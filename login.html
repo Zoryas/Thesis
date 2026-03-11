@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Login</title>
+  <link rel="stylesheet" href="stylesheets/login.css">
+</head>
+<body>
+  <div class="background">
+    <div class="container">
+      <div class="card">
+        <h1 class="title">Login</h1>
+
+        <!-- Toggle between Student and Teacher -->
+        <div class="toggle-container">
+          <button id="studentBtn" class="toggle-button active">Student</button>
+          <button id="teacherBtn" class="toggle-button">Teacher</button>
+        </div>
+
+        <!-- Email and Password -->
+        <input type="email" id="email" class="input" placeholder="Email">
+        <input type="password" id="password" class="input" placeholder="Password">
+
+        <!-- Login Button -->
+        <button id="loginBtn" class="button">Login</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="login.js"></script>
+</body>
+</html>

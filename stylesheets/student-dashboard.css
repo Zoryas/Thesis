@@ -1,0 +1,87 @@
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+}
+
+/* Navbar */
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #007bff;
+  color: white;
+  padding: 1rem;
+}
+
+.site-name {
+  font-weight: bold;
+}
+
+.nav-links {
+  display: flex;
+  gap: 1rem;
+}
+
+.link {
+  color: white;
+  text-decoration: none;
+}
+
+.profile-pic {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+}
+
+/* Calendar */
+.calendar-container {
+  margin: 1rem;
+}
+
+/* Info Card */
+.info-card {
+  display: flex;
+  align-items: center;
+  background: #f9f9f9;
+  padding: 1rem;
+  margin: 1rem;
+  border-radius: 8px;
+}
+
+.info-pic {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+}
+
+.info-details {
+  margin-left: 15px;
+}
+
+.info-name {
+  font-weight: bold;
+  font-size: 1.2rem;
+}
+
+/* Graph Card */
+.graph-card {
+  background: #fff;
+  margin: 1rem;
+  padding: 1rem;
+  border-radius: 8px;
+}
+
+.graph-title {
+  margin-bottom: 0.5rem;
+}
+
+.top-legend {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.legend-text {
+  font-size: 0.9rem;
+  color: #333;
+}

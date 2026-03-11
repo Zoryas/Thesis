@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Student Dashboard</title>
+  <link rel="stylesheet" href="stylesheets/student-dashboard.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <!-- NavBar -->
+  <nav class="navbar">
+    <span class="site-name">STUDENT PORTAL</span>
+    <div class="nav-links">
+      <a href="studentDashboard.html" class="link">Home</a>
+      <a href="grades.html" class="link">Grades</a>
+      <a href="profile.html" class="link">Profile</a>
+      <a href="login.html">
+        <img src="../image/student.png" class="profile-pic" alt="Profile">
+      </a>
+    </div>
+  </nav>
+
+  <!-- Calendar -->
+  <div class="calendar-container">
+    <label for="calendar">Select Date:</label>
+    <input type="date" id="calendar">
+    <p id="selectedDate"></p>
+  </div>
+
+  <!-- Student Info Card -->
+  <div class="info-card">
+    <img src="../image/student.png" class="info-pic" alt="Student">
+    <div class="info-details">
+      <p class="info-name">Juan Dela Cruz</p>
+      <p class="info-detail">Grade: 10</p>
+      <p class="info-detail">Section: A</p>
+      <p class="info-detail">ID: 2026-001</p>
+    </div>
+  </div>
+
+  <!-- Line Graph -->
+  <div class="graph-card">
+    <h2 class="graph-title">Student Progress Track</h2>
+    <div class="top-legend">
+      <span class="legend-text">1 = Easy</span>
+      <span class="legend-text">2 = Moderate</span>
+      <span class="legend-text">3 = Difficult</span>
+    </div>
+    <canvas id="progressChart"></canvas>
+  </div>
+
+  <script src="student-dashboard.js"></script>
+</body>
+</html>

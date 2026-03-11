@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Teacher Dashboard</title>
+  <link rel="stylesheet" href="stylesheets/teacher-dashboard.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <!-- NavBar -->
+  <nav class="navbar">
+    <span class="site-name">TEACHER PORTAL</span>
+    <div class="nav-links">
+      <a href="teacherDashboard.html" class="link">Home</a>
+      <a href="class.html" class="link">My Class</a>
+      <a href="reports.html" class="link">Reports</a>
+      <a href="login.html">
+        <img src="../image/teacher.png" class="profile-pic" alt="Profile">
+      </a>
+    </div>
+  </nav>
+
+  <!-- Calendar -->
+  <div class="calendar-container">
+    <label for="calendar">Select Date:</label>
+    <input type="date" id="calendar">
+    <p id="selectedDate"></p>
+  </div>
+
+  <!-- Student Difficulty Level Sections -->
+  <div class="section-container">
+    <h2 class="section-title">Student Difficulty Level</h2>
+
+    <!-- Easy Level -->
+    <div class="level-card">
+      <h3 class="level-title">Easy</h3>
+      <div class="student-grid">
+        <div class="student-card" onclick="openModal()">
+          <img src="../image/student.png" class="student-pic" alt="Student">
+          <p class="student-name">Juan Dela Cruz</p>
+          <p class="student-detail">Grade: 10</p>
+          <p class="student-detail">Section: A</p>
+          <p class="student-detail">ID: 2026-001</p>
+        </div>
+        <!-- More student cards -->
+       <div class="student-grid">
+        <div class="student-card">
+          <img src="../image/student.png" class="student-pic" alt="Student">
+          <p class="student-name">Student2</p>
+          <p class="student-detail">Grade: 9</p>
+          <p class="student-detail">Section: B</p>
+          <p class="student-detail">ID: 2026-002</p>
+        </div>
+      </div>
+      
+      <div class="student-grid">
+        <div class="student-card">
+          <img src="../image/student.png" class="student-pic" alt="Student">
+          <p class="student-name">Student2</p>
+          <p class="student-detail">Grade: 9</p>
+          <p class="student-detail">Section: B</p>
+          <p class="student-detail">ID: 2026-002</p>
+        </div>
+      </div>
+
+      <div class="student-grid">
+        <div class="student-card">
+          <img src="../image/student.png" class="student-pic" alt="Student">
+          <p class="student-name">Student2</p>
+          <p class="student-detail">Grade: 9</p>
+          <p class="student-detail">Section: B</p>
+          <p class="student-detail">ID: 2026-002</p>
+        </div>
+      </div>
+
+      <div class="student-grid">
+        <div class="student-card">
+          <img src="../image/student.png" class="student-pic" alt="Student">
+          <p class="student-name">Student2</p>
+          <p class="student-detail">Grade: 9</p>
+          <p class="student-detail">Section: B</p>
+          <p class="student-detail">ID: 2026-002</p>
+        </div>
+      </div>
+      </div>
+    </div>
+
+    <!-- Moderate Level -->
+    <div class="level-card">
+      <h3 class="level-title">Moderate</h3>
+      <div class="student-grid">
+        <div class="student-card">
+          <img src="../image/student.png" class="student-pic" alt="Student">
+          <p class="student-name">Student2</p>
+          <p class="student-detail">Grade: 9</p>
+          <p class="student-detail">Section: B</p>
+          <p class="student-detail">ID: 2026-002</p>
+        </div>
+
+        <div class="student-grid">
+        <div class="student-card">
+          <img src="../image/student.png" class="student-pic" alt="Student">
+          <p class="student-name">Student2</p>
+          <p class="student-detail">Grade: 9</p>
+          <p class="student-detail">Section: B</p>
+          <p class="student-detail">ID: 2026-002</p>
+        </div>
+      </div>
+
+      <div class="student-grid">
+        <div class="student-card">
+          <img src="../image/student.png" class="student-pic" alt="Student">
+          <p class="student-name">Student2</p>
+          <p class="student-detail">Grade: 9</p>
+          <p class="student-detail">Section: B</p>
+          <p class="student-detail">ID: 2026-002</p>
+        </div>
+      </div>
+
+      <div class="student-grid">
+        <div class="student-card">
+          <img src="../image/student.png" class="student-pic" alt="Student">
+          <p class="student-name">Student2</p>
+          <p class="student-detail">Grade: 9</p>
+          <p class="student-detail">Section: B</p>
+          <p class="student-detail">ID: 2026-002</p>
+        </div>
+      </div>
+
+      <div class="student-grid">
+        <div class="student-card">
+          <img src="../image/student.png" class="student-pic" alt="Student">
+          <p class="student-name">Student2</p>
+          <p class="student-detail">Grade: 9</p>
+          <p class="student-detail">Section: B</p>
+          <p class="student-detail">ID: 2026-002</p>
+        </div>
+      </div>
+
+      <div class="student-grid">
+        <div class="student-card">
+          <img src="../image/student.png" class="student-pic" alt="Student">
+          <p class="student-name">Student2</p>
+          <p class="student-detail">Grade: 9</p>
+          <p class="student-detail">Section: B</p>
+          <p class="student-detail">ID: 2026-002</p>
+        </div>
+      </div>
+      </div>
+    </div>
+
+    <!-- Difficult Level -->
+    <div class="level-card">
+      <h3 class="level-title">Difficult</h3>
+      <div class="student-grid">
+        <div class="student-card">
+          <img src="../image/student.png" class="student-pic" alt="Student">
+          <p class="student-name">Student3</p>
+          <p class="student-detail">Grade: 9</p>
+          <p class="student-detail">Section: B</p>
+          <p class="student-detail">ID: 2026-003</p>
+        </div>
+
+        <div class="student-grid">
+        <div class="student-card">
+          <img src="../image/student.png" class="student-pic" alt="Student">
+          <p class="student-name">Student2</p>
+          <p class="student-detail">Grade: 9</p>
+          <p class="student-detail">Section: B</p>
+          <p class="student-detail">ID: 2026-002</p>
+        </div>
+      </div>
+
+      <div class="student-grid">
+        <div class="student-card">
+          <img src="../image/student.png" class="student-pic" alt="Student">
+          <p class="student-name">Student2</p>
+          <p class="student-detail">Grade: 9</p>
+          <p class="student-detail">Section: B</p>
+          <p class="student-detail">ID: 2026-002</p>
+        </div>
+      </div>
+
+      <div class="student-grid">
+        <div class="student-card">
+          <img src="../image/student.png" class="student-pic" alt="Student">
+          <p class="student-name">Student2</p>
+          <p class="student-detail">Grade: 9</p>
+          <p class="student-detail">Section: B</p>
+          <p class="student-detail">ID: 2026-002</p>
+        </div>
+      </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal -->
+  <div id="graphModal" class="modal">
+    <div class="modal-content">
+      <h2>Juan Dela Cruz - Progress Track</h2>
+      <canvas id="progressChart"></canvas>
+      <button onclick="closeModal()">Close</button>
+    </div>
+  </div>
+
+  <script src="teacher-dashboard.js"></script>
+</body>
+</html>
