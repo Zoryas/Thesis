@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Student Dashboard — ReadWise</title>
+  <link rel="stylesheet" href="../stylesheets/shared.css">
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+<div class="demo-banner">ReadWise System | Pulo National High School</div>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">RW</div>
+      <h2>ReadWise</h2><p>Student Portal</p>
+    </div>
+    <nav>
+      <a href="student-profile.html"><span class="icon">👤</span> My Profile</a>  
+      <a href="student-dashboard.html" class="active"><span class="icon">🏠</span> Dashboard</a>
+      <a href="student-passage.html"><span class="icon">📖</span> My Passage</a>
+      <a href="student-progress.html"><span class="icon">📊</span> My Progress</a>
+      <a href="student-pre-assessment.html"><span class="icon">📝</span> Pre-Assessment</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-info"><strong id="sb-name">—</strong>Grade 7 · Sampaguita</div>
+      <button class="logout-btn" onclick="logout()">⬅ Logout</button>
+    </div>
+  </aside>
+  <main class="main">
+    <div class="page-header">
+      <h1 id="welcome-msg">Good morning! 👋</h1>
+      <p>Week 5 of 8 — ReadWise Adaptive Reading Program</p>
+    </div>
+
+    <div class="card-grid card-grid-3" style="margin-bottom:16px">
+      <div class="stat-card">
+        <div class="stat-label">Current Class Level</div>
+        <div id="level-badge" class="level-big" style="margin-top:6px">—</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:6px">Assigned by SVM Classifier</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Pre-Assessment Score</div>
+        <div class="stat-val" id="pre-score">—%</div>
+        <div class="progress" style="margin-top:8px">
+          <div class="progress-bar" id="pre-bar" style="background:var(--primary)"></div>
+        </div>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px">Initial reading difficulty result</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Program Progress</div>
+        <div class="stat-val">Week 5</div>
+        <div class="progress" style="margin-top:8px">
+          <div class="progress-bar" style="width:62.5%;background:var(--secondary)"></div>
+        </div>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px">5 of 8 weeks completed</div>
+      </div>
+    </div>
+
+    <div id="rec-banner" class="card" style="margin-bottom:16px;border-left:4px solid var(--accent);background:#fffbf5">
+      <div style="display:flex;align-items:center;gap:12px">
+        <span style="font-size:24px">🔔</span>
+        <div>
+          <div style="font-weight:700;color:var(--secondary)">Latest System Recommendation</div>
+          <div id="rec-text" style="font-size:14px;color:var(--muted);margin-top:3px">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-grid card-grid-2">
+      <div class="card">
+        <div class="section-title">📄 Assigned Passage</div>
+        <div id="passage-card"></div>
+      </div>
+      <div class="card">
+        <div class="section-title">📈 Weekly Score History</div>
+        <div class="chart-wrap"><canvas id="miniChart"></canvas></div>
+    </div>
+  </main>
+</div>
+<div class="toast" id="toast"></div>
+<script src="../mockData.js"></script>
+<script>
+  const s = getCurrentStudent();
+  if(!s){window.location.href="../login.html";}
+  document.getElementById("sb-name").textContent = s.name;
+  document.getElementById("welcome-msg").textContent = "Good morning, "+s.name.split(" ")[0]+"! 👋";
+  const lb = document.getElementById("level-badge");
+  lb.textContent = s.classLevel;
+  lb.style.background = levelBg(s.classLevel);
+  lb.style.color = levelColor(s.classLevel);
+  document.getElementById("pre-score").textContent = s.preScore+"%";
+  document.getElementById("pre-bar").style.width = s.preScore+"%";
+  const prog = MOCK.weeklyProgress[s.id];
+  const latest = prog[prog.length-1];
+  document.getElementById("rec-text").textContent =
+    "Week "+latest.week+" — System recommended: "+latest.recommendation+". Teacher confirmed.";
+  const p = getAssignedPassage(s);
+  document.getElementById("passage-card").innerHTML = `
+    <div style="margin-bottom:10px">
+      <span class="badge ${badgeClass(p.label)}">${p.label}</span>
+      <span class="badge badge-primary" style="margin-left:6px">${p.genre}</span>
+    </div>
+    <h3 style="font-size:16px;font-weight:700;margin-bottom:6px">${p.title}</h3>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:14px">
+      📝 ${p.words} words &nbsp;·&nbsp; ⏱ Est. ${p.time} min
+    </p>
+    <a href="student-reading.html?id=${p.id}" class="btn btn-primary">📖 Read Now</a>
+  `;
+  new Chart(document.getElementById("miniChart"),{
+    type:"bar",
+    data:{
+      labels:prog.map(w=>"Week "+w.week),
+      datasets:[{
+        label:"Score %",
+        data:prog.map(w=>w.score),
+        backgroundColor:prog.map(w=>w.score>=65?"#2e7d5e":w.score>=50?"#c97b2a":"#c0392b"),
+        borderRadius:6
+      }]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{y:{beginAtZero:true,max:100,ticks:{callback:v=>v+"%"}},x:{grid:{display:false}}}
+    }
+  });
+  function logout(){sessionStorage.clear();window.location.href="../login.html";}
+</script>
+</body>
+</html>

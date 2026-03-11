@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Questions — ReadWise</title>
+  <link rel="stylesheet" href="../stylesheets/shared.css">
+</head>
+<body>
+<div class="demo-banner">ReadWise System | Pulo National High School</div>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">RW</div><h2>ReadWise</h2><p>Student Portal</p>
+    </div>
+    <nav>
+        <a href="student-profile.html"><span class="icon">👤</span> My Profile</a>
+      <a href="student-dashboard.html"><span class="icon">🏠</span> Dashboard</a>
+      <a href="student-passage.html" class="active"><span class="icon">📖</span> My Passage</a>
+      <a href="student-progress.html"><span class="icon">📊</span> My Progress</a>
+      <a href="student-pre-assessment.html"><span class="icon">📝</span> Pre-Assessment</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-info"><strong id="sb-name">—</strong>Grade 7</div>
+      <button class="logout-btn" onclick="sessionStorage.clear();window.location.href='../login.html'">⬅ Logout</button>
+    </div>
+  </aside>
+  <main class="main">
+    <div style="max-width:700px;margin:0 auto">
+      <button class="back-btn" onclick="history.back()">← Back to Passage</button>
+      <div class="page-header">
+        <h1 id="q-title">Comprehension Questions</h1>
+        <p id="q-sub"></p>
+      </div>
+      <div id="questions-wrap"></div>
+
+      <!-- Difficulty Rating -->
+      <div class="card" style="margin-top:16px">
+        <div class="section-title">🎯 Difficulty Rating</div>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:14px">
+          How difficult did you find this passage? (1 = Very Easy, 5 = Very Hard)
+        </p>
+        <input type="range" min="1" max="5" value="3" id="difficulty-slider">
+        <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:600;margin-top:6px">
+          <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:2px">
+          <span>Very Easy</span><span>Very Hard</span>
+        </div>
+        <div style="text-align:center;margin-top:10px;font-size:14px;font-weight:700;color:var(--primary)">
+          Selected: <span id="slider-val">3</span> / 5
+        </div>
+      </div>
+
+      <!-- Short Answer (HARD only) -->
+      <div class="card" id="sa-card" style="margin-top:16px;display:none">
+        <div class="section-title">📝 Short Answer <span style="font-size:12px;font-weight:400;color:var(--muted)">(HARD Level)</span></div>
+        <p id="sa-prompt" style="font-size:14px;color:var(--secondary);margin-bottom:10px;font-weight:600"></p>
+        <textarea class="form-control" id="short-answer" rows="5"
+          placeholder="Write your answer here in complete sentences..."></textarea>
+        <p style="font-size:12px;color:var(--muted);margin-top:6px">⏳ This will be scored by your teacher (0–3 points).</p>
+      </div>
+
+      <div style="margin-top:20px;text-align:right">
+        <button class="btn btn-primary" onclick="submitAnswers()" style="font-size:15px;padding:12px 28px">
+          📤 Submit Answers
+        </button>
+      </div>
+    </div>
+  </main>
+</div>
+<div class="toast" id="toast"></div>
+<script src="../mockData.js"></script>
+<script>
+  const params = new URLSearchParams(location.search);
+  const pid    = params.get("id") || "p3";
+  const p      = getPassage(pid);
+  const qs     = MOCK.questions[pid] || [];
+  const s      = getCurrentStudent();
+
+  document.getElementById("sb-name").textContent = s ? s.name : "Student";
+  document.getElementById("q-title").textContent = "Questions: " + p.title;
+  document.getElementById("q-sub").textContent   = p.label + " | " + p.genre + " | " + p.words + " words";
+
+  // Slider
+  const slider = document.getElementById("difficulty-slider");
+  slider.addEventListener("input", function() {
+    document.getElementById("slider-val").textContent = slider.value;
+  });
+
+  // Build questions using createElement (NO innerHTML for label tags)
+  const wrap = document.getElementById("questions-wrap");
+
+  qs.forEach(function(q, i) {
+    const card = document.createElement("div");
+    card.className = "card";
+    card.style.marginBottom = "14px";
+
+    // Question text
+    const qText = document.createElement("div");
+    qText.style.cssText = "font-weight:700;margin-bottom:12px;color:var(--secondary);font-size:15px";
+    qText.textContent = "Q" + (i + 1) + ". " + q.q;
+    card.appendChild(qText);
+
+    // Options container
+    const optWrap = document.createElement("div");
+    optWrap.style.cssText = "display:flex;flex-direction:column;gap:8px";
+
+    q.opts.forEach(function(opt, j) {
+      const lbl = document.createElement("label");
+      lbl.id = "lbl" + i + "_" + j;
+      lbl.style.cssText =
+        "display:flex;align-items:center;gap:10px;cursor:pointer;" +
+        "padding:10px 14px;border:1.5px solid var(--border);" +
+        "border-radius:8px;font-size:14px;transition:.2s;";
+
+      lbl.onmouseover = function() { lbl.style.borderColor = "var(--primary)"; };
+      lbl.onmouseout  = function() {
+        const inp = lbl.querySelector("input");
+        if (!inp.checked) lbl.style.borderColor = "var(--border)";
+      };
+
+      const radio = document.createElement("input");
+      radio.type  = "radio";
+      radio.name  = "q" + i;
+      radio.value = j;
+      radio.style.accentColor = "var(--primary)";
+      radio.addEventListener("change", function() {
+        // Reset all options for this question
+        q.opts.forEach(function(_, k) {
+          const other = document.getElementById("lbl" + i + "_" + k);
+          if (other) other.style.cssText =
+            "display:flex;align-items:center;gap:10px;cursor:pointer;" +
+            "padding:10px 14px;border:1.5px solid var(--border);" +
+            "border-radius:8px;font-size:14px;transition:.2s;";
+        });
+        // Highlight selected
+        lbl.style.borderColor = "var(--primary)";
+        lbl.style.background  = "#e0f2f2";
+      });
+
+      const span = document.createElement("span");
+      span.textContent = String.fromCharCode(65 + j) + ". " + opt;
+
+      lbl.appendChild(radio);
+      lbl.appendChild(span);
+      optWrap.appendChild(lbl);
+    });
+
+    card.appendChild(optWrap);
+    wrap.appendChild(card);
+  });
+
+  // Short answer for HARD passages
+  if (p.label === "HARD" && MOCK.shortAnswer[pid]) {
+    const saCard = document.getElementById("sa-card");
+    saCard.style.display = "block";
+    document.getElementById("sa-prompt").textContent = MOCK.shortAnswer[pid];
+  }
+
+  // Submit
+  function submitAnswers() {
+    let correct = 0;
+    qs.forEach(function(q, i) {
+      const sel = document.querySelector('input[name="q' + i + '"]:checked');
+      if (sel && parseInt(sel.value) === q.ans) correct++;
+    });
+
+    const pct  = Math.round((correct / qs.length) * 100);
+    const diff = slider.value;
+    const sa   = document.getElementById("short-answer");
+    const saVal = sa ? sa.value.trim() : "";
+
+    sessionStorage.setItem("result_" + pid, JSON.stringify({
+      score: pct,
+      correct: correct,
+      total: qs.length,
+      difficulty: diff,
+      passageId: pid,
+      shortAnswer: saVal,
+      readingTime: sessionStorage.getItem("readingTime_" + pid) || "—"
+    }));
+
+    showToast("✅ Answers submitted successfully!");
+    setTimeout(function() {
+      window.location.href = "student-results.html?id=" + pid;
+    }, 1000);
+  }
+</script>
+</body>
+</html>

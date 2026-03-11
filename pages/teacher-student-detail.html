@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Student Detail — ReadWise</title>
+  <link rel="stylesheet" href="../stylesheets/shared.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+<div class="demo-banner">🎓 Demo Mode — Thesis Prototype — ReadWise System | Pulo National High School</div>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">RW</div><h2>ReadWise</h2><p>Teacher Portal</p>
+    </div>
+    <nav>
+      <a href="teacher-dashboard.html"><span class="icon">🏠</span> Dashboard</a>
+      <a href="teacher-passages.html"><span class="icon">📚</span> Passage Library</a>
+      <a href="teacher-submit.html"><span class="icon">➕</span> Submit Passage</a>
+      <a href="teacher-students.html" class="active"><span class="icon">👥</span> Students</a>
+      <a href="teacher-recommendations.html"><span class="icon">🔔</span> Recommendations</a>
+      <a href="teacher-reports.html"><span class="icon">📊</span> Reports</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-info"><strong>Ms. Ana Villanueva</strong>Grade 7 English</div>
+      <button class="logout-btn" onclick="sessionStorage.clear();window.location.href='../login.html'">⬅ Logout</button>
+    </div>
+  </aside>
+  <main class="main">
+
+    <!-- Breadcrumb -->
+    <div class="breadcrumb">
+      <a href="teacher-dashboard.html">Dashboard</a> ›
+      <a href="teacher-students.html">Students</a> ›
+      <span id="bc-name">Student Detail</span>
+    </div>
+
+    <!-- Page Header -->
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;
+      flex-wrap:wrap;gap:12px;margin-bottom:22px">
+      <div>
+        <h1 id="detail-title" style="font-size:22px;font-weight:700;color:var(--secondary)">—</h1>
+        <p id="detail-sub" style="font-size:14px;color:var(--muted);margin-top:4px">—</p>
+      </div>
+      <button class="back-btn" onclick="window.location.href='teacher-students.html'"
+        style="font-size:13px">← Back to Students</button>
+    </div>
+
+    <!-- Top Stats Row -->
+    <div class="card-grid card-grid-3" style="margin-bottom:16px">
+      <div class="stat-card">
+        <div class="stat-label">Current Level</div>
+        <div id="level-badge" class="level-big" style="margin-top:6px;font-size:16px">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Pre-Assessment Score</div>
+        <div class="stat-val" id="pre-score">—%</div>
+        <div class="progress" style="margin-top:8px">
+          <div class="progress-bar" id="pre-bar" style="background:var(--primary)"></div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Latest Score</div>
+        <div class="stat-val" id="latest-score">—%</div>
+        <div class="stat-label" id="latest-rec" style="margin-top:6px"></div>
+      </div>
+    </div>
+
+    <!-- Chart + Score Short Answer -->
+    <div class="card-grid card-grid-2" style="margin-bottom:16px">
+      <div class="card">
+        <div class="section-title">📈 Weekly Score Progress</div>
+        <div class="chart-wrap" style="height:240px">
+          <canvas id="studentChart"></canvas>
+        </div>
+      </div>
+      <div class="card">
+        <div class="section-title">📝 Pending Short Answer</div>
+        <div style="background:#fde8e8;border-radius:8px;padding:16px;margin-bottom:14px">
+          <div style="font-size:13px;font-weight:700;color:var(--hard);margin-bottom:4px">
+            ⚠️ Awaiting Teacher Scoring
+          </div>
+          <div style="font-size:13px;color:var(--secondary);margin-bottom:10px">
+            <strong>Passage:</strong> Climate Change and Its Effects (HARD)<br>
+            <strong>Question:</strong> In your own words, explain one effect of climate change on the Philippines.
+          </div>
+          <div style="background:#fff;border-radius:6px;padding:12px;font-size:13px;
+            color:#4a5568;line-height:1.7;font-style:italic;border-left:3px solid var(--hard)">
+            "The Philippines is often hit by strong typhoons because of climate change.
+            The sea level is also rising which can flood coastal barangays like those in Laguna de Bay.
+            Many farmers also have a hard time because of too much rain or drought."
+          </div>
+        </div>
+        <a href="teacher-score.html?sid=s1&pid=p3" class="btn btn-danger btn-block">
+          ✏️ Score This Short Answer
+        </a>
+      </div>
+    </div>
+
+    <!-- Full Session History Table -->
+    <div class="card" style="margin-bottom:16px">
+      <div class="section-title">📋 All Session Records</div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Week</th>
+              <th>Score</th>
+              <th>Difficulty</th>
+              <th>Score Bar</th>
+              <th>Recommendation</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="session-table"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Recommendation History -->
+    <div class="card">
+      <div class="section-title">🔔 Recommendation History</div>
+      <div id="rec-timeline" style="display:flex;flex-direction:column;gap:10px"></div>
+    </div>
+
+  </main>
+</div>
+<div class="toast" id="toast"></div>
+<script src="../mockData.js"></script>
+<script>
+  const params = new URLSearchParams(location.search);
+  const sid    = params.get("id") || "s1";
+  const s      = getStudent(sid);
+
+  if (!s) {
+    document.querySelector(".main").innerHTML =
+      '<div class="card" style="text-align:center;padding:40px;color:var(--muted)">Student not found.</div>';
+  } else {
+    const prog   = MOCK.weeklyProgress[s.id];
+    const scores = prog.map(function(w){ return w.score; });
+    const latest = prog[prog.length - 1];
+
+    // Breadcrumb & header
+    document.getElementById("bc-name").textContent       = s.name;
+    document.getElementById("detail-title").textContent  = s.name;
+    document.getElementById("detail-sub").textContent    =
+      "Grade " + s.grade + " · " + s.section + " · Student ID: " + s.id.toUpperCase();
+
+    // Level badge
+    const lb = document.getElementById("level-badge");
+    lb.textContent        = s.classLevel;
+    lb.style.background   = levelBg(s.classLevel);
+    lb.style.color        = levelColor(s.classLevel);
+
+    // Scores
+    document.getElementById("pre-score").textContent  = s.preScore + "%";
+    document.getElementById("pre-bar").style.width    = s.preScore + "%";
+    document.getElementById("latest-score").textContent = latest.score + "%";
+
+    var recColor = latest.recommendation.includes("UP")   ? "var(--easy)"   :
+                   latest.recommendation.includes("DOWN") ? "var(--hard)"   : "var(--accent)";
+    document.getElementById("latest-rec").innerHTML =
+      '<span style="font-weight:700;color:' + recColor + '">' + latest.recommendation + '</span>';
+
+    // Chart
+    new Chart(document.getElementById("studentChart"), {
+      type: "line",
+      data: {
+        labels: prog.map(function(w){ return "Week " + w.week; }),
+        datasets: [{
+          label: "Score %",
+          data: scores,
+          borderColor: "var(--primary)",
+          backgroundColor: "rgba(30,127,127,0.1)",
+          fill: true,
+          tension: 0.4,
+          pointRadius: 6,
+          pointBackgroundColor: scores.map(function(v){
+            return v >= 65 ? "#2e7d5e" : v >= 50 ? "#c97b2a" : "#c0392b";
+          }),
+          pointBorderColor: "#fff",
+          pointBorderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { beginAtZero: true, max: 100, ticks: { callback: function(v){ return v + "%"; } } },
+          x: { grid: { display: false } }
+        }
+      }
+    });
+
+    // Session table
+    var tbody = document.getElementById("session-table");
+    prog.forEach(function(w) {
+      var rColor = w.recommendation.includes("UP")   ? "var(--easy)"   :
+                   w.recommendation.includes("DOWN") ? "var(--hard)"   : "var(--accent)";
+      var barColor = w.score >= 65 ? "var(--easy)" : w.score >= 50 ? "var(--accent)" : "var(--hard)";
+      var row = document.createElement("tr");
+      row.innerHTML =
+        '<td><strong>Week ' + w.week + '</strong></td>' +
+        '<td><strong>' + w.score + '%</strong></td>' +
+        '<td><span class="badge ' + badgeClass(w.difficulty) + '">' + w.difficulty + '</span></td>' +
+        '<td><div class="progress" style="width:100px"><div class="progress-bar" ' +
+          'style="width:' + w.score + '%;background:' + barColor + '"></div></div></td>' +
+        '<td><span style="font-weight:700;color:' + rColor + '">' + w.recommendation + '</span></td>' +
+        '<td><span class="badge badge-success">✓ Confirmed</span></td>';
+      tbody.appendChild(row);
+    });
+
+    // Recommendation timeline
+    var timeline = document.getElementById("rec-timeline");
+    prog.forEach(function(w) {
+      var icon  = w.recommendation.includes("UP")   ? "⬆️" :
+                  w.recommendation.includes("DOWN") ? "⬇️" : "✅";
+      var bg    = w.recommendation.includes("UP")   ? "#d4edda" :
+                  w.recommendation.includes("DOWN") ? "#fde8e8" : "#f7fafc";
+      var color = w.recommendation.includes("UP")   ? "var(--easy)"   :
+                  w.recommendation.includes("DOWN") ? "var(--hard)"   : "var(--accent)";
+      var item  = document.createElement("div");
+      item.style.cssText = "display:flex;align-items:center;gap:14px;padding:12px 16px;" +
+        "background:" + bg + ";border-radius:8px;";
+      item.innerHTML =
+        '<span style="font-size:20px">' + icon + '</span>' +
+        '<div style="flex:1">' +
+          '<div style="font-weight:700;color:' + color + ';font-size:14px">' +
+            w.recommendation + '</div>' +
+          '<div style="font-size:12px;color:var(--muted);margin-top:2px">' +
+            'Week ' + w.week + ' · Score: ' + w.score + '% · Level: ' + w.difficulty +
+          '</div>' +
+        '</div>' +
+        '<span class="badge badge-success" style="font-size:11px">Teacher Confirmed</span>';
+      timeline.appendChild(item);
+    });
+  }
+</script>
+</body>
+</html>

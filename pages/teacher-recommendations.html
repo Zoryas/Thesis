@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Recommendations — ReadWise</title>
+  <link rel="stylesheet" href="../stylesheets/shared.css">
+</head>
+<body>
+<div class="demo-banner">🎓 Demo Mode — Thesis Prototype — ReadWise System</div>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">RW</div><h2>ReadWise</h2><p>Teacher Portal</p>
+    </div>
+    <nav>
+      <a href="teacher-dashboard.html"><span class="icon">🏠</span> Dashboard</a>
+      <a href="teacher-passages.html"><span class="icon">📚</span> Passage Library</a>
+      <a href="teacher-submit.html"><span class="icon">➕</span> Submit Passage</a>
+      <a href="teacher-students.html"><span class="icon">👥</span> Students</a>
+      <a href="teacher-recommendations.html" class="active"><span class="icon">🔔</span> Recommendations</a>
+      <a href="teacher-reports.html"><span class="icon">📊</span> Reports</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-info"><strong>Ms. Ana Villanueva</strong>Grade 7 English</div>
+      <button class="logout-btn" onclick="sessionStorage.clear();window.location.href='../login.html'">⬅ Logout</button>
+    </div>
+  </aside>
+  <main class="main">
+    <div class="breadcrumb"><a href="teacher-dashboard.html">Dashboard</a> › Recommendations</div>
+    <div class="page-header">
+      <h1>🔔 System Recommendations</h1>
+      <p>Week 5 — Auto-generated after every 2 consecutive sessions based on score and difficulty rating.</p>
+    </div>
+
+    <div class="card" style="margin-bottom:16px">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Student</th>
+              <th>Current Level</th>
+              <th>Wk 3 Score</th>
+              <th>Wk 4 Score</th>
+              <th>2-Session Avg</th>
+              <th>System Recommendation</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="rec-table"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card" style="background:#f0fafa;border-left:4px solid var(--primary)">
+      <div style="font-size:13px;color:var(--secondary)">
+        <strong>ℹ️ How Recommendations Work</strong><br>
+        <span style="color:var(--muted)">
+          Recommendations are generated automatically after every 2 consecutive sessions.<br>
+          • Average ≥ 75% → <strong style="color:var(--easy)">Step UP</strong> to harder level<br>
+          • Average 55–74% → <strong style="color:var(--accent)">Maintain</strong> current level<br>
+          • Average &lt; 55% → <strong style="color:var(--hard)">Step DOWN</strong> to easier level
+        </span>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Override Modal -->
+<div class="modal-overlay" id="override-modal">
+  <div class="modal">
+    <h3>Override Recommendation</h3>
+    <p style="font-size:14px;color:var(--muted);margin-bottom:16px">
+      Manually assign a different level for <strong id="modal-student-name">—</strong>.
+    </p>
+    <div class="form-group">
+      <label class="form-label">Assign Level</label>
+      <select class="form-control" id="modal-level-select">
+        <option value="EASY">EASY</option>
+        <option value="MODERATE">MODERATE</option>
+        <option value="HARD">HARD</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Reason (optional)</label>
+      <input class="form-control" id="modal-reason" placeholder="e.g. Student requested review period">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="confirmOverride()">✅ Apply Override</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script src="../mockData.js"></script>
+<script>
+  var overrideSid = null;
+
+  var tbody = document.getElementById("rec-table");
+  MOCK.students.forEach(function(s) {
+    var prog   = MOCK.weeklyProgress[s.id];
+    var wk3    = prog[2].score;
+    var wk4    = prog[3].score;
+    var avg    = Math.round((wk3 + wk4) / 2);
+    var rec    = avg >= 75 ? "Step UP ↑" : avg >= 55 ? "Maintain ✓" : "Step DOWN ↓";
+    var rColor = rec.includes("UP")   ? "var(--easy)" :
+                 rec.includes("DOWN") ? "var(--hard)" : "var(--accent)";
+    var rBg    = rec.includes("UP")   ? "#d4edda" :
+                 rec.includes("DOWN") ? "#fde8e8" : "#fff3cd";
+
+    var row = document.createElement("tr");
+    row.id  = "row-" + s.id;
+    row.innerHTML =
+      '<td><strong>' + s.name + '</strong></td>' +
+      '<td><span class="badge ' + badgeClass(s.classLevel) + '">' + s.classLevel + '</span></td>' +
+      '<td>' + wk3 + '%</td>' +
+      '<td>' + wk4 + '%</td>' +
+      '<td><strong>' + avg + '%</strong></td>' +
+      '<td><span style="font-weight:800;color:' + rColor + ';background:' + rBg +
+        ';padding:4px 12px;border-radius:20px;font-size:13px">' + rec + '</span></td>' +
+      '<td style="display:flex;gap:6px;flex-wrap:wrap">' +
+        '<button class="btn btn-success btn-sm" onclick="confirmRec(\'' + s.id + '\',\'' +
+          s.name + '\',\'' + rec + '\')">✅ Confirm</button>' +
+        '<button class="btn btn-outline btn-sm" onclick="openModal(\'' + s.id + '\',\'' +
+          s.name + '\')">✏️ Override</button>' +
+      '</td>';
+    tbody.appendChild(row);
+  });
+
+  function confirmRec(sid, name, rec) {
+    var btn = document.querySelector("#row-" + sid + " .btn-success");
+    if (btn) {
+      btn.textContent = "✓ Confirmed";
+      btn.disabled    = true;
+      btn.style.opacity = ".6";
+    }
+    showToast("✅ Recommendation confirmed for " + name + "!");
+  }
+
+  function openModal(sid, name) {
+    overrideSid = sid;
+    document.getElementById("modal-student-name").textContent = name;
+    document.getElementById("override-modal").classList.add("active");
+  }
+
+  function closeModal() {
+    document.getElementById("override-modal").classList.remove("active");
+    overrideSid = null;
+  }
+
+  function confirmOverride() {
+    var level  = document.getElementById("modal-level-select").value;
+    var s      = getStudent(overrideSid);
+    showToast("✅ Level overridden to " + level + " for " + s.name + "!");
+    closeModal();
+  }
+</script>
+</body>
+</html>

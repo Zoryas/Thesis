@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Teacher Dashboard — ReadWise</title>
+  <link rel="stylesheet" href="../stylesheets/shared.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+<div class="demo-banner">ReadWise System | Pulo National High School</div>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">RW</div><h2>ReadWise</h2><p>Teacher Portal</p>
+    </div>
+    <nav>
+      <a href="teacher-dashboard.html" class="active"><span class="icon">🏠</span> Dashboard</a>
+      <a href="teacher-passages.html"><span class="icon">📚</span> Passage Library</a>
+      <a href="teacher-submit.html"><span class="icon">➕</span> Submit Passage</a>
+      <a href="teacher-students.html"><span class="icon">👥</span> Students</a>
+      <a href="teacher-recommendations.html"><span class="icon">🔔</span> Recommendations</a>
+      <a href="teacher-reports.html"><span class="icon">📊</span> Reports</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-info"><strong>Ms. Ana Villanueva</strong>Grade 7 English · PNHS</div>
+      <button class="logout-btn" onclick="sessionStorage.clear();window.location.href='../login.html'">⬅ Logout</button>
+    </div>
+  </aside>
+  <main class="main">
+    <div class="page-header">
+      <h1>Teacher Dashboard 👩‍🏫</h1>
+      <p>Pulo National High School · Grade 7 English · Week 5 of 8</p>
+    </div>
+
+    <div class="card-grid card-grid-3" style="margin-bottom:16px">
+      <div class="stat-card" style="border-top:4px solid var(--easy)">
+        <div class="stat-label">EASY Class</div>
+        <div class="stat-val" style="color:var(--easy)">1</div>
+        <div style="font-size:13px;color:var(--muted)">Carlo Reyes</div>
+      </div>
+      <div class="stat-card" style="border-top:4px solid var(--moderate)">
+        <div class="stat-label">MODERATE Class</div>
+        <div class="stat-val" style="color:var(--moderate)">1</div>
+        <div style="font-size:13px;color:var(--muted)">Maria Santos</div>
+      </div>
+      <div class="stat-card" style="border-top:4px solid var(--hard)">
+        <div class="stat-label">HARD Class</div>
+        <div class="stat-val" style="color:var(--hard)">1</div>
+        <div style="font-size:13px;color:var(--muted)">Juan Dela Cruz</div>
+      </div>
+    </div>
+
+    <div class="card-grid card-grid-2" style="margin-bottom:16px">
+      <div class="card">
+        <div class="section-title">📋 Recent Submissions</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Student</th><th>Passage</th><th>Score</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr><td>Juan Dela Cruz</td><td>Climate Change</td><td>71%</td><td><span class="badge badge-success">Scored</span></td></tr>
+              <tr><td>Maria Santos</td><td>Philippine Biodiversity</td><td>72%</td><td><span class="badge badge-success">Scored</span></td></tr>
+              <tr><td>Carlo Reyes</td><td>The Water Cycle</td><td>48%</td><td><span class="badge badge-moderate">Pending SA</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card">
+        <div class="section-title">📊 Class Score Distribution</div>
+        <div class="chart-wrap"><canvas id="classChart"></canvas></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px">
+      <div class="section-title">⚡ Quick Actions</div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap">
+        <a href="teacher-passages.html" class="btn btn-primary">📚 View Passage Library</a>
+        <a href="teacher-submit.html" class="btn btn-secondary">➕ Submit New Passage</a>
+        <a href="teacher-students.html" class="btn btn-outline">👥 View All Students</a>
+        <a href="teacher-recommendations.html" class="btn btn-amber">🔔 Review Recommendations</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-title">🔔 Pending Actions</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:#fde8e8;border-radius:8px">
+          <div><strong>Short Answer Pending:</strong> Juan Dela Cruz — Climate Change &amp; Its Effects</div>
+          <a href="teacher-score.html?sid=s1&pid=p3" class="btn btn-danger btn-sm">Score Now</a>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:#fff3cd;border-radius:8px">
+          <div><strong>Recommendation Review:</strong> 3 students have pending confirmations for Week 5</div>
+          <a href="teacher-recommendations.html" class="btn btn-amber btn-sm">Review</a>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<script src="../mockData.js"></script>
+<script>
+  new Chart(document.getElementById("classChart"),{
+    type:"doughnut",
+    data:{
+      labels:["EASY","MODERATE","HARD"],
+      datasets:[{data:[1,1,1],backgroundColor:["#2e7d5e","#c97b2a","#c0392b"],borderWidth:3,borderColor:"#fff"}]
+    },
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"bottom"}}}
+  });
+</script>
+</body>
+</html>

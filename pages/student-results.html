@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Results — ReadWise</title>
+  <link rel="stylesheet" href="../stylesheets/shared.css">
+</head>
+<body>
+<div class="demo-banner">ReadWise System | Pulo National High School</div>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">RW</div><h2>ReadWise</h2><p>Student Portal</p>
+    </div>
+    <nav>
+        <a href="student-profile.html"><span class="icon">👤</span> My Profile</a>
+      <a href="student-dashboard.html"><span class="icon">🏠</span> Dashboard</a>
+      <a href="student-passage.html" class="active"><span class="icon">📖</span> My Passage</a>
+      <a href="student-progress.html"><span class="icon">📊</span> My Progress</a>
+      <a href="student-pre-assessment.html"><span class="icon">📝</span> Pre-Assessment</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-info"><strong id="sb-name">—</strong>Grade 7</div>
+      <button class="logout-btn" onclick="sessionStorage.clear();window.location.href='../login.html'">⬅ Logout</button>
+    </div>
+  </aside>
+  <main class="main">
+    <div style="max-width:640px;margin:0 auto">
+      <div class="page-header">
+        <h1>📊 Your Results</h1>
+        <p id="result-sub">Session completed</p>
+      </div>
+      <!-- Score card -->
+      <div class="card" style="text-align:center;margin-bottom:16px;padding:32px">
+        <div style="font-size:56px;font-weight:900;color:var(--secondary)" id="score-big">—%</div>
+        <div id="score-label" style="font-size:18px;margin:8px 0;font-weight:700"></div>
+        <div id="score-fraction" style="font-size:14px;color:var(--muted)"></div>
+        <div class="progress" style="margin:16px 0;height:14px">
+          <div class="progress-bar" id="score-bar" style="background:var(--primary)"></div>
+        </div>
+        <div id="reading-time" style="font-size:13px;color:var(--muted)"></div>
+      </div>
+      <div class="card-grid card-grid-2" style="margin-bottom:16px">
+        <div class="stat-card" style="text-align:center">
+          <div class="stat-label">Difficulty Rating Submitted</div>
+          <div class="stat-val" id="diff-val" style="margin-top:6px">—/5</div>
+        </div>
+        <div class="stat-card" style="text-align:center">
+          <div class="stat-label">System Recommendation</div>
+          <div id="rec-badge" style="margin-top:10px"></div>
+        </div>
+      </div>
+      <div class="card" id="sa-section" style="margin-bottom:16px;display:none">
+        <div class="section-title">📝 Your Short Answer</div>
+        <div id="sa-display" style="font-size:14px;color:var(--text);line-height:1.7;background:#f7fafc;padding:12px;border-radius:8px"></div>
+        <div style="margin-top:10px;font-size:13px;color:var(--muted)">
+          ⏳ Pending teacher scoring (0–3 points)
+        </div>
+      </div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap">
+        <a href="student-dashboard.html" class="btn btn-primary">🏠 Back to Dashboard</a>
+        <a href="student-progress.html" class="btn btn-outline">📊 View My Progress</a>
+      </div>
+    </div>
+  </main>
+</div>
+<script src="../mockData.js"></script>
+<script>
+  const params = new URLSearchParams(location.search);
+  const pid = params.get("id")||"p3";
+  const p = getPassage(pid);
+  const s = getCurrentStudent();
+  document.getElementById("sb-name").textContent = s?s.name:"Student";
+  document.getElementById("result-sub").textContent = p.title+" — "+p.label;
+
+  const raw = sessionStorage.getItem("result_"+pid);
+  const res = raw ? JSON.parse(raw) : {score:67,correct:2,total:3,difficulty:3,readingTime:"3:24",shortAnswer:""};
+
+  document.getElementById("score-big").textContent = res.score+"%";
+  document.getElementById("score-fraction").textContent = res.correct+" of "+res.total+" correct";
+  document.getElementById("score-bar").style.width = res.score+"%";
+  document.getElementById("reading-time").textContent = "⏱ Reading Time: "+res.readingTime;
+
+  let label="", color="";
+  if(res.score>=75){label="Excellent! 🌟";color="var(--easy)";}
+  else if(res.score>=60){label="Good Job! 👍";color="var(--accent)";}
+  else{label="Needs Improvement 📚";color="var(--hard)";}
+  document.getElementById("score-label").textContent = label;
+  document.getElementById("score-label").style.color = color;
+
+  document.getElementById("diff-val").textContent = res.difficulty+"/5";
+
+  let rec="", recColor="";
+  if(res.score>=75){rec="Step UP ↑";recColor="var(--easy)";}
+  else if(res.score>=60){rec="Maintain ✓";recColor="var(--accent)";}
+  else{rec="Step DOWN ↓";recColor="var(--hard)";}
+  document.getElementById("rec-badge").innerHTML =
+    `<span style="font-size:16px;font-weight:800;color:${recColor}">${rec}</span>
+     <div style="font-size:12px;color:var(--muted);margin-top:4px">Based on your score</div>`;
+
+  if(res.shortAnswer){
+    document.getElementById("sa-section").style.display="block";
+    document.getElementById("sa-display").textContent = res.shortAnswer;
+  }
+</script>
+</body>
+</html>

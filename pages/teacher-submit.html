@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Submit Passage — ReadWise</title>
+  <link rel="stylesheet" href="../stylesheets/shared.css">
+</head>
+<body>
+<div class="demo-banner">ReadWise System | Pulo National High School</div>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">RW</div><h2>ReadWise</h2><p>Teacher Portal</p>
+    </div>
+    <nav>
+      <a href="teacher-dashboard.html"><span class="icon">🏠</span> Dashboard</a>
+      <a href="teacher-passages.html"><span class="icon">📚</span> Passage Library</a>
+      <a href="teacher-submit.html" class="active"><span class="icon">➕</span> Submit Passage</a>
+      <a href="teacher-students.html"><span class="icon">👥</span> Students</a>
+      <a href="teacher-recommendations.html"><span class="icon">🔔</span> Recommendations</a>
+      <a href="teacher-reports.html"><span class="icon">📊</span> Reports</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-info"><strong>Ms. Ana Villanueva</strong>Grade 7 English</div>
+      <button class="logout-btn" onclick="sessionStorage.clear();window.location.href='../login.html'">⬅ Logout</button>
+    </div>
+  </aside>
+  <main class="main">
+    <div class="breadcrumb"><a href="teacher-dashboard.html">Dashboard</a> › Submit Passage</div>
+    <div class="page-header">
+      <h1>➕ Submit New Passage</h1>
+      <p>Paste a reading passage and let the SVM classifier predict its difficulty level.</p>
+    </div>
+    <div class="card-grid card-grid-2">
+      <div class="card">
+        <div class="section-title">📄 Passage Input</div>
+        <div class="form-group">
+          <label class="form-label">Passage Title</label>
+          <input class="form-control" id="passage-title" placeholder="e.g. The Solar System">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Genre</label>
+          <select class="form-control" id="passage-genre">
+            <option>Expository</option><option>Narrative</option>
+            <option>Persuasive</option><option>Descriptive</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Passage Text</label>
+          <textarea class="form-control" id="passage-text" rows="10"
+            placeholder="Paste or type the reading passage here (minimum 80 words)..."></textarea>
+        </div>
+        <button class="btn btn-primary btn-block" id="analyze-btn" onclick="analyzePassage()">
+          🔍 Analyze Passage (SVM)
+        </button>
+      </div>
+      <div class="card" id="result-panel">
+        <div class="section-title">🤖 SVM Prediction Results</div>
+        <div id="result-content">
+          <div style="text-align:center;padding:40px 0;color:var(--muted)">
+            <div style="font-size:48px;margin-bottom:12px">🔍</div>
+            <p>Paste a passage and click Analyze to see the SVM classifier results.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<div class="toast" id="toast"></div>
+<script src="../mockData.js"></script>
+<script>
+  function analyzePassage(){
+    const text = document.getElementById("passage-text").value.trim();
+    if(text.length < 50){
+      showToast("⚠️ Please enter a longer passage (min 80 words).", "#c0392b");
+      return;
+    }
+    document.getElementById("result-content").innerHTML =
+      `<div style="text-align:center;padding:40px 0">
+        <div class="spinner"></div>
+        <p style="margin-top:16px;color:var(--muted);font-size:14px">Running SVM classifier...<br>Extracting linguistic features...</p>
+      </div>`;
+
+    const words = text.split(/\s+/).filter(Boolean);
+    const wordCount = words.length;
+    const sentences = text.split(/[.!?]+/).filter(s=>s.trim().length>3);
+    const avgSentLen = (wordCount/(sentences.length||1)).toFixed(1);
+    const avgWordLen = (words.reduce((a,w)=>a+w.replace(/[^a-zA-Z]/g,"").length,0)/wordCount).toFixed(1);
+    const uniqueWords = new Set(words.map(w=>w.toLowerCase().replace(/[^a-z]/g,""))).size;
+    const ttr = (uniqueWords/wordCount).toFixed(2);
+
+    let label="MODERATE";
+    if(parseFloat(avgSentLen)<12 && parseFloat(avgWordLen)<5 && wordCount<150) label="EASY";
+    else if(parseFloat(avgSentLen)>18 || parseFloat(avgWordLen)>6 || wordCount>250) label="HARD";
+
+    setTimeout(()=>{
+      document.getElementById("result-content").innerHTML = `
+        <div style="text-align:center;margin-bottom:20px">
+          <div style="font-size:12px;color:var(--muted);margin-bottom:8px">PREDICTED LABEL</div>
+          <span class="badge ${badgeClass(label)}" style="font-size:22px;padding:10px 28px">${label}</span>
+          <div style="font-size:12px;color:var(--muted);margin-top:8px">SVM Classifier — Linear Kernel — One-vs-Rest</div>
+        </div>
+        <div style="background:#f7fafc;border-radius:8px;padding:16px;margin-bottom:16px">
+          <div style="font-size:13px;font-weight:700;color:var(--secondary);margin-bottom:12px">📊 Feature Breakdown</div>
+          ${[
+            ["Avg Sentence Length", avgSentLen+" words"],
+            ["Avg Word Length", avgWordLen+" characters"],
+            ["Type-Token Ratio", ttr],
+            ["Passage Length", wordCount+" words"],
+            ["Sentence Count", sentences.length]
+          ].map(([k,v])=>`
+            <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px">
+              <span style="color:var(--muted)">${k}</span>
+              <strong>${v}</strong>
+            </div>
+          `).join("")}
+        </div>
+        <div class="form-group">
+          <label class="form-label">Override Label (Optional)</label>
+          <select class="form-control" id="override-label">
+            <option value="">— Use Predicted: ${label} —</option>
+            <option>EASY</option><option>MODERATE</option><option>HARD</option>
+          </select>
+        </div>
+        <button class="btn btn-success btn-block" onclick="saveToLibrary('${label}')">💾 Save to Passage Library</button>
+      `;
+    }, 2000);
+  }
+
+  function saveToLibrary(predictedLabel){
+    const override = document.getElementById("override-label").value;
+    const finalLabel = override || predictedLabel;
+    showToast("✅ Passage saved to library as "+finalLabel+"!");
+    setTimeout(()=>window.location.href="teacher-passages.html",1500);
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>My Progress — ReadWise</title>
+ <link rel="stylesheet" href="../stylesheets/shared.css">
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+<div class="demo-banner">ReadWise System | Pulo National High School</div>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">RW</div><h2>ReadWise</h2><p>Student Portal</p>
+    </div>
+    <nav>
+        <a href="student-profile.html"><span class="icon">👤</span> My Profile</a>
+      <a href="student-dashboard.html"><span class="icon">🏠</span> Dashboard</a>
+      <a href="student-passage.html"><span class="icon">📖</span> My Passage</a>
+      <a href="student-progress.html" class="active"><span class="icon">📊</span> My Progress</a>
+      <a href="student-pre-assessment.html"><span class="icon">📝</span> Pre-Assessment</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-info"><strong id="sb-name">—</strong>Grade 7</div>
+      <button class="logout-btn" onclick="sessionStorage.clear();window.location.href='../login.html'">⬅ Logout</button>
+    </div>
+  </aside>
+  <main class="main">
+    <div class="page-header">
+      <h1>📊 My Progress Tracker</h1>
+      <p>Weekly reading scores and difficulty recommendations</p>
+    </div>
+    <div class="card-grid card-grid-3" style="margin-bottom:16px">
+      <div class="stat-card">
+        <div class="stat-label">Current Level</div>
+        <div id="cur-level" class="level-big" style="margin-top:6px;font-size:16px">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Best Score</div>
+        <div class="stat-val" id="best-score">—%</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Latest Score</div>
+        <div class="stat-val" id="latest-score">—%</div>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:16px">
+      <div class="section-title">📈 Score Trend (Weeks 1–4)</div>
+      <div class="chart-wrap" style="height:260px"><canvas id="progressChart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="section-title">📋 Session History & Recommendations</div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Week</th><th>Score</th><th>Difficulty</th><th>Progress</th><th>Recommendation</th></tr>
+          </thead>
+          <tbody id="history-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+<script src="../mockData.js"></script>
+<script>
+  const s = getCurrentStudent();
+  document.getElementById("sb-name").textContent = s.name;
+  const prog = MOCK.weeklyProgress[s.id];
+  const scores = prog.map(w=>w.score);
+
+  const cl = document.getElementById("cur-level");
+  cl.textContent = s.classLevel;
+  cl.style.background = levelBg(s.classLevel);
+  cl.style.color = levelColor(s.classLevel);
+  document.getElementById("best-score").textContent = Math.max(...scores)+"%";
+  document.getElementById("latest-score").textContent = scores[scores.length-1]+"%";
+
+  const tbody = document.getElementById("history-body");
+  prog.forEach(w=>{
+    const recColor = w.recommendation.includes("UP")?"var(--easy)":
+                     w.recommendation.includes("DOWN")?"var(--hard)":"var(--accent)";
+    tbody.innerHTML += `
+      <tr>
+        <td><strong>Week ${w.week}</strong></td>
+        <td><strong>${w.score}%</strong></td>
+        <td><span class="badge ${badgeClass(w.difficulty)}">${w.difficulty}</span></td>
+        <td>
+          <div class="progress" style="width:120px">
+            <div class="progress-bar" style="width:${w.score}%;background:${w.score>=65?"var(--easy)":w.score>=50?"var(--accent)":"var(--hard)"}"></div>
+          </div>
+        </td>
+        <td><span style="font-weight:700;color:${recColor}">${w.recommendation}</span></td>
+      </tr>
+    `;
+  });
+
+  new Chart(document.getElementById("progressChart"),{
+    type:"line",
+    data:{
+      labels:prog.map(w=>"Week "+w.week),
+      datasets:[{
+        label:"Score %",
+        data:scores,
+        borderColor:"var(--primary)",
+        backgroundColor:"rgba(30,127,127,0.1)",
+        fill:true, tension:.4, pointRadius:6,
+        pointBackgroundColor:scores.map(s=>s>=65?"#2e7d5e":s>=50?"#c97b2a":"#c0392b"),
+        pointBorderColor:"#fff", pointBorderWidth:2
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{
+        y:{beginAtZero:true,max:100,ticks:{callback:v=>v+"%"},
+           grid:{color:"rgba(0,0,0,0.05)"}},
+        x:{grid:{display:false}}
+      }
+    }
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Reading — ReadWise</title>
+ <link rel="stylesheet" href="../stylesheets/shared.css">
+  <style>
+    .reading-page{max-width:760px;margin:0 auto;}
+    .timer-bar{display:flex;align-items:center;justify-content:space-between;
+      padding:12px 20px;background:#fff;border-radius:10px;box-shadow:var(--shadow);
+      margin-bottom:20px;position:sticky;top:52px;z-index:50;}
+    .timer-val{font-size:18px;font-weight:800;color:var(--primary);font-variant-numeric:tabular-nums;}
+  </style>
+</head>
+<body>
+<div class="demo-banner">ReadWise System | Pulo National High School</div>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">RW</div><h2>ReadWise</h2><p>Student Portal</p>
+    </div>
+    <nav>
+        <a href="student-profile.html"><span class="icon">👤</span> My Profile</a>
+      <a href="student-dashboard.html"><span class="icon">🏠</span> Dashboard</a>
+      <a href="student-passage.html" class="active"><span class="icon">📖</span> My Passage</a>
+      <a href="student-progress.html"><span class="icon">📊</span> My Progress</a>
+      <a href="student-pre-assessment.html"><span class="icon">📝</span> Pre-Assessment</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-info"><strong id="sb-name">—</strong>Grade 7</div>
+      <button class="logout-btn" onclick="sessionStorage.clear();window.location.href='../login.html'">⬅ Logout</button>
+    </div>
+  </aside>
+  <main class="main">
+    <div class="reading-page">
+      <button class="back-btn" onclick="history.back()">← Back</button>
+      <div class="timer-bar">
+        <div>
+          <span style="font-size:13px;color:var(--muted);font-weight:600">⏱ Reading Time</span>
+          <span class="timer-val" id="timer" style="margin-left:10px">0:00</span>
+        </div>
+        <div id="timer-status" style="font-size:13px;color:var(--muted)">Reading in progress...</div>
+      </div>
+      <div class="card" id="passage-body">
+        <div id="passage-meta" style="margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border)"></div>
+        <div class="reading-area" id="passage-text"></div>
+        <div style="margin-top:30px;text-align:center">
+          <button class="btn btn-primary" id="next-btn" onclick="goToQuestions()" style="font-size:16px;padding:12px 32px">
+            ✅ Done Reading — Answer Questions
+          </button>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<script src="../mockData.js"></script>
+<script>
+  const params = new URLSearchParams(location.search);
+  const pid = params.get("id") || "p3";
+  const p = getPassage(pid);
+  const s = getCurrentStudent();
+  document.getElementById("sb-name").textContent = s ? s.name : "Student";
+
+  document.getElementById("passage-meta").innerHTML = `
+    <div style="margin-bottom:8px">
+      <span class="badge ${badgeClass(p.label)}">${p.label}</span>
+      <span class="badge badge-primary" style="margin-left:6px">${p.genre}</span>
+    </div>
+    <h2 style="font-size:20px;font-weight:700;color:var(--secondary);margin-bottom:4px">${p.title}</h2>
+    <p style="font-size:13px;color:var(--muted)">📝 ${p.words} words · ⏱ Est. ${p.time} min reading time</p>
+  `;
+
+  const paraText = p.text.split('\n').map(para=>
+    para.trim() ? `<p style="margin-bottom:1.2em">${para.trim()}</p>` : ""
+  ).join("");
+  document.getElementById("passage-text").innerHTML = paraText;
+
+  // Timer
+  let secs = 0, timerInterval = setInterval(tick, 1000);
+  function tick(){
+    secs++;
+    const m = Math.floor(secs/60), ss = secs%60;
+    document.getElementById("timer").textContent = m+":"+(ss<10?"0":"")+ss;
+  }
+
+  function goToQuestions(){
+    clearInterval(timerInterval);
+    const m = Math.floor(secs/60), ss = secs%60;
+    const timeStr = m+":"+(ss<10?"0":"")+ss;
+    document.getElementById("timer-status").textContent = "Reading Time: "+timeStr+" ✓";
+    document.getElementById("next-btn").disabled = true;
+    document.getElementById("next-btn").textContent = "Proceeding...";
+    sessionStorage.setItem("readingTime_"+pid, timeStr);
+    setTimeout(()=>{ window.location.href = "student-questions.html?id="+pid; }, 600);
+  }
+</script>
+</body>
+</html>

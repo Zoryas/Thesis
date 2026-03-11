@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Students — ReadWise</title>
+  <link rel="stylesheet" href="../stylesheets/shared.css">
+</head>
+<body>
+<div class="demo-banner">ReadWise System | Pulo National High School</div>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">RW</div><h2>ReadWise</h2><p>Teacher Portal</p>
+    </div>
+    <nav>
+      <a href="teacher-dashboard.html"><span class="icon">🏠</span> Dashboard</a>
+      <a href="teacher-passages.html"><span class="icon">📚</span> Passage Library</a>
+      <a href="teacher-submit.html"><span class="icon">➕</span> Submit Passage</a>
+      <a href="teacher-students.html" class="active"><span class="icon">👥</span> Students</a>
+      <a href="teacher-recommendations.html"><span class="icon">🔔</span> Recommendations</a>
+      <a href="teacher-reports.html"><span class="icon">📊</span> Reports</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-info"><strong>Ms. Ana Villanueva</strong>Grade 7 English</div>
+      <button class="logout-btn" onclick="sessionStorage.clear();window.location.href='../login.html'">⬅ Logout</button>
+    </div>
+  </aside>
+  <main class="main">
+    <div class="breadcrumb"><a href="teacher-dashboard.html">Dashboard</a> › Students</div>
+    <div class="page-header">
+      <h1>👥 Student Roster</h1>
+      <p>Grade 7 — Sampaguita Section · 3 enrolled students</p>
+    </div>
+    <div class="card">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>#</th><th>Student Name</th><th>Current Level</th><th>Pre-Score</th><th>Latest Score</th><th>Latest Recommendation</th><th>Action</th></tr>
+          </thead>
+          <tbody id="students-table"></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+<script src="../mockData.js"></script>
+<script>
+  const tbody = document.getElementById("students-table");
+  MOCK.students.forEach((s,i)=>{
+    const prog = MOCK.weeklyProgress[s.id];
+    const latest = prog[prog.length-1];
+    const recColor = latest.recommendation.includes("UP")?"var(--easy)":
+                     latest.recommendation.includes("DOWN")?"var(--hard)":"var(--accent)";
+    tbody.innerHTML += `
+      <tr>
+        <td>${i+1}</td>
+        <td><strong>${s.name}</strong><br><span style="font-size:12px;color:var(--muted)">Grade ${s.grade} · ${s.section}</span></td>
+        <td><span class="badge ${badgeClass(s.classLevel)}">${s.classLevel}</span></td>
+        <td>${s.preScore}%
+          <div class="progress" style="width:80px;margin-top:4px">
+            <div class="progress-bar" style="width:${s.preScore}%;background:var(--primary)"></div>
+          </div>
+        </td>
+        <td><strong>${latest.score}%</strong></td>
+        <td><span style="font-weight:700;font-size:13px;color:${recColor}">${latest.recommendation}</span></td>
+        <td><a href="teacher-student-detail.html?id=${s.id}" class="btn btn-outline btn-sm">👁 View Details</a></td>
+      </tr>
+    `;
+  });
+</script>
+</body>
+</html>

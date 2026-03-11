@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>My Passage — ReadWise</title>
+ <link rel="stylesheet" href="../stylesheets/shared.css">
+
+</head>
+<body>
+<div class="demo-banner">ReadWise System | Pulo National High School</div>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">RW</div><h2>ReadWise</h2><p>Student Portal</p>
+    </div>
+    <nav>
+      <a href="student-profile.html"><span class="icon">👤</span> My Profile</a>
+      <a href="student-dashboard.html"><span class="icon">🏠</span> Dashboard</a>
+      <a href="student-passage.html" class="active"><span class="icon">📖</span> My Passage</a>
+      <a href="student-progress.html"><span class="icon">📊</span> My Progress</a>
+      <a href="student-pre-assessment.html"><span class="icon">📝</span> Pre-Assessment</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-info"><strong id="sb-name">—</strong>Grade 7</div>
+      <button class="logout-btn" onclick="sessionStorage.clear();window.location.href='../login.html'">⬅ Logout</button>
+    </div>
+  </aside>
+  <main class="main">
+    <div class="page-header">
+      <h1>📖 My Passage</h1>
+      <p>Your currently assigned reading passage based on your difficulty level.</p>
+    </div>
+    <div class="card" id="passage-detail"></div>
+  </main>
+</div>
+<script src="../mockData.js"></script>
+<script>
+  const s = getCurrentStudent();
+  document.getElementById("sb-name").textContent = s.name;
+  const p = getAssignedPassage(s);
+  document.getElementById("passage-detail").innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;margin-bottom:20px">
+      <div>
+        <div style="margin-bottom:8px">
+          <span class="badge ${badgeClass(p.label)}">${p.label}</span>
+          <span class="badge badge-primary" style="margin-left:6px">${p.genre}</span>
+        </div>
+        <h2 style="font-size:20px;font-weight:700;color:var(--secondary)">${p.title}</h2>
+        <p style="font-size:13px;color:var(--muted);margin-top:4px">📝 ${p.words} words · ⏱ Est. ${p.time} min · Assigned by ReadWise</p>
+      </div>
+      <a href="student-reading.html?id=${p.id}" class="btn btn-primary" style="white-space:nowrap">📖 Start Reading</a>
+    </div>
+    <div style="border-top:1px solid var(--border);padding-top:20px">
+      <div style="font-size:13px;font-weight:700;color:var(--muted);margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px">Passage Preview</div>
+      <div class="reading-area" style="font-size:15px;color:#4a5568;max-height:200px;overflow:hidden;position:relative">
+        ${p.text.split('\n')[0].substring(0,300)}...
+        <div style="position:absolute;bottom:0;left:0;right:0;height:60px;background:linear-gradient(transparent,#fff)"></div>
+      </div>
+      <div style="margin-top:14px">
+        <a href="student-reading.html?id=${p.id}" class="btn btn-outline">Read Full Passage & Answer Questions →</a>
+      </div>
+    </div>
+    <div style="margin-top:20px;padding:14px;background:#f7fafc;border-radius:8px;font-size:13px;color:var(--muted)">
+      ℹ️ <strong>How it works:</strong> Read the passage at your own pace. A timer will track your reading time.
+      After reading, you'll answer comprehension questions. Your score and difficulty rating will be submitted to your teacher.
+    </div>
+  `;
+</script>
+</body>
+</html>

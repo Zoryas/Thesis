@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>My Profile — ReadWise</title>
+  <link rel="stylesheet" href="../stylesheets/shared.css">
+  <style>
+    .avatar-wrap {
+      position: relative;
+      width: 90px;
+      height: 90px;
+      flex-shrink: 0;
+    }
+    .avatar-wrap img,
+    .avatar-wrap .avatar-initials {
+      width: 90px;
+      height: 90px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 3px solid var(--primary);
+    }
+    .avatar-wrap .avatar-initials {
+      background: var(--primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 30px;
+      font-weight: 800;
+      color: #fff;
+    }
+    .avatar-upload-btn {
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      width: 28px;
+      height: 28px;
+      background: var(--secondary);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 14px;
+      border: 2px solid #fff;
+      transition: .2s;
+    }
+    .avatar-upload-btn:hover { background: var(--primary); }
+    #avatar-file-input { display: none; }
+
+    .remove-photo-btn {
+      font-size: 12px;
+      color: var(--hard);
+      background: none;
+      border: none;
+      cursor: pointer;
+      text-decoration: underline;
+      margin-top: 6px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+<div class="demo-banner">🎓 Demo Mode — Thesis Prototype — ReadWise System</div>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">RW</div><h2>ReadWise</h2><p>Student Portal</p>
+    </div>
+    <nav>
+          <a href="student-profile.html" class="active"><span class="icon">👤</span> My Profile</a>
+      <a href="student-dashboard.html"><span class="icon">🏠</span> Dashboard</a>
+      <a href="student-passage.html"><span class="icon">📖</span> My Passage</a>
+      <a href="student-progress.html"><span class="icon">📊</span> My Progress</a>
+      <a href="student-pre-assessment.html"><span class="icon">📝</span> Pre-Assessment</a>
+    
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-info"><strong id="sb-name">—</strong>Grade 7</div>
+      <button class="logout-btn" onclick="sessionStorage.clear();window.location.href='../login.html'">⬅ Logout</button>
+    </div>
+  </aside>
+  <main class="main">
+    <div class="page-header">
+      <h1>👤 My Profile</h1>
+      <p>Your account information and reading program details</p>
+    </div>
+
+    <div class="card-grid card-grid-2" style="margin-bottom:16px;align-items:start">
+
+      <!-- Left: Identity -->
+      <div class="card">
+        <div style="display:flex;align-items:center;gap:18px;margin-bottom:20px;
+          padding-bottom:20px;border-bottom:1px solid var(--border)">
+
+          <!-- Avatar with upload button -->
+          <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+            <div class="avatar-wrap">
+              <!-- Shows either uploaded photo or initials -->
+              <div class="avatar-initials" id="avatar-initials">—</div>
+              <img id="avatar-img" src="" alt="Profile Photo"
+                style="display:none;width:90px;height:90px;border-radius:50%;
+                  object-fit:cover;border:3px solid var(--primary);">
+              <!-- Camera icon button -->
+              <label class="avatar-upload-btn" for="avatar-file-input" title="Upload photo">
+                📷
+              </label>
+              <input type="file" id="avatar-file-input" accept="image/*">
+            </div>
+            <button class="remove-photo-btn" id="remove-photo-btn" onclick="removePhoto()">
+              ✕ Remove photo
+            </button>
+          </div>
+
+          <div>
+            <div id="full-name" style="font-size:20px;font-weight:800;color:var(--secondary)">—</div>
+            <div style="font-size:13px;color:var(--muted);margin-top:3px">Grade 7 Student</div>
+            <div id="level-pill" style="margin-top:8px"></div>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:0">
+          <div style="display:flex;justify-content:space-between;font-size:14px;
+            padding:11px 0;border-bottom:1px solid var(--border)">
+            <span style="color:var(--muted);font-weight:600">Full Name</span>
+            <span id="info-name" style="font-weight:700;color:var(--secondary)">—</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:14px;
+            padding:11px 0;border-bottom:1px solid var(--border)">
+            <span style="color:var(--muted);font-weight:600">Grade & Section</span>
+            <span id="info-grade" style="font-weight:700;color:var(--secondary)">—</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:14px;
+            padding:11px 0;border-bottom:1px solid var(--border)">
+            <span style="color:var(--muted);font-weight:600">School</span>
+            <span style="font-weight:700;color:var(--secondary)">Pulo National High School</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:14px;
+            padding:11px 0;border-bottom:1px solid var(--border)">
+            <span style="color:var(--muted);font-weight:600">Subject</span>
+            <span style="font-weight:700;color:var(--secondary)">English</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:14px;
+            padding:11px 0;border-bottom:1px solid var(--border)">
+            <span style="color:var(--muted);font-weight:600">Teacher</span>
+            <span style="font-weight:700;color:var(--secondary)">Ms. Ana Villanueva</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:14px;
+            padding:11px 0">
+            <span style="color:var(--muted);font-weight:600">Program Week</span>
+            <span style="font-weight:700;color:var(--secondary)">Week 5 of 8</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Stats -->
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="card">
+          <div class="section-title">📊 Reading Statistics</div>
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <div>
+              <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px">
+                <span style="color:var(--muted);font-weight:600">Pre-Assessment Score</span>
+                <strong id="stat-pre">—%</strong>
+              </div>
+              <div class="progress">
+                <div class="progress-bar" id="bar-pre" style="background:var(--primary)"></div>
+              </div>
+            </div>
+            <div>
+              <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px">
+                <span style="color:var(--muted);font-weight:600">Latest Session Score</span>
+                <strong id="stat-latest">—%</strong>
+              </div>
+              <div class="progress">
+                <div class="progress-bar" id="bar-latest"></div>
+              </div>
+            </div>
+            <div>
+              <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px">
+                <span style="color:var(--muted);font-weight:600">Best Score</span>
+                <strong id="stat-best">—%</strong>
+              </div>
+              <div class="progress">
+                <div class="progress-bar" id="bar-best" style="background:var(--easy)"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="section-title">🏷️ Reading Level History</div>
+          <div id="level-history" style="display:flex;flex-direction:column;gap:8px"></div>
+        </div>
+
+        <div class="card" style="background:linear-gradient(135deg,var(--secondary),#1e4a8a);color:#fff">
+          <div style="font-size:13px;opacity:.75;margin-bottom:4px">Current System Recommendation</div>
+          <div id="rec-display" style="font-size:18px;font-weight:800">—</div>
+          <div style="font-size:12px;opacity:.65;margin-top:4px">Based on last 2 sessions · Teacher confirmed</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Demo credentials -->
+    <div class="card" style="border-left:4px solid var(--primary);background:#f0fafa">
+      <div style="font-size:13px;color:var(--secondary)">
+        <strong>🔐 Demo Credentials</strong><br>
+        <span style="color:var(--muted)">Login credentials shown for demo purposes only.</span>
+        <div style="margin-top:8px;display:flex;gap:24px;flex-wrap:wrap">
+          <div>
+            <span style="color:var(--muted)">Email: </span>
+            <code id="demo-email" style="background:#e0f2f2;padding:2px 8px;
+              border-radius:4px;font-size:13px">—</code>
+          </div>
+          <div>
+            <span style="color:var(--muted)">Password: </span>
+            <code style="background:#e0f2f2;padding:2px 8px;
+              border-radius:4px;font-size:13px">password123</code>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+<div class="toast" id="toast"></div>
+<script src="../mockData.js"></script>
+<script>
+  const s      = getCurrentStudent();
+  const prog   = MOCK.weeklyProgress[s.id];
+  const scores = prog.map(function(w){ return w.score; });
+  const latest = prog[prog.length - 1];
+
+  // Initials
+  const initials = s.name.split(" ").map(function(n){ return n[0]; }).join("").substring(0,2);
+  document.getElementById("avatar-initials").textContent = initials;
+  document.getElementById("sb-name").textContent         = s.name;
+  document.getElementById("full-name").textContent       = s.name;
+  document.getElementById("info-name").textContent       = s.name;
+  document.getElementById("info-grade").textContent      = "Grade " + s.grade + " — " + s.section;
+
+  // Level pill
+  document.getElementById("level-pill").innerHTML =
+    '<span class="badge ' + badgeClass(s.classLevel) + '" style="font-size:13px;padding:4px 14px">' +
+    s.classLevel + ' Level</span>';
+
+  // Stats
+  const best = Math.max.apply(null, scores);
+  document.getElementById("stat-pre").textContent    = s.preScore + "%";
+  document.getElementById("bar-pre").style.width     = s.preScore + "%";
+  document.getElementById("stat-latest").textContent = latest.score + "%";
+  document.getElementById("bar-latest").style.width  = latest.score + "%";
+  document.getElementById("bar-latest").style.background =
+    latest.score >= 65 ? "var(--easy)" : latest.score >= 50 ? "var(--accent)" : "var(--hard)";
+  document.getElementById("stat-best").textContent   = best + "%";
+  document.getElementById("bar-best").style.width    = best + "%";
+  document.getElementById("rec-display").textContent = latest.recommendation;
+
+  // Level history
+  const histWrap = document.getElementById("level-history");
+  prog.forEach(function(w) {
+    const row = document.createElement("div");
+    row.style.cssText = "display:flex;justify-content:space-between;align-items:center;" +
+      "padding:8px 10px;background:#f7fafc;border-radius:8px;font-size:13px";
+    row.innerHTML =
+      '<span style="color:var(--muted)">Week ' + w.week + '</span>' +
+      '<span class="badge ' + badgeClass(w.difficulty) + '">' + w.difficulty + '</span>' +
+      '<strong>' + w.score + '%</strong>';
+    histWrap.appendChild(row);
+  });
+
+  // Demo email
+  var emails = { s1:"juan.delacruz@pnhs.edu", s2:"maria.santos@pnhs.edu", s3:"carlo.reyes@pnhs.edu" };
+  document.getElementById("demo-email").textContent = emails[s.id] || "student@example.com";
+
+  // ============================================================
+  // PROFILE PHOTO — Upload, display, persist with localStorage
+  // ============================================================
+  var photoKey  = "profilePhoto_" + s.id;
+  var imgEl     = document.getElementById("avatar-img");
+  var initEl    = document.getElementById("avatar-initials");
+  var removeBtn = document.getElementById("remove-photo-btn");
+  var fileInput = document.getElementById("avatar-file-input");
+
+  // Load saved photo on page load
+  var saved = localStorage.getItem(photoKey);
+  if (saved) {
+    showPhoto(saved);
+  }
+
+  // When user picks a file
+  fileInput.addEventListener("change", function() {
+    var file = fileInput.files[0];
+    if (!file) return;
+
+    // Validate: image only, max 5MB
+    if (!file.type.startsWith("image/")) {
+      showToast("⚠️ Please select an image file.", "#c0392b");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      showToast("⚠️ Image must be under 5MB.", "#c0392b");
+      return;
+    }
+
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var dataUrl = e.target.result;
+      localStorage.setItem(photoKey, dataUrl);
+      showPhoto(dataUrl);
+      showToast("✅ Profile photo updated!");
+    };
+    reader.readAsDataURL(file);
+  });
+
+  function showPhoto(src) {
+    imgEl.src            = src;
+    imgEl.style.display  = "block";
+    initEl.style.display = "none";
+    removeBtn.style.display = "block";
+  }
+
+  function removePhoto() {
+    localStorage.removeItem(photoKey);
+    imgEl.src            = "";
+    imgEl.style.display  = "none";
+    initEl.style.display = "flex";
+    removeBtn.style.display = "none";
+    fileInput.value      = "";
+    showToast("🗑️ Profile photo removed.");
+  }
+</script>
+</body>
+</html>

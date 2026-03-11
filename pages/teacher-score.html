@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Score Short Answer — ReadWise</title>
+  <link rel="stylesheet" href="../stylesheets/shared.css">
+</head>
+<body>
+<div class="demo-banner">🎓 Demo Mode — Thesis Prototype — ReadWise System</div>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">RW</div><h2>ReadWise</h2><p>Teacher Portal</p>
+    </div>
+    <nav>
+      <a href="teacher-dashboard.html"><span class="icon">🏠</span> Dashboard</a>
+      <a href="teacher-passages.html"><span class="icon">📚</span> Passage Library</a>
+      <a href="teacher-submit.html"><span class="icon">➕</span> Submit Passage</a>
+      <a href="teacher-students.html" class="active"><span class="icon">👥</span> Students</a>
+      <a href="teacher-recommendations.html"><span class="icon">🔔</span> Recommendations</a>
+      <a href="teacher-reports.html"><span class="icon">📊</span> Reports</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-info"><strong>Ms. Ana Villanueva</strong>Grade 7 English</div>
+      <button class="logout-btn" onclick="sessionStorage.clear();window.location.href='../login.html'">⬅ Logout</button>
+    </div>
+  </aside>
+  <main class="main">
+    <div class="breadcrumb">
+      <a href="teacher-dashboard.html">Dashboard</a> ›
+      <a href="teacher-students.html">Students</a> ›
+      Score Short Answer
+    </div>
+    <div class="page-header">
+      <h1>✏️ Score Short Answer</h1>
+      <p>Review the student's response and assign a score using the 3-point rubric.</p>
+    </div>
+
+    <div class="card-grid card-grid-2" style="margin-bottom:16px;align-items:start">
+
+      <!-- Student Response -->
+      <div class="card">
+        <div class="section-title">📄 Student Response</div>
+        <div style="margin-bottom:12px">
+          <span style="font-size:13px;color:var(--muted)">Student:</span>
+          <strong style="margin-left:6px">Juan Dela Cruz</strong>
+          <span class="badge badge-hard" style="margin-left:8px">HARD</span>
+        </div>
+        <div style="margin-bottom:12px">
+          <span style="font-size:13px;color:var(--muted)">Passage:</span>
+          <strong style="margin-left:6px">Climate Change and Its Effects</strong>
+        </div>
+        <div style="margin-bottom:10px">
+          <div style="font-size:13px;font-weight:700;color:var(--secondary);margin-bottom:6px">Question:</div>
+          <div style="font-size:14px;color:var(--text);background:#f0fafa;padding:10px 12px;
+            border-radius:8px;border-left:3px solid var(--primary)">
+            In your own words, explain one effect of climate change on the Philippines.
+          </div>
+        </div>
+        <div>
+          <div style="font-size:13px;font-weight:700;color:var(--secondary);margin-bottom:6px">
+            Student's Answer:
+          </div>
+          <div style="font-size:14px;color:#4a5568;background:#fff8f0;padding:14px;
+            border-radius:8px;border-left:3px solid var(--accent);line-height:1.75;font-style:italic">
+            "The Philippines is often hit by strong typhoons because of climate change.
+            The sea level is also rising which can flood coastal barangays like those in Laguna de Bay.
+            Many farmers also have a hard time because of too much rain or drought."
+          </div>
+        </div>
+      </div>
+
+      <!-- Scoring Panel -->
+      <div class="card">
+        <div class="section-title">🎯 Scoring Rubric (0–3 Points)</div>
+
+        <!-- Rubric -->
+        <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px">
+          <div style="padding:10px 12px;background:#d4edda;border-radius:8px;font-size:13px">
+            <strong style="color:var(--easy)">3 Points</strong> — Clear, accurate, well-explained effect with specific detail
+          </div>
+          <div style="padding:10px 12px;background:#fff3cd;border-radius:8px;font-size:13px">
+            <strong style="color:var(--accent)">2 Points</strong> — Correct effect mentioned but lacks detail or clarity
+          </div>
+          <div style="padding:10px 12px;background:#fde8e8;border-radius:8px;font-size:13px">
+            <strong style="color:var(--hard)">1 Point</strong> — Vague or partially correct response
+          </div>
+          <div style="padding:10px 12px;background:#f7fafc;border-radius:8px;font-size:13px">
+            <strong style="color:var(--muted)">0 Points</strong> — No answer or completely incorrect
+          </div>
+        </div>
+
+        <!-- Model Answer -->
+        <div style="margin-bottom:20px">
+          <div style="font-size:13px;font-weight:700;color:var(--secondary);margin-bottom:6px">
+            📌 Model Answer (Reference):
+          </div>
+          <div style="font-size:13px;color:#4a5568;background:#f0fafa;padding:12px;
+            border-radius:8px;line-height:1.7">
+            One effect of climate change on the Philippines is the intensification of typhoons.
+            As ocean temperatures rise, tropical cyclones become stronger and more destructive,
+            causing widespread flooding, landslides, and displacement of communities — particularly
+            in coastal and low-lying areas.
+          </div>
+        </div>
+
+        <!-- Score Buttons -->
+        <div style="font-size:13px;font-weight:700;color:var(--secondary);margin-bottom:10px">
+          Assign Score:
+        </div>
+        <div style="display:flex;gap:10px;margin-bottom:16px">
+          <button class="btn score-btn" data-score="0"
+            style="flex:1;background:#f7fafc;color:var(--secondary);border:2px solid var(--border);
+              font-size:18px;font-weight:800;padding:14px"
+            onclick="selectScore(0)">0</button>
+          <button class="btn score-btn" data-score="1"
+            style="flex:1;background:#fde8e8;color:var(--hard);border:2px solid var(--hard);
+              font-size:18px;font-weight:800;padding:14px"
+            onclick="selectScore(1)">1</button>
+          <button class="btn score-btn" data-score="2"
+            style="flex:1;background:#fff3cd;color:var(--accent);border:2px solid var(--accent);
+              font-size:18px;font-weight:800;padding:14px"
+            onclick="selectScore(2)">2</button>
+          <button class="btn score-btn" data-score="3"
+            style="flex:1;background:#d4edda;color:var(--easy);border:2px solid var(--easy);
+              font-size:18px;font-weight:800;padding:14px"
+            onclick="selectScore(3)">3</button>
+        </div>
+
+        <div id="score-selected" style="text-align:center;font-size:14px;color:var(--muted);
+          margin-bottom:16px">No score selected yet</div>
+
+        <div class="form-group">
+          <label class="form-label">Teacher Feedback (optional)</label>
+          <textarea class="form-control" id="teacher-feedback" rows="3"
+            placeholder="e.g. Good effort! Try to include more specific examples next time."></textarea>
+        </div>
+
+        <button class="btn btn-primary btn-block" id="submit-score-btn"
+          onclick="submitScore()" disabled style="opacity:.5">
+          💾 Save Score
+        </button>
+      </div>
+    </div>
+  </main>
+</div>
+<div class="toast" id="toast"></div>
+<script src="../mockData.js"></script>
+<script>
+  var selectedScore = null;
+
+  function selectScore(val) {
+    selectedScore = val;
+    document.querySelectorAll(".score-btn").forEach(function(btn) {
+      btn.style.transform = "scale(1)";
+      btn.style.boxShadow = "none";
+    });
+    var active = document.querySelector(".score-btn[data-score='" + val + "']");
+    if (active) {
+      active.style.transform = "scale(1.08)";
+      active.style.boxShadow = "0 4px 12px rgba(0,0,0,0.15)";
+    }
+    var labels = ["No answer / incorrect", "Partially correct", "Correct but lacks detail", "Excellent — clear and specific"];
+    document.getElementById("score-selected").innerHTML =
+      '<strong style="font-size:16px">' + val + ' / 3 points</strong>' +
+      ' — <span style="color:var(--muted)">' + labels[val] + '</span>';
+
+    var btn = document.getElementById("submit-score-btn");
+    btn.disabled    = false;
+    btn.style.opacity = "1";
+  }
+
+  function submitScore() {
+    if (selectedScore === null) return;
+    showToast("✅ Score of " + selectedScore + "/3 saved for Juan Dela Cruz!");
+    setTimeout(function() {
+      window.location.href = "teacher-student-detail.html?id=s1";
+    }, 1500);
+  }
+</script>
+</body>
+</html>

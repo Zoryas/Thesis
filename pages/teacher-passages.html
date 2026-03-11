@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Passage Library — ReadWise</title>
+ <link rel="stylesheet" href="../stylesheets/shared.css">
+</head>
+<body>
+<div class="demo-banner">ReadWise System | Pulo National High School</div>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">RW</div><h2>ReadWise</h2><p>Teacher Portal</p>
+    </div>
+    <nav>
+      <a href="teacher-dashboard.html"><span class="icon">🏠</span> Dashboard</a>
+      <a href="teacher-passages.html" class="active"><span class="icon">📚</span> Passage Library</a>
+      <a href="teacher-submit.html"><span class="icon">➕</span> Submit Passage</a>
+      <a href="teacher-students.html"><span class="icon">👥</span> Students</a>
+      <a href="teacher-recommendations.html"><span class="icon">🔔</span> Recommendations</a>
+      <a href="teacher-reports.html"><span class="icon">📊</span> Reports</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-info"><strong>Ms. Ana Villanueva</strong>Grade 7 English</div>
+      <button class="logout-btn" onclick="sessionStorage.clear();window.location.href='../login.html'">⬅ Logout</button>
+    </div>
+  </aside>
+  <main class="main">
+    <div class="breadcrumb"><a href="teacher-dashboard.html">Dashboard</a> › Passage Library</div>
+    <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start">
+      <div>
+        <h1>📚 Passage Library</h1>
+        <p>All 6 passages with SVM-predicted difficulty labels</p>
+      </div>
+      <a href="teacher-submit.html" class="btn btn-primary">➕ Add New Passage</a>
+    </div>
+    <div id="passage-grid" style="display:flex;flex-direction:column;gap:14px"></div>
+  </main>
+</div>
+<div class="toast" id="toast"></div>
+<script src="../mockData.js"></script>
+<script>
+  const grid = document.getElementById("passage-grid");
+  MOCK.passages.forEach(p=>{
+    grid.innerHTML += `
+      <div class="card" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+        <div style="flex:1;min-width:200px">
+          <div style="margin-bottom:6px">
+            <span class="badge ${badgeClass(p.label)}">${p.label}</span>
+            <span class="badge badge-primary" style="margin-left:6px">${p.genre}</span>
+            <span style="font-size:11px;color:var(--muted);margin-left:8px;background:#f0f4f8;padding:2px 8px;border-radius:4px">
+              SVM: Linear Kernel
+            </span>
+          </div>
+          <h3 style="font-size:15px;font-weight:700;color:var(--secondary);margin-bottom:3px">${p.title}</h3>
+          <p style="font-size:13px;color:var(--muted)">📝 ${p.words} words · ⏱ ~${p.time} min</p>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-outline btn-sm" onclick="assignPassage('${p.id}','${p.title}')">📌 Assign</button>
+          <button class="btn btn-sm" style="background:#f0f4f8;color:var(--secondary)" onclick="editLabel('${p.id}')">✏️ Edit Label</button>
+        </div>
+      </div>
+    `;
+  });
+
+  function assignPassage(id,title){
+    showToast("✅ '"+title+"' assigned to class!");
+  }
+  function editLabel(id){
+    const p = getPassage(id);
+    const newLabel = prompt("Override label for '"+p.title+"'?\nEnter: EASY, MODERATE, or HARD",""+p.label);
+    if(newLabel && ["EASY","MODERATE","HARD"].includes(newLabel.toUpperCase())){
+      showToast("✅ Label updated to "+newLabel.toUpperCase());
+    }
+  }
+</script>
+</body>
+</html>
