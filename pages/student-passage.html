@@ -1,7 +1,8 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>My Passages - ReadWise</title>
   <link rel="stylesheet" href="../stylesheets/shared.css">
 </head>
@@ -13,15 +14,15 @@
       <div class="logo-mark">RW</div><h2>ReadWise</h2><p>Student Portal</p>
     </div>
     <nav>
-      <a href="student-profile.html"><span class="icon">&#128100;</span> My Profile</a>
-      <a href="student-dashboard.html"><span class="icon">&#8962;</span> Dashboard</a>
-      <a href="student-passage.html" class="active"><span class="icon">&#128214;</span> My Passage</a>
-      <a href="student-progress.html"><span class="icon">&#128202;</span> My Progress</a>
-      <a href="student-pre-assessment.html"><span class="icon">&#128221;</span> Pre-Assessment</a>
+      <a href="student-profile.html"><span class="icon"></span> My Profile</a>
+      <a href="student-dashboard.html"><span class="icon"></span> Dashboard</a>
+      <a href="student-passage.html" class="active"><span class="icon"></span> My Passage</a>
+      <a href="student-progress.html"><span class="icon"></span> My Progress</a>
+      <a href="student-pre-assessment.html"><span class="icon"></span> Pre-Assessment</a>
     </nav>
     <div class="sidebar-footer">
       <div class="user-info"><strong id="sb-name">-</strong>Grade 7</div>
-      <button class="logout-btn" onclick="sessionStorage.clear();window.location.href='../login.html'">&larr; Logout</button>
+      <button class="logout-btn" onclick="sessionStorage.clear();window.location.href='../login.html'">Logout</button>
     </div>
   </aside>
   <main class="main">
@@ -59,7 +60,7 @@
     const pending = passages.filter(function(passage) { return !completedIds.includes(passage.id); });
     const nextPassage = pending[0] || passages[0];
     container.innerHTML =
-      '<div style="margin-bottom:14px;padding:12px;border-radius:8px;background:#f7fafc">' +
+      '<div style="margin-bottom:14px;padding:12px;border-radius:12px;border:1px solid var(--border);background:var(--surface-elevated)">' +
       '<strong style="color:var(--secondary)">Next passage to complete:</strong> ' + nextPassage.title +
       "</div>" +
       passages.map(function(passage, index) {
@@ -75,7 +76,7 @@
             '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap">' +
               '<div>' +
                 '<div style="margin-bottom:6px">' +
-                  '<span class="badge ' + badgeClass(passage.label) + '">' + passage.label + '</span>' +
+                  '<span class="badge ' + badgeClass(passage.label) + '">' + getClassDisplayName(passage.label) + '</span>' +
                   '<span class="badge badge-primary" style="margin-left:6px">' + passage.genre + '</span>' +
                   '<span style="margin-left:6px;font-size:11px;color:var(--muted)">Passage ' + (index + 1) + " of " + passages.length + "</span>" +
                 "</div>" +
@@ -84,7 +85,7 @@
               "</div>" +
               status +
             "</div>" +
-            '<p style="font-size:14px;color:#4a5568;line-height:1.7;margin-bottom:10px">' + preview + "</p>" +
+            '<p style="font-size:14px;color:var(--text-soft);line-height:1.7;margin-bottom:10px">' + preview + "</p>" +
             '<a href="student-reading.html?id=' + passage.id + '" class="btn ' + buttonStyle + '">' + buttonText + "</a>" +
           "</div>"
         );
@@ -93,3 +94,4 @@
 </script>
 </body>
 </html>
+

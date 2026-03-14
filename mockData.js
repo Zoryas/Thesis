@@ -80,10 +80,53 @@ const MOCK = {
   }
 };
 
+const LEGACY_TEXT_PATTERN = /(?:Ã.|Â.|â.|ðŸ|â€|â€™|â€œ|â€\u009d|â€¢|â†|â‰|âœ|â‚)/;
+
+function looksLikeLegacyText(value) {
+  return typeof value === "string" && LEGACY_TEXT_PATTERN.test(value);
+}
+
+function repairLegacyText(value) {
+  let next = String(value || "");
+  if (!looksLikeLegacyText(next)) return next;
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    if (!looksLikeLegacyText(next)) break;
+    try {
+      const decoded = decodeURIComponent(escape(next));
+      if (!decoded || decoded === next) break;
+      next = decoded;
+    } catch (error) {
+      break;
+    }
+  }
+
+  return next.replace(/\uFEFF/g, "");
+}
+
+function repairLegacyData(value) {
+  if (typeof value === "string") return repairLegacyText(value);
+
+  if (Array.isArray(value)) {
+    return value.map(function(entry) { return repairLegacyData(entry); });
+  }
+
+  if (value && typeof value === "object") {
+    Object.keys(value).forEach(function(key) {
+      value[key] = repairLegacyData(value[key]);
+    });
+  }
+
+  return value;
+}
+
+repairLegacyData(MOCK);
+
 const PASSAGES_STORAGE_KEY = "readwise_passages_v1";
 const ASSIGNMENTS_STORAGE_KEY = "readwise_weekly_assignments_v1";
 const ASSIGNMENTS_ACTIVE_WEEK_KEY = "readwise_active_week_v1";
 const COMPLETION_STORAGE_KEY = "readwise_weekly_completion_v1";
+const THEME_PREFERENCE_KEY = "readwise_theme_preference_v1";
 const MAX_WEEKLY_PASSAGES_PER_CLASS = 5;
 const TOTAL_PROGRAM_WEEKS = 8;
 const CLASS_LEVELS = ["EASY", "MODERATE", "HARD"];
@@ -179,7 +222,7 @@ function normalizeQuestionType(type, difficulty) {
 
 function toStringArray(values) {
   if (!Array.isArray(values)) return [];
-  return values.map(function(value) { return String(value || "").trim(); });
+  return values.map(function(value) { return repairLegacyText(String(value || "").trim()); });
 }
 
 function parseDelimitedAnswers(value, delimiter) {
@@ -205,7 +248,7 @@ function normalizeAssessmentQuestion(question) {
   }
   const type = normalizeQuestionType(candidateType, difficulty);
 
-  const prompt = String(source.prompt || source.q || "").trim();
+  const prompt = repairLegacyText(String(source.prompt || source.q || "").trim());
   const optionSource = Array.isArray(source.options) ? source.options : source.opts;
   let options = toStringArray(optionSource);
   const answerIndexRaw = source.answerIndex !== undefined ? source.answerIndex : source.ans;
@@ -263,9 +306,9 @@ function normalizeAssessmentQuestion(question) {
 function normalizePassageData(passage) {
   const normalized = Object.assign({}, passage);
   normalized.id = normalized.id || "";
-  normalized.title = String(normalized.title || "").trim();
-  normalized.genre = String(normalized.genre || "Expository").trim() || "Expository";
-  normalized.text = String(normalized.text || "").trim();
+  normalized.title = repairLegacyText(String(normalized.title || "").trim());
+  normalized.genre = repairLegacyText(String(normalized.genre || "Expository").trim()) || "Expository";
+  normalized.text = repairLegacyText(String(normalized.text || "").trim());
   normalized.label = String(normalized.label || "MODERATE").trim().toUpperCase() || "MODERATE";
   normalized.words = countPassageWords(normalized.text);
   normalized.time = estimateReadingTime(normalized.words);
@@ -282,12 +325,12 @@ function normalizePassageData(passage) {
       type: mapPassageLabelToQuestionDifficulty(normalized.label) === "MODERATE"
         ? "multiple_choice_harder"
         : "multiple_choice",
-      q: String(question.q || "").trim(),
-      opts: Array.isArray(question.opts) ? question.opts.slice(0, 4).map(function(opt) { return String(opt || "").trim(); }) : ["", "", "", ""],
+      q: repairLegacyText(String(question.q || "").trim()),
+      opts: Array.isArray(question.opts) ? question.opts.slice(0, 4).map(function(opt) { return repairLegacyText(String(opt || "").trim()); }) : ["", "", "", ""],
       ans: Number.isInteger(question.ans) ? question.ans : 0
     };
   });
-  const legacyShortAnswer = String(MOCK.shortAnswer[normalized.id] || "").trim();
+  const legacyShortAnswer = repairLegacyText(String(MOCK.shortAnswer[normalized.id] || "").trim());
   normalized.assessment = normalizeAssessmentData(normalized.assessment || {
     questions: legacyQuestions,
     shortAnswerPrompt: legacyShortAnswer
@@ -305,7 +348,7 @@ function normalizeAssessmentData(assessment) {
 
   return {
     questions: questions,
-    shortAnswerPrompt: String(source.shortAnswerPrompt || source.shortAnswer || "").trim()
+    shortAnswerPrompt: repairLegacyText(String(source.shortAnswerPrompt || source.shortAnswer || "").trim())
   };
 }
 
@@ -587,8 +630,31 @@ function getStudent(id)       { return MOCK.students.find(s=>s.id===id); }
 function getPassage(id)       { return MOCK.passages.find(p=>p.id===id); }
 function getPassages()        { return cloneData(MOCK.passages); }
 function getCurrentStudent()  { return getStudent(sessionStorage.getItem("studentId")||"s1"); }
-function levelColor(l)        { return l==="EASY"?"#2e7d5e":l==="MODERATE"?"#c97b2a":"#c0392b"; }
-function levelBg(l)           { return l==="EASY"?"#d4edda":l==="MODERATE"?"#fff3cd":"#fde8e8"; }
+function themeColor(name, fallback) {
+  if (typeof window === "undefined" || !window.getComputedStyle || !document.documentElement) {
+    return fallback;
+  }
+  const value = window.getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  return value || fallback;
+}
+function isDarkAppearance()   {
+  return typeof document !== "undefined" &&
+    document.documentElement &&
+    document.documentElement.dataset.appearance === "dark";
+}
+function levelColor(l) {
+  const level = normalizeClassLevel(l);
+  if (level === "EASY") return themeColor("--easy", "#34c759");
+  if (level === "MODERATE") return themeColor("--moderate", "#ff9f0a");
+  return themeColor("--hard", "#ff453a");
+}
+function levelBg(l) {
+  const level = normalizeClassLevel(l);
+  const alpha = isDarkAppearance() ? 0.22 : 0.14;
+  if (level === "EASY") return "rgba(52, 199, 89, " + alpha + ")";
+  if (level === "MODERATE") return "rgba(255, 159, 10, " + alpha + ")";
+  return "rgba(255, 69, 58, " + alpha + ")";
+}
 function badgeClass(l)        { return l==="EASY"?"badge-easy":l==="MODERATE"?"badge-moderate":"badge-hard"; }
 function getAssignedPassage(s) {
   const week = getActiveWeek();
@@ -642,6 +708,408 @@ function getQuestionTypeLabel(type) {
 function showToast(msg,color="#2c3e6b") {
   const t=document.getElementById("toast");
   if(!t)return;
-  t.textContent=msg; t.style.background=color; t.style.display="block";
+  t.textContent=repairLegacyText(msg); t.style.background=color; t.style.display="block";
   setTimeout(()=>t.style.display="none",2800);
+}
+
+function repairLegacyDom(root) {
+  if (!root || !root.querySelectorAll) return;
+
+  document.title = repairLegacyText(document.title);
+
+  const textWalker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+    acceptNode: function(node) {
+      if (!node.parentElement) return NodeFilter.FILTER_REJECT;
+      const tag = node.parentElement.tagName;
+      if (tag === "SCRIPT" || tag === "STYLE") return NodeFilter.FILTER_REJECT;
+      return looksLikeLegacyText(node.nodeValue) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+    }
+  });
+
+  const textNodes = [];
+  while (textWalker.nextNode()) textNodes.push(textWalker.currentNode);
+  textNodes.forEach(function(node) {
+    node.nodeValue = repairLegacyText(node.nodeValue);
+  });
+
+  root.querySelectorAll("[title],[placeholder],[aria-label]").forEach(function(element) {
+    if (element.hasAttribute("title")) {
+      element.setAttribute("title", repairLegacyText(element.getAttribute("title")));
+    }
+    if (element.hasAttribute("placeholder")) {
+      element.setAttribute("placeholder", repairLegacyText(element.getAttribute("placeholder")));
+    }
+    if (element.hasAttribute("aria-label")) {
+      element.setAttribute("aria-label", repairLegacyText(element.getAttribute("aria-label")));
+    }
+  });
+}
+
+function initLegacyDomRepair() {
+  if (window.__READWISE_TEXT_REPAIR_READY) return;
+  window.__READWISE_TEXT_REPAIR_READY = true;
+
+  repairLegacyDom(document.body);
+
+  const observer = new MutationObserver(function(mutations) {
+    mutations.forEach(function(mutation) {
+      if (mutation.type === "characterData" && looksLikeLegacyText(mutation.target.nodeValue)) {
+        mutation.target.nodeValue = repairLegacyText(mutation.target.nodeValue);
+        return;
+      }
+
+      if (mutation.type === "attributes" && mutation.target) {
+        const attr = mutation.attributeName;
+        const current = mutation.target.getAttribute(attr);
+        if (current && looksLikeLegacyText(current)) {
+          mutation.target.setAttribute(attr, repairLegacyText(current));
+        }
+        return;
+      }
+
+      mutation.addedNodes.forEach(function(node) {
+        if (node.nodeType === Node.TEXT_NODE && looksLikeLegacyText(node.nodeValue)) {
+          node.nodeValue = repairLegacyText(node.nodeValue);
+          return;
+        }
+
+        if (node.nodeType === Node.ELEMENT_NODE) {
+          repairLegacyDom(node);
+        }
+      });
+    });
+  });
+
+  observer.observe(document.body, {
+    subtree: true,
+    childList: true,
+    characterData: true,
+    attributes: true,
+    attributeFilter: ["title", "placeholder", "aria-label"]
+  });
+}
+
+const SHELL_NAV_ITEMS = {
+  "teacher-dashboard.html": { label: "Dashboard", icon: "home" },
+  "teacher-passages.html": { label: "Passage Library", icon: "books" },
+  "teacher-submit.html": { label: "Submit Passage", icon: "plus-square" },
+  "teacher-students.html": { label: "Students", icon: "users" },
+  "teacher-recommendations.html": { label: "Recommendations", icon: "bell" },
+  "teacher-reports.html": { label: "Reports", icon: "chart" },
+  "student-profile.html": { label: "My Profile", icon: "person" },
+  "student-dashboard.html": { label: "Dashboard", icon: "home" },
+  "student-passage.html": { label: "My Passage", icon: "book" },
+  "student-progress.html": { label: "My Progress", icon: "chart" },
+  "student-pre-assessment.html": { label: "Pre-Assessment", icon: "checklist" }
+};
+
+const SHELL_ICON_PATHS = {
+  menu: '<path d="M5 7.5h14"></path><path d="M5 12h14"></path><path d="M5 16.5h14"></path>',
+  close: '<path d="M7 7l10 10"></path><path d="M17 7L7 17"></path>',
+  sidebar: '<rect x="4.5" y="5" width="15" height="14" rx="2.5"></rect><path d="M10 5v14"></path>',
+  sun: '<circle cx="12" cy="12" r="3.5"></circle><path d="M12 3.5v2"></path><path d="M12 18.5v2"></path><path d="M20.5 12h-2"></path><path d="M5.5 12h-2"></path><path d="M17.7 6.3 16.3 7.7"></path><path d="M7.7 16.3 6.3 17.7"></path><path d="M17.7 17.7 16.3 16.3"></path><path d="M7.7 7.7 6.3 6.3"></path>',
+  moon: '<path d="M18.2 14.6A6.8 6.8 0 0 1 9.4 5.8a7.6 7.6 0 1 0 8.8 8.8Z"></path>',
+  home: '<path d="M4.5 10.5L12 4l7.5 6.5"></path><path d="M7.5 10.5V19h9v-8.5"></path>',
+  books: '<path d="M6 5.5h10.5A1.5 1.5 0 0 1 18 7v12H7.5A2.5 2.5 0 0 0 5 21.5V7A1.5 1.5 0 0 1 6.5 5.5Z"></path><path d="M5 18.5A2.5 2.5 0 0 1 7.5 16H18"></path>',
+  "plus-square": '<rect x="5" y="5" width="14" height="14" rx="3"></rect><path d="M12 8.5v7"></path><path d="M8.5 12h7"></path>',
+  users: '<path d="M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"></path><path d="M15.5 12.5a2.5 2.5 0 1 0 0-5"></path><path d="M4.5 18.5c1.1-2.1 3-3 5-3s3.9.9 5 3"></path><path d="M14.5 15.8c1.3.2 2.5 1 3.3 2.4"></path>',
+  bell: '<path d="M8 18.5h8"></path><path d="M9.5 18.5a2.5 2.5 0 0 0 5 0"></path><path d="M6.5 15.5h11l-1.4-2.4v-2.4a4.1 4.1 0 1 0-8.2 0v2.4Z"></path>',
+  chart: '<path d="M5 19V9.5"></path><path d="M12 19V5"></path><path d="M19 19v-7"></path><path d="M4 19h16"></path>',
+  person: '<path d="M12 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"></path><path d="M5 19c1.2-2.7 3.8-4.2 7-4.2s5.8 1.5 7 4.2"></path>',
+  book: '<path d="M7 5.5h10.5A1.5 1.5 0 0 1 19 7v11.5H8A3 3 0 0 0 5 21.5V7.5A2 2 0 0 1 7 5.5Z"></path><path d="M8 9h7"></path><path d="M8 12h7"></path>',
+  checklist: '<rect x="5" y="4.5" width="14" height="15" rx="3"></rect><path d="M9 8.5h6"></path><path d="M9 12h6"></path><path d="M9 15.5h4"></path><path d="M7.2 8.5h.1"></path><path d="M7.2 12h.1"></path><path d="M7.2 15.5h.1"></path>',
+  logout: '<path d="M10 7.5V6a2 2 0 0 1 2-2h5v16h-5a2 2 0 0 1-2-2v-1.5"></path><path d="M13 12H5.5"></path><path d="M8.5 8.5L5 12l3.5 3.5"></path>'
+};
+
+function getShellPageName(href) {
+  const value = String(href || "").split("#")[0].split("?")[0];
+  return value.slice(value.lastIndexOf("/") + 1);
+}
+
+function getShellIcon(name) {
+  const paths = SHELL_ICON_PATHS[name] || SHELL_ICON_PATHS.home;
+  return '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">' + paths + "</svg>";
+}
+
+function getStoredThemePreference() {
+  try {
+    const value = localStorage.getItem(THEME_PREFERENCE_KEY);
+    return value === "light" || value === "dark" ? value : null;
+  } catch (error) {
+    return null;
+  }
+}
+
+function storeThemePreference(value) {
+  try {
+    if (value === "light" || value === "dark") {
+      localStorage.setItem(THEME_PREFERENCE_KEY, value);
+    } else {
+      localStorage.removeItem(THEME_PREFERENCE_KEY);
+    }
+  } catch (error) {
+    console.warn("Unable to persist theme preference:", error);
+  }
+}
+
+function applyChartTheme() {
+  if (!window.Chart) return;
+  const styles = getComputedStyle(document.documentElement);
+  const labelColor = styles.getPropertyValue("--text-soft").trim() || "#6e6e73";
+  const gridColor = styles.getPropertyValue("--chart-grid").trim() || "rgba(60, 60, 67, 0.16)";
+  Chart.defaults.color = labelColor;
+  Chart.defaults.borderColor = gridColor;
+
+  const chartInstances = window.Chart.instances || {};
+  Object.keys(chartInstances).forEach(function(key) {
+    const chart = chartInstances[key];
+    if (!chart || !chart.options) return;
+    chart.options.color = labelColor;
+    if (chart.options.plugins && chart.options.plugins.legend && chart.options.plugins.legend.labels) {
+      chart.options.plugins.legend.labels.color = labelColor;
+    }
+    if (chart.options.scales) {
+      Object.keys(chart.options.scales).forEach(function(scaleKey) {
+        const scale = chart.options.scales[scaleKey];
+        if (!scale) return;
+        scale.grid = Object.assign({}, scale.grid, { color: gridColor });
+        scale.ticks = Object.assign({}, scale.ticks, { color: labelColor });
+      });
+    }
+    chart.update("none");
+  });
+}
+
+function initReadWiseThemeSync() {
+  if (typeof window === "undefined" || !window.matchMedia || !document.documentElement) return;
+  if (window.__READWISE_THEME_SYNC_READY) return;
+  window.__READWISE_THEME_SYNC_READY = true;
+
+  const colorQuery = window.matchMedia("(prefers-color-scheme: dark)");
+  const contrastQuery = window.matchMedia("(prefers-contrast: more)");
+
+  function syncThemeState() {
+    const preference = getStoredThemePreference();
+    const appearance = preference || (colorQuery.matches ? "dark" : "light");
+    document.documentElement.style.colorScheme = appearance;
+    document.documentElement.dataset.appearance = appearance;
+    document.documentElement.dataset.themePreference = preference || "system";
+    document.documentElement.dataset.contrast = contrastQuery.matches ? "more" : "standard";
+    applyChartTheme();
+    window.dispatchEvent(new CustomEvent("readwise:themechange", {
+      detail: {
+        appearance: appearance,
+        preference: preference || "system",
+        contrast: document.documentElement.dataset.contrast
+      }
+    }));
+  }
+
+  if (typeof colorQuery.addEventListener === "function") {
+    colorQuery.addEventListener("change", syncThemeState);
+    contrastQuery.addEventListener("change", syncThemeState);
+  } else if (typeof colorQuery.addListener === "function") {
+    colorQuery.addListener(syncThemeState);
+    contrastQuery.addListener(syncThemeState);
+  }
+
+  window.getReadWiseThemePreference = function() {
+    return getStoredThemePreference() || document.documentElement.dataset.appearance || (colorQuery.matches ? "dark" : "light");
+  };
+
+  window.setReadWiseThemePreference = function(value) {
+    storeThemePreference(value);
+    syncThemeState();
+  };
+
+  window.clearReadWiseThemePreference = function() {
+    storeThemePreference(null);
+    syncThemeState();
+  };
+
+  window.addEventListener("storage", function(event) {
+    if (event.key === THEME_PREFERENCE_KEY) syncThemeState();
+  });
+
+  syncThemeState();
+}
+
+function initReadWiseShell() {
+  if (window.__READWISE_SHELL_READY) return;
+  window.__READWISE_SHELL_READY = true;
+
+  const body = document.body;
+  const layout = document.querySelector(".layout");
+  const sidebar = document.querySelector(".sidebar");
+  if (!body || !layout || !sidebar) return;
+
+  const banner = document.querySelector(".demo-banner");
+  if (banner) banner.textContent = "ReadWise System | Pulo National High School";
+
+  if (!sidebar.id) sidebar.id = "app-sidebar";
+
+  const navLinks = Array.from(sidebar.querySelectorAll("nav a"));
+  navLinks.forEach(function(link) {
+    const pageName = getShellPageName(link.getAttribute("href"));
+    const meta = SHELL_NAV_ITEMS[pageName];
+    if (!meta) return;
+    link.innerHTML =
+      '<span class="icon" aria-hidden="true">' + getShellIcon(meta.icon) + '</span>' +
+      '<span class="nav-label">' + meta.label + "</span>";
+    link.setAttribute("title", meta.label);
+  });
+
+  const logoutButton = sidebar.querySelector(".logout-btn");
+  if (logoutButton) {
+    logoutButton.innerHTML =
+      '<span class="icon" aria-hidden="true">' + getShellIcon("logout") + '</span>' +
+      '<span class="nav-label">Logout</span>';
+    logoutButton.setAttribute("type", "button");
+  }
+
+  let themeSwitch = sidebar.querySelector(".theme-switch");
+  if (!themeSwitch) {
+    themeSwitch = document.createElement("div");
+    themeSwitch.className = "theme-switch";
+    themeSwitch.innerHTML =
+      '<div class="theme-switch-label">Appearance</div>' +
+      '<div class="theme-switch-segment" role="group" aria-label="Appearance">' +
+        '<button class="theme-option" type="button" data-theme-value="light">' +
+          '<span class="icon" aria-hidden="true">' + getShellIcon("sun") + '</span>' +
+          '<span class="theme-option-label">Light</span>' +
+        "</button>" +
+        '<button class="theme-option" type="button" data-theme-value="dark">' +
+          '<span class="icon" aria-hidden="true">' + getShellIcon("moon") + '</span>' +
+          '<span class="theme-option-label">Dark</span>' +
+        "</button>" +
+      "</div>";
+
+    const footer = sidebar.querySelector(".sidebar-footer");
+    if (footer) {
+      if (logoutButton) footer.insertBefore(themeSwitch, logoutButton);
+      else footer.appendChild(themeSwitch);
+    }
+  }
+
+  const themeButtons = Array.from(sidebar.querySelectorAll(".theme-option"));
+
+  function syncThemeButtons() {
+    const activeTheme = document.documentElement.dataset.appearance || "light";
+    themeButtons.forEach(function(button) {
+      const isActive = button.dataset.themeValue === activeTheme;
+      button.classList.toggle("active", isActive);
+      button.setAttribute("aria-pressed", isActive ? "true" : "false");
+    });
+  }
+
+  themeButtons.forEach(function(button) {
+    button.addEventListener("click", function() {
+      if (typeof window.setReadWiseThemePreference === "function") {
+        window.setReadWiseThemePreference(button.dataset.themeValue);
+      }
+    });
+  });
+
+  window.addEventListener("readwise:themechange", syncThemeButtons);
+  syncThemeButtons();
+
+  let overlay = document.querySelector(".sidebar-overlay");
+  if (!overlay) {
+    overlay = document.createElement("div");
+    overlay.className = "sidebar-overlay";
+    body.insertBefore(overlay, layout);
+  }
+
+  let toggle = document.querySelector(".shell-toggle");
+  if (!toggle) {
+    toggle = document.createElement("button");
+    toggle.className = "shell-toggle";
+    toggle.type = "button";
+    toggle.setAttribute("aria-controls", sidebar.id);
+    toggle.innerHTML = '<span class="icon" aria-hidden="true">' + getShellIcon("sidebar") + "</span>";
+    body.insertBefore(toggle, layout);
+  }
+
+  const collapseKey = "readwise.sidebar.collapsed";
+  const mobileQuery = window.matchMedia("(max-width: 900px)");
+
+  function updateTogglePresentation() {
+    const isMobile = mobileQuery.matches;
+    const isOpen = isMobile ? body.classList.contains("sidebar-open") : !body.classList.contains("sidebar-collapsed");
+    const iconName = isMobile ? (isOpen ? "close" : "sidebar") : "sidebar";
+    toggle.innerHTML = '<span class="icon" aria-hidden="true">' + getShellIcon(iconName) + "</span>";
+  }
+
+  function syncShellState() {
+    const isMobile = mobileQuery.matches;
+    body.classList.toggle("sidebar-mobile", isMobile);
+    if (isMobile) {
+      body.classList.remove("sidebar-collapsed");
+      body.classList.remove("sidebar-open");
+    } else {
+      body.classList.remove("sidebar-open");
+      const collapsed = sessionStorage.getItem(collapseKey) === "1";
+      body.classList.toggle("sidebar-collapsed", collapsed);
+    }
+    updateToggleA11y();
+    updateTogglePresentation();
+  }
+
+  function updateToggleA11y() {
+    const isMobile = mobileQuery.matches;
+    const expanded = isMobile ? body.classList.contains("sidebar-open") : !body.classList.contains("sidebar-collapsed");
+    toggle.setAttribute("aria-expanded", expanded ? "true" : "false");
+    toggle.setAttribute("aria-label", expanded ? "Close navigation" : "Open navigation");
+  }
+
+  function closeMobileSidebar() {
+    if (!mobileQuery.matches) return;
+    body.classList.remove("sidebar-open");
+    updateToggleA11y();
+    updateTogglePresentation();
+  }
+
+  toggle.addEventListener("click", function() {
+    if (mobileQuery.matches) {
+      body.classList.toggle("sidebar-open");
+    } else {
+      const nextCollapsed = !body.classList.contains("sidebar-collapsed");
+      body.classList.toggle("sidebar-collapsed", nextCollapsed);
+      sessionStorage.setItem(collapseKey, nextCollapsed ? "1" : "0");
+    }
+    updateToggleA11y();
+    updateTogglePresentation();
+  });
+
+  overlay.addEventListener("click", closeMobileSidebar);
+
+  navLinks.forEach(function(link) {
+    link.addEventListener("click", closeMobileSidebar);
+  });
+
+  document.addEventListener("keydown", function(event) {
+    if (event.key === "Escape") closeMobileSidebar();
+  });
+
+  if (typeof mobileQuery.addEventListener === "function") {
+    mobileQuery.addEventListener("change", syncShellState);
+  } else if (typeof mobileQuery.addListener === "function") {
+    mobileQuery.addListener(syncShellState);
+  }
+
+  syncShellState();
+}
+
+if (typeof window !== "undefined" && typeof document !== "undefined") {
+  initReadWiseThemeSync();
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", function() {
+      initLegacyDomRepair();
+      initReadWiseShell();
+    });
+  } else {
+    initLegacyDomRepair();
+    initReadWiseShell();
+  }
 }

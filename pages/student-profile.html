@@ -1,8 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>My Profile — ReadWise</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Profile - ReadWise</title>
   <link rel="stylesheet" href="../stylesheets/shared.css">
   <style>
     .avatar-wrap {
@@ -45,6 +46,15 @@
       transition: .2s;
     }
     .avatar-upload-btn:hover { background: var(--primary); }
+    .avatar-upload-btn svg {
+      width: 14px;
+      height: 14px;
+      stroke: #fff;
+      stroke-width: 1.9;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      fill: none;
+    }
     #avatar-file-input { display: none; }
 
     .remove-photo-btn {
@@ -60,28 +70,28 @@
   </style>
 </head>
 <body>
-<div class="demo-banner">🎓 Demo Mode — Thesis Prototype — ReadWise System</div>
+<div class="demo-banner">ReadWise System | Pulo National High School</div>
 <div class="layout">
   <aside class="sidebar">
     <div class="sidebar-logo">
       <div class="logo-mark">RW</div><h2>ReadWise</h2><p>Student Portal</p>
     </div>
     <nav>
-          <a href="student-profile.html" class="active"><span class="icon">👤</span> My Profile</a>
-      <a href="student-dashboard.html"><span class="icon">🏠</span> Dashboard</a>
-      <a href="student-passage.html"><span class="icon">📖</span> My Passage</a>
-      <a href="student-progress.html"><span class="icon">📊</span> My Progress</a>
-      <a href="student-pre-assessment.html"><span class="icon">📝</span> Pre-Assessment</a>
+          <a href="student-profile.html" class="active"><span class="icon"></span> My Profile</a>
+      <a href="student-dashboard.html"><span class="icon"></span> Dashboard</a>
+      <a href="student-passage.html"><span class="icon"></span> My Passage</a>
+      <a href="student-progress.html"><span class="icon"></span> My Progress</a>
+      <a href="student-pre-assessment.html"><span class="icon"></span> Pre-Assessment</a>
     
     </nav>
     <div class="sidebar-footer">
-      <div class="user-info"><strong id="sb-name">—</strong>Grade 7</div>
-      <button class="logout-btn" onclick="sessionStorage.clear();window.location.href='../login.html'">⬅ Logout</button>
+      <div class="user-info"><strong id="sb-name">-</strong>Grade 7</div>
+      <button class="logout-btn" onclick="sessionStorage.clear();window.location.href='../login.html'">Logout</button>
     </div>
   </aside>
   <main class="main">
     <div class="page-header">
-      <h1>👤 My Profile</h1>
+      <h1>My Profile</h1>
       <p>Your account information and reading program details</p>
     </div>
 
@@ -96,23 +106,26 @@
           <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
             <div class="avatar-wrap">
               <!-- Shows either uploaded photo or initials -->
-              <div class="avatar-initials" id="avatar-initials">—</div>
+              <div class="avatar-initials" id="avatar-initials">-</div>
               <img id="avatar-img" src="" alt="Profile Photo"
                 style="display:none;width:90px;height:90px;border-radius:50%;
                   object-fit:cover;border:3px solid var(--primary);">
               <!-- Camera icon button -->
               <label class="avatar-upload-btn" for="avatar-file-input" title="Upload photo">
-                📷
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <path d="M8 7.5l1.2-2h5.6l1.2 2H19a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9.5a2 2 0 0 1 2-2Z"></path>
+                  <circle cx="12" cy="13" r="3.5"></circle>
+                </svg>
               </label>
               <input type="file" id="avatar-file-input" accept="image/*">
             </div>
             <button class="remove-photo-btn" id="remove-photo-btn" onclick="removePhoto()">
-              ✕ Remove photo
+              Remove photo
             </button>
           </div>
 
           <div>
-            <div id="full-name" style="font-size:20px;font-weight:800;color:var(--secondary)">—</div>
+            <div id="full-name" style="font-size:20px;font-weight:800;color:var(--secondary)">-</div>
             <div style="font-size:13px;color:var(--muted);margin-top:3px">Grade 7 Student</div>
             <div id="level-pill" style="margin-top:8px"></div>
           </div>
@@ -122,12 +135,12 @@
           <div style="display:flex;justify-content:space-between;font-size:14px;
             padding:11px 0;border-bottom:1px solid var(--border)">
             <span style="color:var(--muted);font-weight:600">Full Name</span>
-            <span id="info-name" style="font-weight:700;color:var(--secondary)">—</span>
+            <span id="info-name" style="font-weight:700;color:var(--secondary)">-</span>
           </div>
           <div style="display:flex;justify-content:space-between;font-size:14px;
             padding:11px 0;border-bottom:1px solid var(--border)">
             <span style="color:var(--muted);font-weight:600">Grade & Section</span>
-            <span id="info-grade" style="font-weight:700;color:var(--secondary)">—</span>
+            <span id="info-grade" style="font-weight:700;color:var(--secondary)">-</span>
           </div>
           <div style="display:flex;justify-content:space-between;font-size:14px;
             padding:11px 0;border-bottom:1px solid var(--border)">
@@ -155,12 +168,12 @@
       <!-- Right: Stats -->
       <div style="display:flex;flex-direction:column;gap:14px">
         <div class="card">
-          <div class="section-title">📊 Reading Statistics</div>
+          <div class="section-title">Reading Statistics</div>
           <div style="display:flex;flex-direction:column;gap:14px">
             <div>
               <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px">
                 <span style="color:var(--muted);font-weight:600">Pre-Assessment Score</span>
-                <strong id="stat-pre">—%</strong>
+                <strong id="stat-pre">-%</strong>
               </div>
               <div class="progress">
                 <div class="progress-bar" id="bar-pre" style="background:var(--primary)"></div>
@@ -169,7 +182,7 @@
             <div>
               <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px">
                 <span style="color:var(--muted);font-weight:600">Latest Session Score</span>
-                <strong id="stat-latest">—%</strong>
+                <strong id="stat-latest">-%</strong>
               </div>
               <div class="progress">
                 <div class="progress-bar" id="bar-latest"></div>
@@ -178,7 +191,7 @@
             <div>
               <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px">
                 <span style="color:var(--muted);font-weight:600">Best Score</span>
-                <strong id="stat-best">—%</strong>
+                <strong id="stat-best">-%</strong>
               </div>
               <div class="progress">
                 <div class="progress-bar" id="bar-best" style="background:var(--easy)"></div>
@@ -188,14 +201,14 @@
         </div>
 
         <div class="card">
-          <div class="section-title">🏷️ Reading Level History</div>
+          <div class="section-title">Reading Level History</div>
           <div id="level-history" style="display:flex;flex-direction:column;gap:8px"></div>
         </div>
 
         <div class="card" style="background:linear-gradient(135deg,var(--secondary),#1e4a8a);color:#fff">
           <div style="font-size:13px;opacity:.75;margin-bottom:4px">Current System Recommendation</div>
-          <div id="rec-display" style="font-size:18px;font-weight:800">—</div>
-          <div style="font-size:12px;opacity:.65;margin-top:4px">Based on last 2 sessions · Teacher confirmed</div>
+          <div id="rec-display" style="font-size:18px;font-weight:800">-</div>
+          <div style="font-size:12px;opacity:.65;margin-top:4px">Based on last 2 sessions | Teacher confirmed</div>
         </div>
       </div>
     </div>
@@ -203,13 +216,13 @@
     <!-- Demo credentials -->
     <div class="card" style="border-left:4px solid var(--primary);background:#f0fafa">
       <div style="font-size:13px;color:var(--secondary)">
-        <strong>🔐 Demo Credentials</strong><br>
+        <strong>Demo Credentials</strong><br>
         <span style="color:var(--muted)">Login credentials shown for demo purposes only.</span>
         <div style="margin-top:8px;display:flex;gap:24px;flex-wrap:wrap">
           <div>
             <span style="color:var(--muted)">Email: </span>
             <code id="demo-email" style="background:#e0f2f2;padding:2px 8px;
-              border-radius:4px;font-size:13px">—</code>
+              border-radius:4px;font-size:13px">-</code>
           </div>
           <div>
             <span style="color:var(--muted)">Password: </span>
@@ -236,7 +249,7 @@
   document.getElementById("sb-name").textContent         = s.name;
   document.getElementById("full-name").textContent       = s.name;
   document.getElementById("info-name").textContent       = s.name;
-  document.getElementById("info-grade").textContent      = "Grade " + s.grade + " — " + s.section;
+  document.getElementById("info-grade").textContent      = "Grade " + s.grade + " | " + s.section;
 
   // Level pill
   document.getElementById("level-pill").innerHTML =
@@ -272,9 +285,7 @@
   var emails = { s1:"juan.delacruz@pnhs.edu", s2:"maria.santos@pnhs.edu", s3:"carlo.reyes@pnhs.edu" };
   document.getElementById("demo-email").textContent = emails[s.id] || "student@example.com";
 
-  // ============================================================
-  // PROFILE PHOTO — Upload, display, persist with localStorage
-  // ============================================================
+  // Profile photo upload, display, and local persistence
   var photoKey  = "profilePhoto_" + s.id;
   var imgEl     = document.getElementById("avatar-img");
   var initEl    = document.getElementById("avatar-initials");
@@ -294,11 +305,11 @@
 
     // Validate: image only, max 5MB
     if (!file.type.startsWith("image/")) {
-      showToast("⚠️ Please select an image file.", "#c0392b");
+      showToast("Please select an image file.", "#c0392b");
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
-      showToast("⚠️ Image must be under 5MB.", "#c0392b");
+      showToast("Image must be under 5MB.", "#c0392b");
       return;
     }
 
@@ -307,7 +318,7 @@
       var dataUrl = e.target.result;
       localStorage.setItem(photoKey, dataUrl);
       showPhoto(dataUrl);
-      showToast("✅ Profile photo updated!");
+      showToast("Profile photo updated.");
     };
     reader.readAsDataURL(file);
   });
@@ -326,8 +337,9 @@
     initEl.style.display = "flex";
     removeBtn.style.display = "none";
     fileInput.value      = "";
-    showToast("🗑️ Profile photo removed.");
+    showToast("Profile photo removed.");
   }
 </script>
 </body>
 </html>
+

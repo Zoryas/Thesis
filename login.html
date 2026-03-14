@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Login</title>
   <link rel="stylesheet" href="stylesheets/login.css">
 </head>
@@ -9,19 +10,26 @@
   <div class="background">
     <div class="container">
       <div class="card">
-        <h1 class="title">Login</h1>
-
-        <!-- Toggle between Student and Teacher -->
-        <div class="toggle-container">
-          <button id="studentBtn" class="toggle-button active">Student</button>
-          <button id="teacherBtn" class="toggle-button">Teacher</button>
+        <div class="card-intro">
+          <p class="eyebrow">ReadWise</p>
+          <h1 class="title">Sign in</h1>
+          <p class="subtitle">Choose your portal and continue with weekly reading passages, assessments, and class progress.</p>
         </div>
 
-        <!-- Email and Password -->
-        <input type="email" id="email" class="input" placeholder="Email">
-        <input type="password" id="password" class="input" placeholder="Password">
+        <div class="toggle-container">
+          <button id="studentBtn" class="toggle-button active" type="button">Student</button>
+          <button id="teacherBtn" class="toggle-button" type="button">Teacher</button>
+        </div>
 
-        <!-- Login Button -->
+        <label class="field-group" for="email">
+          <span class="field-label">Email</span>
+          <input type="email" id="email" class="input" placeholder="name@school.edu">
+        </label>
+        <label class="field-group" for="password">
+          <span class="field-label">Password</span>
+          <input type="password" id="password" class="input" placeholder="Enter your password">
+        </label>
+
         <button id="loginBtn" class="button">Login</button>
       </div>
     </div>

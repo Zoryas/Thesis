@@ -1,7 +1,8 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Student Dashboard - ReadWise</title>
   <link rel="stylesheet" href="../stylesheets/shared.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -15,15 +16,15 @@
       <h2>ReadWise</h2><p>Student Portal</p>
     </div>
     <nav>
-      <a href="student-profile.html"><span class="icon">&#128100;</span> My Profile</a>
-      <a href="student-dashboard.html" class="active"><span class="icon">&#8962;</span> Dashboard</a>
-      <a href="student-passage.html"><span class="icon">&#128214;</span> My Passage</a>
-      <a href="student-progress.html"><span class="icon">&#128202;</span> My Progress</a>
-      <a href="student-pre-assessment.html"><span class="icon">&#128221;</span> Pre-Assessment</a>
+      <a href="student-profile.html"><span class="icon"></span> My Profile</a>
+      <a href="student-dashboard.html" class="active"><span class="icon"></span> Dashboard</a>
+      <a href="student-passage.html"><span class="icon"></span> My Passage</a>
+      <a href="student-progress.html"><span class="icon"></span> My Progress</a>
+      <a href="student-pre-assessment.html"><span class="icon"></span> Pre-Assessment</a>
     </nav>
     <div class="sidebar-footer">
-      <div class="user-info"><strong id="sb-name">-</strong>Grade 7 - Sampaguita</div>
-      <button class="logout-btn" onclick="logout()">&larr; Logout</button>
+      <div class="user-info"><strong id="sb-name">-</strong>Grade 7 | Sampaguita</div>
+      <button class="logout-btn" onclick="logout()">Logout</button>
     </div>
   </aside>
   <main class="main">
@@ -56,12 +57,9 @@
     </div>
 
     <div id="rec-banner" class="card" style="margin-bottom:16px;border-left:4px solid var(--accent);background:#fffbf5">
-      <div style="display:flex;align-items:center;gap:12px">
-        <span style="font-size:24px">&#128276;</span>
-        <div>
-          <div style="font-weight:700;color:var(--secondary)">Latest System Recommendation</div>
-          <div id="rec-text" style="font-size:14px;color:var(--muted);margin-top:3px">-</div>
-        </div>
+      <div>
+        <div style="font-weight:700;color:var(--secondary)">Latest System Recommendation</div>
+        <div id="rec-text" style="font-size:14px;color:var(--muted);margin-top:3px">-</div>
       </div>
     </div>
 
@@ -96,8 +94,11 @@
 
   const levelBadge = document.getElementById("level-badge");
   levelBadge.textContent = getClassDisplayName(student.classLevel);
-  levelBadge.style.background = levelBg(student.classLevel);
-  levelBadge.style.color = levelColor(student.classLevel);
+  function syncLevelBadgeTheme() {
+    levelBadge.style.background = levelBg(student.classLevel);
+    levelBadge.style.color = levelColor(student.classLevel);
+  }
+  syncLevelBadgeTheme();
 
   document.getElementById("pre-score").textContent = student.preScore + "%";
   document.getElementById("pre-bar").style.width = student.preScore + "%";
@@ -145,7 +146,13 @@
     }).join("");
   }
 
-  new Chart(document.getElementById("miniChart"), {
+  function scoreColor(score) {
+    if (score >= 65) return levelColor("EASY");
+    if (score >= 50) return levelColor("MODERATE");
+    return levelColor("HARD");
+  }
+
+  const miniChart = new Chart(document.getElementById("miniChart"), {
     type: "bar",
     data: {
       labels: progress.map(function(w) { return "Week " + w.week; }),
@@ -153,7 +160,7 @@
         label: "Score %",
         data: progress.map(function(w) { return w.score; }),
         backgroundColor: progress.map(function(w) {
-          return w.score >= 65 ? "#2e7d5e" : w.score >= 50 ? "#c97b2a" : "#c0392b";
+          return scoreColor(w.score);
         }),
         borderRadius: 6
       }]
@@ -169,6 +176,14 @@
     }
   });
 
+  window.addEventListener("readwise:themechange", function() {
+    syncLevelBadgeTheme();
+    miniChart.data.datasets[0].backgroundColor = progress.map(function(w) {
+      return scoreColor(w.score);
+    });
+    miniChart.update("none");
+  });
+
   function logout() {
     sessionStorage.clear();
     window.location.href = "../login.html";
@@ -176,3 +191,4 @@
 </script>
 </body>
 </html>
+

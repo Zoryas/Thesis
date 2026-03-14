@@ -1,15 +1,24 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Reading - ReadWise</title>
   <link rel="stylesheet" href="../stylesheets/shared.css">
   <style>
     .reading-page { max-width:760px; margin:0 auto; }
     .timer-bar {
       display:flex; align-items:center; justify-content:space-between;
-      padding:12px 20px; background:#fff; border-radius:10px; box-shadow:var(--shadow);
-      margin-bottom:20px; position:sticky; top:52px; z-index:50;
+      padding:12px 20px;
+      margin-bottom:20px;
+      position:sticky;
+      top:calc(var(--banner-height) + 12px);
+      z-index:50;
+      border:1px solid var(--border);
+      border-radius:18px;
+      background:var(--surface-elevated);
+      box-shadow:var(--shadow-sm);
+      backdrop-filter:blur(16px) saturate(135%);
     }
     .timer-val { font-size:18px; font-weight:800; color:var(--primary); font-variant-numeric:tabular-nums; }
   </style>
@@ -22,15 +31,15 @@
       <div class="logo-mark">RW</div><h2>ReadWise</h2><p>Student Portal</p>
     </div>
     <nav>
-      <a href="student-profile.html"><span class="icon">&#128100;</span> My Profile</a>
-      <a href="student-dashboard.html"><span class="icon">&#8962;</span> Dashboard</a>
-      <a href="student-passage.html" class="active"><span class="icon">&#128214;</span> My Passage</a>
-      <a href="student-progress.html"><span class="icon">&#128202;</span> My Progress</a>
-      <a href="student-pre-assessment.html"><span class="icon">&#128221;</span> Pre-Assessment</a>
+      <a href="student-profile.html"><span class="icon"></span> My Profile</a>
+      <a href="student-dashboard.html"><span class="icon"></span> Dashboard</a>
+      <a href="student-passage.html" class="active"><span class="icon"></span> My Passage</a>
+      <a href="student-progress.html"><span class="icon"></span> My Progress</a>
+      <a href="student-pre-assessment.html"><span class="icon"></span> Pre-Assessment</a>
     </nav>
     <div class="sidebar-footer">
       <div class="user-info"><strong id="sb-name">-</strong>Grade 7</div>
-      <button class="logout-btn" onclick="sessionStorage.clear();window.location.href='../login.html'">&larr; Logout</button>
+      <button class="logout-btn" onclick="sessionStorage.clear();window.location.href='../login.html'">Logout</button>
     </div>
   </aside>
   <main class="main">
@@ -120,3 +129,4 @@
 </script>
 </body>
 </html>
+

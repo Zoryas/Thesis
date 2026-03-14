@@ -1,37 +1,38 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Student Detail — ReadWise</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Detail â€” ReadWise</title>
   <link rel="stylesheet" href="../stylesheets/shared.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-<div class="demo-banner">🎓 Demo Mode — Thesis Prototype — ReadWise System | Pulo National High School</div>
+<div class="demo-banner">ðŸŽ“ Demo Mode â€” Thesis Prototype â€” ReadWise System | Pulo National High School</div>
 <div class="layout">
   <aside class="sidebar">
     <div class="sidebar-logo">
       <div class="logo-mark">RW</div><h2>ReadWise</h2><p>Teacher Portal</p>
     </div>
     <nav>
-      <a href="teacher-dashboard.html"><span class="icon">🏠</span> Dashboard</a>
-      <a href="teacher-passages.html"><span class="icon">📚</span> Passage Library</a>
-      <a href="teacher-submit.html"><span class="icon">➕</span> Submit Passage</a>
-      <a href="teacher-students.html" class="active"><span class="icon">👥</span> Students</a>
-      <a href="teacher-recommendations.html"><span class="icon">🔔</span> Recommendations</a>
-      <a href="teacher-reports.html"><span class="icon">📊</span> Reports</a>
+      <a href="teacher-dashboard.html"><span class="icon">ðŸ </span> Dashboard</a>
+      <a href="teacher-passages.html"><span class="icon">ðŸ“š</span> Passage Library</a>
+      <a href="teacher-submit.html"><span class="icon">âž•</span> Submit Passage</a>
+      <a href="teacher-students.html" class="active"><span class="icon">ðŸ‘¥</span> Students</a>
+      <a href="teacher-recommendations.html"><span class="icon">ðŸ””</span> Recommendations</a>
+      <a href="teacher-reports.html"><span class="icon">ðŸ“Š</span> Reports</a>
     </nav>
     <div class="sidebar-footer">
       <div class="user-info"><strong>Ms. Ana Villanueva</strong>Grade 7 English</div>
-      <button class="logout-btn" onclick="sessionStorage.clear();window.location.href='../login.html'">⬅ Logout</button>
+      <button class="logout-btn" onclick="sessionStorage.clear();window.location.href='../login.html'">â¬… Logout</button>
     </div>
   </aside>
   <main class="main">
 
     <!-- Breadcrumb -->
     <div class="breadcrumb">
-      <a href="teacher-dashboard.html">Dashboard</a> ›
-      <a href="teacher-students.html">Students</a> ›
+      <a href="teacher-dashboard.html">Dashboard</a> â€º
+      <a href="teacher-students.html">Students</a> â€º
       <span id="bc-name">Student Detail</span>
     </div>
 
@@ -39,29 +40,29 @@
     <div style="display:flex;justify-content:space-between;align-items:flex-start;
       flex-wrap:wrap;gap:12px;margin-bottom:22px">
       <div>
-        <h1 id="detail-title" style="font-size:22px;font-weight:700;color:var(--secondary)">—</h1>
-        <p id="detail-sub" style="font-size:14px;color:var(--muted);margin-top:4px">—</p>
+        <h1 id="detail-title" style="font-size:22px;font-weight:700;color:var(--secondary)">â€”</h1>
+        <p id="detail-sub" style="font-size:14px;color:var(--muted);margin-top:4px">â€”</p>
       </div>
       <button class="back-btn" onclick="window.location.href='teacher-students.html'"
-        style="font-size:13px">← Back to Students</button>
+        style="font-size:13px">â† Back to Students</button>
     </div>
 
     <!-- Top Stats Row -->
     <div class="card-grid card-grid-3" style="margin-bottom:16px">
       <div class="stat-card">
         <div class="stat-label">Current Level</div>
-        <div id="level-badge" class="level-big" style="margin-top:6px;font-size:16px">—</div>
+        <div id="level-badge" class="level-big" style="margin-top:6px;font-size:16px">â€”</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">Pre-Assessment Score</div>
-        <div class="stat-val" id="pre-score">—%</div>
+        <div class="stat-val" id="pre-score">â€”%</div>
         <div class="progress" style="margin-top:8px">
           <div class="progress-bar" id="pre-bar" style="background:var(--primary)"></div>
         </div>
       </div>
       <div class="stat-card">
         <div class="stat-label">Latest Score</div>
-        <div class="stat-val" id="latest-score">—%</div>
+        <div class="stat-val" id="latest-score">â€”%</div>
         <div class="stat-label" id="latest-rec" style="margin-top:6px"></div>
       </div>
     </div>
@@ -69,16 +70,16 @@
     <!-- Chart + Score Short Answer -->
     <div class="card-grid card-grid-2" style="margin-bottom:16px">
       <div class="card">
-        <div class="section-title">📈 Weekly Score Progress</div>
+        <div class="section-title">ðŸ“ˆ Weekly Score Progress</div>
         <div class="chart-wrap" style="height:240px">
           <canvas id="studentChart"></canvas>
         </div>
       </div>
       <div class="card">
-        <div class="section-title">📝 Pending Short Answer</div>
+        <div class="section-title">ðŸ“ Pending Short Answer</div>
         <div style="background:#fde8e8;border-radius:8px;padding:16px;margin-bottom:14px">
           <div style="font-size:13px;font-weight:700;color:var(--hard);margin-bottom:4px">
-            ⚠️ Awaiting Teacher Scoring
+            âš ï¸ Awaiting Teacher Scoring
           </div>
           <div style="font-size:13px;color:var(--secondary);margin-bottom:10px">
             <strong>Passage:</strong> Climate Change and Its Effects (HARD)<br>
@@ -92,14 +93,14 @@
           </div>
         </div>
         <a href="teacher-score.html?sid=s1&pid=p3" class="btn btn-danger btn-block">
-          ✏️ Score This Short Answer
+          âœï¸ Score This Short Answer
         </a>
       </div>
     </div>
 
     <!-- Full Session History Table -->
     <div class="card" style="margin-bottom:16px">
-      <div class="section-title">📋 All Session Records</div>
+      <div class="section-title">ðŸ“‹ All Session Records</div>
       <div class="table-wrap">
         <table>
           <thead>
@@ -119,7 +120,7 @@
 
     <!-- Recommendation History -->
     <div class="card">
-      <div class="section-title">🔔 Recommendation History</div>
+      <div class="section-title">ðŸ”” Recommendation History</div>
       <div id="rec-timeline" style="display:flex;flex-direction:column;gap:10px"></div>
     </div>
 
@@ -144,7 +145,7 @@
     document.getElementById("bc-name").textContent       = s.name;
     document.getElementById("detail-title").textContent  = s.name;
     document.getElementById("detail-sub").textContent    =
-      "Grade " + s.grade + " · " + s.section + " · Student ID: " + s.id.toUpperCase();
+      "Grade " + s.grade + " Â· " + s.section + " Â· Student ID: " + s.id.toUpperCase();
 
     // Level badge
     const lb = document.getElementById("level-badge");
@@ -207,15 +208,15 @@
         '<td><div class="progress" style="width:100px"><div class="progress-bar" ' +
           'style="width:' + w.score + '%;background:' + barColor + '"></div></div></td>' +
         '<td><span style="font-weight:700;color:' + rColor + '">' + w.recommendation + '</span></td>' +
-        '<td><span class="badge badge-success">✓ Confirmed</span></td>';
+        '<td><span class="badge badge-success">âœ“ Confirmed</span></td>';
       tbody.appendChild(row);
     });
 
     // Recommendation timeline
     var timeline = document.getElementById("rec-timeline");
     prog.forEach(function(w) {
-      var icon  = w.recommendation.includes("UP")   ? "⬆️" :
-                  w.recommendation.includes("DOWN") ? "⬇️" : "✅";
+      var icon  = w.recommendation.includes("UP")   ? "â¬†ï¸" :
+                  w.recommendation.includes("DOWN") ? "â¬‡ï¸" : "âœ…";
       var bg    = w.recommendation.includes("UP")   ? "#d4edda" :
                   w.recommendation.includes("DOWN") ? "#fde8e8" : "#f7fafc";
       var color = w.recommendation.includes("UP")   ? "var(--easy)"   :
@@ -229,7 +230,7 @@
           '<div style="font-weight:700;color:' + color + ';font-size:14px">' +
             w.recommendation + '</div>' +
           '<div style="font-size:12px;color:var(--muted);margin-top:2px">' +
-            'Week ' + w.week + ' · Score: ' + w.score + '% · Level: ' + w.difficulty +
+            'Week ' + w.week + ' Â· Score: ' + w.score + '% Â· Level: ' + w.difficulty +
           '</div>' +
         '</div>' +
         '<span class="badge badge-success" style="font-size:11px">Teacher Confirmed</span>';
@@ -239,3 +240,4 @@
 </script>
 </body>
 </html>
+

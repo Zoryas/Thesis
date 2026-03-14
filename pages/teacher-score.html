@@ -1,38 +1,39 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Score Short Answer — ReadWise</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Score Short Answer â€” ReadWise</title>
   <link rel="stylesheet" href="../stylesheets/shared.css">
 </head>
 <body>
-<div class="demo-banner">🎓 Demo Mode — Thesis Prototype — ReadWise System</div>
+<div class="demo-banner">ðŸŽ“ Demo Mode â€” Thesis Prototype â€” ReadWise System</div>
 <div class="layout">
   <aside class="sidebar">
     <div class="sidebar-logo">
       <div class="logo-mark">RW</div><h2>ReadWise</h2><p>Teacher Portal</p>
     </div>
     <nav>
-      <a href="teacher-dashboard.html"><span class="icon">🏠</span> Dashboard</a>
-      <a href="teacher-passages.html"><span class="icon">📚</span> Passage Library</a>
-      <a href="teacher-submit.html"><span class="icon">➕</span> Submit Passage</a>
-      <a href="teacher-students.html" class="active"><span class="icon">👥</span> Students</a>
-      <a href="teacher-recommendations.html"><span class="icon">🔔</span> Recommendations</a>
-      <a href="teacher-reports.html"><span class="icon">📊</span> Reports</a>
+      <a href="teacher-dashboard.html"><span class="icon">ðŸ </span> Dashboard</a>
+      <a href="teacher-passages.html"><span class="icon">ðŸ“š</span> Passage Library</a>
+      <a href="teacher-submit.html"><span class="icon">âž•</span> Submit Passage</a>
+      <a href="teacher-students.html" class="active"><span class="icon">ðŸ‘¥</span> Students</a>
+      <a href="teacher-recommendations.html"><span class="icon">ðŸ””</span> Recommendations</a>
+      <a href="teacher-reports.html"><span class="icon">ðŸ“Š</span> Reports</a>
     </nav>
     <div class="sidebar-footer">
       <div class="user-info"><strong>Ms. Ana Villanueva</strong>Grade 7 English</div>
-      <button class="logout-btn" onclick="sessionStorage.clear();window.location.href='../login.html'">⬅ Logout</button>
+      <button class="logout-btn" onclick="sessionStorage.clear();window.location.href='../login.html'">â¬… Logout</button>
     </div>
   </aside>
   <main class="main">
     <div class="breadcrumb">
-      <a href="teacher-dashboard.html">Dashboard</a> ›
-      <a href="teacher-students.html">Students</a> ›
+      <a href="teacher-dashboard.html">Dashboard</a> â€º
+      <a href="teacher-students.html">Students</a> â€º
       Score Short Answer
     </div>
     <div class="page-header">
-      <h1>✏️ Score Short Answer</h1>
+      <h1>âœï¸ Score Short Answer</h1>
       <p>Review the student's response and assign a score using the 3-point rubric.</p>
     </div>
 
@@ -40,7 +41,7 @@
 
       <!-- Student Response -->
       <div class="card">
-        <div class="section-title">📄 Student Response</div>
+        <div class="section-title">ðŸ“„ Student Response</div>
         <div style="margin-bottom:12px">
           <span style="font-size:13px;color:var(--muted)">Student:</span>
           <strong style="margin-left:6px">Juan Dela Cruz</strong>
@@ -72,34 +73,34 @@
 
       <!-- Scoring Panel -->
       <div class="card">
-        <div class="section-title">🎯 Scoring Rubric (0–3 Points)</div>
+        <div class="section-title">ðŸŽ¯ Scoring Rubric (0â€“3 Points)</div>
 
         <!-- Rubric -->
         <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px">
           <div style="padding:10px 12px;background:#d4edda;border-radius:8px;font-size:13px">
-            <strong style="color:var(--easy)">3 Points</strong> — Clear, accurate, well-explained effect with specific detail
+            <strong style="color:var(--easy)">3 Points</strong> â€” Clear, accurate, well-explained effect with specific detail
           </div>
           <div style="padding:10px 12px;background:#fff3cd;border-radius:8px;font-size:13px">
-            <strong style="color:var(--accent)">2 Points</strong> — Correct effect mentioned but lacks detail or clarity
+            <strong style="color:var(--accent)">2 Points</strong> â€” Correct effect mentioned but lacks detail or clarity
           </div>
           <div style="padding:10px 12px;background:#fde8e8;border-radius:8px;font-size:13px">
-            <strong style="color:var(--hard)">1 Point</strong> — Vague or partially correct response
+            <strong style="color:var(--hard)">1 Point</strong> â€” Vague or partially correct response
           </div>
           <div style="padding:10px 12px;background:#f7fafc;border-radius:8px;font-size:13px">
-            <strong style="color:var(--muted)">0 Points</strong> — No answer or completely incorrect
+            <strong style="color:var(--muted)">0 Points</strong> â€” No answer or completely incorrect
           </div>
         </div>
 
         <!-- Model Answer -->
         <div style="margin-bottom:20px">
           <div style="font-size:13px;font-weight:700;color:var(--secondary);margin-bottom:6px">
-            📌 Model Answer (Reference):
+            ðŸ“Œ Model Answer (Reference):
           </div>
           <div style="font-size:13px;color:#4a5568;background:#f0fafa;padding:12px;
             border-radius:8px;line-height:1.7">
             One effect of climate change on the Philippines is the intensification of typhoons.
             As ocean temperatures rise, tropical cyclones become stronger and more destructive,
-            causing widespread flooding, landslides, and displacement of communities — particularly
+            causing widespread flooding, landslides, and displacement of communities â€” particularly
             in coastal and low-lying areas.
           </div>
         </div>
@@ -138,7 +139,7 @@
 
         <button class="btn btn-primary btn-block" id="submit-score-btn"
           onclick="submitScore()" disabled style="opacity:.5">
-          💾 Save Score
+          ðŸ’¾ Save Score
         </button>
       </div>
     </div>
@@ -160,10 +161,10 @@
       active.style.transform = "scale(1.08)";
       active.style.boxShadow = "0 4px 12px rgba(0,0,0,0.15)";
     }
-    var labels = ["No answer / incorrect", "Partially correct", "Correct but lacks detail", "Excellent — clear and specific"];
+    var labels = ["No answer / incorrect", "Partially correct", "Correct but lacks detail", "Excellent â€” clear and specific"];
     document.getElementById("score-selected").innerHTML =
       '<strong style="font-size:16px">' + val + ' / 3 points</strong>' +
-      ' — <span style="color:var(--muted)">' + labels[val] + '</span>';
+      ' â€” <span style="color:var(--muted)">' + labels[val] + '</span>';
 
     var btn = document.getElementById("submit-score-btn");
     btn.disabled    = false;
@@ -172,7 +173,7 @@
 
   function submitScore() {
     if (selectedScore === null) return;
-    showToast("✅ Score of " + selectedScore + "/3 saved for Juan Dela Cruz!");
+    showToast("âœ… Score of " + selectedScore + "/3 saved for Juan Dela Cruz!");
     setTimeout(function() {
       window.location.href = "teacher-student-detail.html?id=s1";
     }, 1500);
@@ -180,3 +181,4 @@
 </script>
 </body>
 </html>
+

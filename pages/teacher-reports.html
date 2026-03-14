@@ -2,38 +2,38 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Reports — ReadWise</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reports - ReadWise</title>
   <link rel="stylesheet" href="../stylesheets/shared.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-<div class="demo-banner">🎓 Demo Mode — Thesis Prototype — ReadWise System</div>
+<div class="demo-banner">ReadWise System | Pulo National High School</div>
 <div class="layout">
   <aside class="sidebar">
     <div class="sidebar-logo">
       <div class="logo-mark">RW</div><h2>ReadWise</h2><p>Teacher Portal</p>
     </div>
     <nav>
-      <a href="teacher-dashboard.html"><span class="icon">🏠</span> Dashboard</a>
-      <a href="teacher-passages.html"><span class="icon">📚</span> Passage Library</a>
-      <a href="teacher-submit.html"><span class="icon">➕</span> Submit Passage</a>
-      <a href="teacher-students.html"><span class="icon">👥</span> Students</a>
-      <a href="teacher-recommendations.html"><span class="icon">🔔</span> Recommendations</a>
-      <a href="teacher-reports.html" class="active"><span class="icon">📊</span> Reports</a>
+      <a href="teacher-dashboard.html"><span class="icon"></span> Dashboard</a>
+      <a href="teacher-passages.html"><span class="icon"></span> Passage Library</a>
+      <a href="teacher-submit.html"><span class="icon"></span> Submit Passage</a>
+      <a href="teacher-students.html"><span class="icon"></span> Students</a>
+      <a href="teacher-recommendations.html"><span class="icon"></span> Recommendations</a>
+      <a href="teacher-reports.html" class="active"><span class="icon"></span> Reports</a>
     </nav>
     <div class="sidebar-footer">
       <div class="user-info"><strong>Ms. Ana Villanueva</strong>Grade 7 English</div>
-      <button class="logout-btn" onclick="sessionStorage.clear();window.location.href='../login.html'">⬅ Logout</button>
+      <button class="logout-btn" onclick="sessionStorage.clear();window.location.href='../login.html'">Logout</button>
     </div>
   </aside>
   <main class="main">
-    <div class="breadcrumb"><a href="teacher-dashboard.html">Dashboard</a> › Reports</div>
+    <div class="breadcrumb"><a href="teacher-dashboard.html">Dashboard</a> > Reports</div>
     <div class="page-header">
-      <h1>📊 Pre vs Post Assessment Report</h1>
+      <h1>Pre vs Post Assessment Report</h1>
       <p>Comparison of each student's pre-assessment score vs post-assessment score (Week 8)</p>
     </div>
 
-    <!-- Summary cards -->
     <div class="card-grid card-grid-3" style="margin-bottom:16px">
       <div class="stat-card">
         <div class="stat-label">Class Average (Pre)</div>
@@ -51,17 +51,15 @@
       </div>
     </div>
 
-    <!-- Bar Chart -->
     <div class="card" style="margin-bottom:16px">
-      <div class="section-title">📈 Pre vs Post Score Comparison</div>
+      <div class="section-title">Pre vs Post Score Comparison</div>
       <div class="chart-wrap" style="height:280px">
         <canvas id="reportChart"></canvas>
       </div>
     </div>
 
-    <!-- Table -->
     <div class="card">
-      <div class="section-title">📋 Student Score Breakdown</div>
+      <div class="section-title">Student Score Breakdown</div>
       <div class="table-wrap">
         <table>
           <thead>
@@ -87,7 +85,7 @@
     var row = document.createElement("tr");
     row.innerHTML =
       '<td><strong>' + s.name + '</strong></td>' +
-      '<td><span class="badge ' + badgeClass(s.classLevel) + '">' + s.classLevel + '</span></td>' +
+      '<td><span class="badge ' + badgeClass(s.classLevel) + '">' + getClassDisplayName(s.classLevel) + '</span></td>' +
       '<td>' +
         '<strong>' + s.preScore + '%</strong>' +
         '<div class="progress" style="width:80px;margin-top:4px">' +
@@ -95,7 +93,7 @@
         '</div>' +
       '</td>' +
       '<td style="color:var(--muted);font-style:italic">Pending (Week 8)</td>' +
-      '<td style="color:var(--muted)">—</td>' +
+      '<td style="color:var(--muted)">-</td>' +
       '<td><span class="badge badge-primary">In Progress</span></td>';
     tbody.appendChild(row);
   });
@@ -103,11 +101,11 @@
   new Chart(document.getElementById("reportChart"), {
     type: "bar",
     data: {
-      labels: MOCK.students.map(function(s){ return s.name.split(" ")[0]; }),
+      labels: MOCK.students.map(function(s) { return s.name.split(" ")[0]; }),
       datasets: [
         {
           label: "Pre-Assessment",
-          data: MOCK.students.map(function(s){ return s.preScore; }),
+          data: MOCK.students.map(function(s) { return s.preScore; }),
           backgroundColor: "rgba(44,62,107,0.75)",
           borderRadius: 6
         },
@@ -118,7 +116,7 @@
           borderRadius: 6,
           borderWidth: 2,
           borderColor: "rgba(30,127,127,0.6)",
-          borderDash: [5,5]
+          borderDash: [5, 5]
         }
       ]
     },
@@ -137,8 +135,9 @@
       },
       scales: {
         y: {
-          beginAtZero: true, max: 100,
-          ticks: { callback: function(v){ return v + "%"; } }
+          beginAtZero: true,
+          max: 100,
+          ticks: { callback: function(v) { return v + "%"; } }
         },
         x: { grid: { display: false } }
       }

@@ -1,8 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>My Progress — ReadWise</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Progress â€” ReadWise</title>
  <link rel="stylesheet" href="../stylesheets/shared.css">
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -15,42 +16,42 @@
       <div class="logo-mark">RW</div><h2>ReadWise</h2><p>Student Portal</p>
     </div>
     <nav>
-        <a href="student-profile.html"><span class="icon">👤</span> My Profile</a>
-      <a href="student-dashboard.html"><span class="icon">🏠</span> Dashboard</a>
-      <a href="student-passage.html"><span class="icon">📖</span> My Passage</a>
-      <a href="student-progress.html" class="active"><span class="icon">📊</span> My Progress</a>
-      <a href="student-pre-assessment.html"><span class="icon">📝</span> Pre-Assessment</a>
+        <a href="student-profile.html"><span class="icon">ðŸ‘¤</span> My Profile</a>
+      <a href="student-dashboard.html"><span class="icon">ðŸ </span> Dashboard</a>
+      <a href="student-passage.html"><span class="icon">ðŸ“–</span> My Passage</a>
+      <a href="student-progress.html" class="active"><span class="icon">ðŸ“Š</span> My Progress</a>
+      <a href="student-pre-assessment.html"><span class="icon">ðŸ“</span> Pre-Assessment</a>
     </nav>
     <div class="sidebar-footer">
-      <div class="user-info"><strong id="sb-name">—</strong>Grade 7</div>
-      <button class="logout-btn" onclick="sessionStorage.clear();window.location.href='../login.html'">⬅ Logout</button>
+      <div class="user-info"><strong id="sb-name">â€”</strong>Grade 7</div>
+      <button class="logout-btn" onclick="sessionStorage.clear();window.location.href='../login.html'">â¬… Logout</button>
     </div>
   </aside>
   <main class="main">
     <div class="page-header">
-      <h1>📊 My Progress Tracker</h1>
+      <h1>ðŸ“Š My Progress Tracker</h1>
       <p>Weekly reading scores and difficulty recommendations</p>
     </div>
     <div class="card-grid card-grid-3" style="margin-bottom:16px">
       <div class="stat-card">
         <div class="stat-label">Current Level</div>
-        <div id="cur-level" class="level-big" style="margin-top:6px;font-size:16px">—</div>
+        <div id="cur-level" class="level-big" style="margin-top:6px;font-size:16px">â€”</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">Best Score</div>
-        <div class="stat-val" id="best-score">—%</div>
+        <div class="stat-val" id="best-score">â€”%</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">Latest Score</div>
-        <div class="stat-val" id="latest-score">—%</div>
+        <div class="stat-val" id="latest-score">â€”%</div>
       </div>
     </div>
     <div class="card" style="margin-bottom:16px">
-      <div class="section-title">📈 Score Trend (Weeks 1–4)</div>
+      <div class="section-title">ðŸ“ˆ Score Trend (Weeks 1â€“4)</div>
       <div class="chart-wrap" style="height:260px"><canvas id="progressChart"></canvas></div>
     </div>
     <div class="card">
-      <div class="section-title">📋 Session History & Recommendations</div>
+      <div class="section-title">ðŸ“‹ Session History & Recommendations</div>
       <div class="table-wrap">
         <table>
           <thead>
@@ -122,3 +123,4 @@
 </script>
 </body>
 </html>
+
