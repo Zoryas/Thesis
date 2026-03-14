@@ -71,10 +71,15 @@
   const params = new URLSearchParams(location.search);
   const pid = params.get("id") || "p3";
   const p = getPassage(pid);
+  const activeWeek = getActiveWeek();
   const assessment = getPassageAssessment(pid);
   const qs = (assessment.questions || []).map(function(q) { return normalizeAssessmentQuestion(q); });
   const shortAnswerPrompt = assessment.shortAnswerPrompt || "";
   const s = getCurrentStudent();
+  if (!s) {
+    window.location.href = "../login.html";
+    throw new Error("Missing student session");
+  }
 
   document.getElementById("sb-name").textContent = s ? s.name : "Student";
 
@@ -317,11 +322,16 @@
       correct: fullyCorrect,
       total: qs.length,
       difficulty: diff,
+      week: activeWeek,
       passageId: pid,
       shortAnswer: saVal,
       responses: responses,
       readingTime: sessionStorage.getItem("readingTime_" + pid) || "-"
     }));
+
+    if (s && s.id) {
+      markPassageCompleted(s.id, activeWeek, pid);
+    }
 
     showToast("Answers submitted successfully.");
     setTimeout(function() {

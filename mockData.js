@@ -81,6 +81,12 @@ const MOCK = {
 };
 
 const PASSAGES_STORAGE_KEY = "readwise_passages_v1";
+const ASSIGNMENTS_STORAGE_KEY = "readwise_weekly_assignments_v1";
+const ASSIGNMENTS_ACTIVE_WEEK_KEY = "readwise_active_week_v1";
+const COMPLETION_STORAGE_KEY = "readwise_weekly_completion_v1";
+const MAX_WEEKLY_PASSAGES_PER_CLASS = 5;
+const TOTAL_PROGRAM_WEEKS = 8;
+const CLASS_LEVELS = ["EASY", "MODERATE", "HARD"];
 const DEFAULT_PASSAGES = JSON.parse(JSON.stringify(MOCK.passages));
 const QUESTION_TYPE_CATALOG = {
   EASY: [
@@ -119,6 +125,25 @@ function countPassageWords(text) {
 
 function estimateReadingTime(wordCount) {
   return Math.max(1, Math.ceil((wordCount || 0) / 80));
+}
+
+function normalizeClassLevel(value) {
+  const normalized = String(value || "").trim().toUpperCase();
+  if (normalized === "DIFFICULT") return "HARD";
+  if (CLASS_LEVELS.includes(normalized)) return normalized;
+  return "EASY";
+}
+
+function getClassDisplayName(level) {
+  const normalized = normalizeClassLevel(level);
+  return normalized === "HARD" ? "DIFFICULT" : normalized;
+}
+
+function mapPassageLabelToClassLevel(label) {
+  const normalized = String(label || "").trim().toUpperCase();
+  if (normalized === "HARD" || normalized === "DIFFICULT") return "HARD";
+  if (normalized === "MODERATE") return "MODERATE";
+  return "EASY";
 }
 
 function normalizeQuestionDifficulty(value) {
@@ -297,6 +322,242 @@ function loadStoredPassages() {
   }
 }
 
+function normalizeWeekNumber(week) {
+  const parsed = Number(week);
+  if (!Number.isInteger(parsed) || parsed < 1) return 1;
+  if (parsed > TOTAL_PROGRAM_WEEKS) return TOTAL_PROGRAM_WEEKS;
+  return parsed;
+}
+
+function createEmptyWeekAssignment() {
+  return {
+    EASY: [],
+    MODERATE: [],
+    HARD: []
+  };
+}
+
+function createDefaultAssignmentsTemplate() {
+  const assignments = {};
+  for (let week = 1; week <= TOTAL_PROGRAM_WEEKS; week++) {
+    assignments[String(week)] = createEmptyWeekAssignment();
+  }
+  return assignments;
+}
+
+function createAutoFilledAssignmentsTemplate() {
+  const assignments = createDefaultAssignmentsTemplate();
+  Object.keys(assignments).forEach(function(weekKey) {
+    CLASS_LEVELS.forEach(function(level) {
+      fillWeekClassToLimit(assignments[weekKey], level);
+    });
+  });
+  return assignments;
+}
+
+function getPassagesByClassLevel(classLevel) {
+  const normalized = normalizeClassLevel(classLevel);
+  return MOCK.passages.filter(function(passage) {
+    return mapPassageLabelToClassLevel(passage.label) === normalized;
+  });
+}
+
+function dedupeIds(ids) {
+  const seen = new Set();
+  const output = [];
+  ids.forEach(function(id) {
+    const clean = String(id || "").trim();
+    if (!clean || seen.has(clean)) return;
+    seen.add(clean);
+    output.push(clean);
+  });
+  return output;
+}
+
+function fillWeekClassToLimit(weekAssignments, classLevel) {
+  const level = normalizeClassLevel(classLevel);
+  const current = Array.isArray(weekAssignments[level]) ? weekAssignments[level].slice() : [];
+  const pool = getPassagesByClassLevel(level).map(function(passage) { return passage.id; });
+  const filled = dedupeIds(current).filter(function(id) { return pool.includes(id); });
+
+  let pointer = 0;
+  while (filled.length < MAX_WEEKLY_PASSAGES_PER_CLASS && pool.length > 0 && pointer < pool.length * 3) {
+    const candidate = pool[pointer % pool.length];
+    if (!filled.includes(candidate)) filled.push(candidate);
+    pointer++;
+    if (filled.length >= pool.length) break;
+  }
+
+  weekAssignments[level] = filled.slice(0, MAX_WEEKLY_PASSAGES_PER_CLASS);
+}
+
+function normalizeAssignments(assignments) {
+  const source = assignments || {};
+  const normalized = createDefaultAssignmentsTemplate();
+
+  Object.keys(normalized).forEach(function(weekKey) {
+    const weekSource = source[weekKey] || {};
+    CLASS_LEVELS.forEach(function(level) {
+      const ids = Array.isArray(weekSource[level]) ? weekSource[level].slice() : [];
+      const matching = getPassagesByClassLevel(level).map(function(passage) { return passage.id; });
+      normalized[weekKey][level] = dedupeIds(ids).filter(function(id) { return matching.includes(id); }).slice(0, MAX_WEEKLY_PASSAGES_PER_CLASS);
+    });
+  });
+
+  return normalized;
+}
+
+function loadStoredAssignments() {
+  try {
+    const raw = localStorage.getItem(ASSIGNMENTS_STORAGE_KEY);
+    if (!raw) return normalizeAssignments(createAutoFilledAssignmentsTemplate());
+    const parsed = JSON.parse(raw);
+    return normalizeAssignments(parsed);
+  } catch (error) {
+    return normalizeAssignments(createAutoFilledAssignmentsTemplate());
+  }
+}
+
+function saveAssignments(assignments) {
+  const normalized = normalizeAssignments(assignments);
+  try {
+    localStorage.setItem(ASSIGNMENTS_STORAGE_KEY, JSON.stringify(normalized));
+  } catch (error) {
+    console.warn("Unable to save assignments:", error);
+  }
+  return normalized;
+}
+
+function getActiveWeek() {
+  const stored = localStorage.getItem(ASSIGNMENTS_ACTIVE_WEEK_KEY);
+  return normalizeWeekNumber(stored || 1);
+}
+
+function setActiveWeek(week) {
+  const normalized = normalizeWeekNumber(week);
+  try {
+    localStorage.setItem(ASSIGNMENTS_ACTIVE_WEEK_KEY, String(normalized));
+  } catch (error) {
+    console.warn("Unable to persist active week:", error);
+  }
+  return normalized;
+}
+
+function getWeeklyAssignments(week) {
+  const normalizedWeek = normalizeWeekNumber(week);
+  const assignments = loadStoredAssignments();
+  return cloneData(assignments[String(normalizedWeek)] || createEmptyWeekAssignment());
+}
+
+function setWeeklyAssignments(week, weeklyData) {
+  const normalizedWeek = normalizeWeekNumber(week);
+  const assignments = loadStoredAssignments();
+  assignments[String(normalizedWeek)] = Object.assign(createEmptyWeekAssignment(), weeklyData || {});
+  return saveAssignments(assignments);
+}
+
+function isPassageAssignableToClass(passageId, classLevel) {
+  const passage = getPassage(passageId);
+  if (!passage) return false;
+  return mapPassageLabelToClassLevel(passage.label) === normalizeClassLevel(classLevel);
+}
+
+function assignPassageToWeekClass(week, classLevel, passageId) {
+  const weekNumber = normalizeWeekNumber(week);
+  const level = normalizeClassLevel(classLevel);
+  const passage = getPassage(passageId);
+  if (!passage) return { ok: false, message: "Passage not found." };
+  if (!isPassageAssignableToClass(passageId, level)) {
+    return { ok: false, message: "Passage label does not match class level." };
+  }
+
+  const assignments = loadStoredAssignments();
+  const weekKey = String(weekNumber);
+  const list = assignments[weekKey][level] || [];
+  if (list.includes(passageId)) return { ok: true, message: "Passage already assigned." };
+  if (list.length >= MAX_WEEKLY_PASSAGES_PER_CLASS) {
+    return { ok: false, message: "Class already has 5 passages this week." };
+  }
+
+  list.push(passageId);
+  assignments[weekKey][level] = dedupeIds(list).slice(0, MAX_WEEKLY_PASSAGES_PER_CLASS);
+  saveAssignments(assignments);
+  return { ok: true, message: "Passage assigned." };
+}
+
+function removePassageFromWeekClass(week, classLevel, passageId) {
+  const weekNumber = normalizeWeekNumber(week);
+  const level = normalizeClassLevel(classLevel);
+  const assignments = loadStoredAssignments();
+  const weekKey = String(weekNumber);
+  const list = Array.isArray(assignments[weekKey][level]) ? assignments[weekKey][level] : [];
+  assignments[weekKey][level] = list.filter(function(id) { return id !== passageId; });
+  saveAssignments(assignments);
+  return true;
+}
+
+function autofillWeekClass(week, classLevel) {
+  const weekNumber = normalizeWeekNumber(week);
+  const level = normalizeClassLevel(classLevel);
+  const assignments = loadStoredAssignments();
+  const weekKey = String(weekNumber);
+  fillWeekClassToLimit(assignments[weekKey], level);
+  saveAssignments(assignments);
+  return cloneData(assignments[weekKey][level]);
+}
+
+function loadCompletionData() {
+  try {
+    const raw = localStorage.getItem(COMPLETION_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch (error) {
+    return {};
+  }
+}
+
+function saveCompletionData(data) {
+  try {
+    localStorage.setItem(COMPLETION_STORAGE_KEY, JSON.stringify(data || {}));
+  } catch (error) {
+    console.warn("Unable to save completion data:", error);
+  }
+}
+
+function getCompletionKey(studentId, week) {
+  return String(studentId || "") + "::week" + normalizeWeekNumber(week);
+}
+
+function markPassageCompleted(studentId, week, passageId) {
+  const key = getCompletionKey(studentId, week);
+  const data = loadCompletionData();
+  const current = Array.isArray(data[key]) ? data[key] : [];
+  if (!current.includes(passageId)) current.push(passageId);
+  data[key] = current;
+  saveCompletionData(data);
+  return cloneData(current);
+}
+
+function getCompletedPassages(studentId, week) {
+  const key = getCompletionKey(studentId, week);
+  const data = loadCompletionData();
+  return Array.isArray(data[key]) ? cloneData(data[key]) : [];
+}
+
+function isPassageCompleted(studentId, week, passageId) {
+  return getCompletedPassages(studentId, week).includes(passageId);
+}
+
+function getStudentWeeklyPassages(studentOrId, week) {
+  const student = typeof studentOrId === "string" ? getStudent(studentOrId) : studentOrId;
+  if (!student) return [];
+  const classLevel = normalizeClassLevel(student.classLevel);
+  const weekAssignments = getWeeklyAssignments(week);
+  const ids = Array.isArray(weekAssignments[classLevel]) ? weekAssignments[classLevel] : [];
+  return ids.map(function(id) { return getPassage(id); }).filter(Boolean);
+}
+
 function commitPassages(passages) {
   const normalized = passages.map(normalizePassageData);
   MOCK.passages = normalized;
@@ -329,7 +590,15 @@ function getCurrentStudent()  { return getStudent(sessionStorage.getItem("studen
 function levelColor(l)        { return l==="EASY"?"#2e7d5e":l==="MODERATE"?"#c97b2a":"#c0392b"; }
 function levelBg(l)           { return l==="EASY"?"#d4edda":l==="MODERATE"?"#fff3cd":"#fde8e8"; }
 function badgeClass(l)        { return l==="EASY"?"badge-easy":l==="MODERATE"?"badge-moderate":"badge-hard"; }
-function getAssignedPassage(s){ return MOCK.passages.find(p=>p.label===s.classLevel); }
+function getAssignedPassage(s) {
+  const week = getActiveWeek();
+  const weekly = getStudentWeeklyPassages(s, week);
+  if (!weekly.length) return MOCK.passages.find(function(p){ return p.label===s.classLevel; }) || null;
+
+  const completed = getCompletedPassages(s.id, week);
+  const next = weekly.find(function(passage) { return !completed.includes(passage.id); });
+  return next || weekly[0];
+}
 function savePassage(data) {
   const passages = getPassages();
   const isEdit = Boolean(data && data.id);

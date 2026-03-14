@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Results — ReadWise</title>
+  <title>Results - ReadWise</title>
   <link rel="stylesheet" href="../stylesheets/shared.css">
 </head>
 <body>
@@ -13,26 +13,26 @@
       <div class="logo-mark">RW</div><h2>ReadWise</h2><p>Student Portal</p>
     </div>
     <nav>
-        <a href="student-profile.html"><span class="icon">👤</span> My Profile</a>
-      <a href="student-dashboard.html"><span class="icon">🏠</span> Dashboard</a>
-      <a href="student-passage.html" class="active"><span class="icon">📖</span> My Passage</a>
-      <a href="student-progress.html"><span class="icon">📊</span> My Progress</a>
-      <a href="student-pre-assessment.html"><span class="icon">📝</span> Pre-Assessment</a>
+      <a href="student-profile.html"><span class="icon">&#128100;</span> My Profile</a>
+      <a href="student-dashboard.html"><span class="icon">&#8962;</span> Dashboard</a>
+      <a href="student-passage.html" class="active"><span class="icon">&#128214;</span> My Passage</a>
+      <a href="student-progress.html"><span class="icon">&#128202;</span> My Progress</a>
+      <a href="student-pre-assessment.html"><span class="icon">&#128221;</span> Pre-Assessment</a>
     </nav>
     <div class="sidebar-footer">
-      <div class="user-info"><strong id="sb-name">—</strong>Grade 7</div>
-      <button class="logout-btn" onclick="sessionStorage.clear();window.location.href='../login.html'">⬅ Logout</button>
+      <div class="user-info"><strong id="sb-name">-</strong>Grade 7</div>
+      <button class="logout-btn" onclick="sessionStorage.clear();window.location.href='../login.html'">&larr; Logout</button>
     </div>
   </aside>
   <main class="main">
     <div style="max-width:640px;margin:0 auto">
       <div class="page-header">
-        <h1>📊 Your Results</h1>
+        <h1>Your Results</h1>
         <p id="result-sub">Session completed</p>
       </div>
-      <!-- Score card -->
+
       <div class="card" style="text-align:center;margin-bottom:16px;padding:32px">
-        <div style="font-size:56px;font-weight:900;color:var(--secondary)" id="score-big">—%</div>
+        <div style="font-size:56px;font-weight:900;color:var(--secondary)" id="score-big">-%</div>
         <div id="score-label" style="font-size:18px;margin:8px 0;font-weight:700"></div>
         <div id="score-fraction" style="font-size:14px;color:var(--muted)"></div>
         <div class="progress" style="margin:16px 0;height:14px">
@@ -40,26 +40,32 @@
         </div>
         <div id="reading-time" style="font-size:13px;color:var(--muted)"></div>
       </div>
+
       <div class="card-grid card-grid-2" style="margin-bottom:16px">
         <div class="stat-card" style="text-align:center">
           <div class="stat-label">Difficulty Rating Submitted</div>
-          <div class="stat-val" id="diff-val" style="margin-top:6px">—/5</div>
+          <div class="stat-val" id="diff-val" style="margin-top:6px">-/5</div>
         </div>
         <div class="stat-card" style="text-align:center">
           <div class="stat-label">System Recommendation</div>
           <div id="rec-badge" style="margin-top:10px"></div>
         </div>
       </div>
-      <div class="card" id="sa-section" style="margin-bottom:16px;display:none">
-        <div class="section-title">📝 Your Short Answer</div>
-        <div id="sa-display" style="font-size:14px;color:var(--text);line-height:1.7;background:#f7fafc;padding:12px;border-radius:8px"></div>
-        <div style="margin-top:10px;font-size:13px;color:var(--muted)">
-          ⏳ Pending teacher scoring (0–3 points)
-        </div>
+
+      <div class="card" style="margin-bottom:16px">
+        <div class="section-title">Weekly Assignment Status</div>
+        <div id="week-status" style="font-size:14px;color:var(--secondary)"></div>
       </div>
+
+      <div class="card" id="sa-section" style="margin-bottom:16px;display:none">
+        <div class="section-title">Your Short Answer</div>
+        <div id="sa-display" style="font-size:14px;color:var(--text);line-height:1.7;background:#f7fafc;padding:12px;border-radius:8px"></div>
+        <div style="margin-top:10px;font-size:13px;color:var(--muted)">Pending teacher scoring (0-3 points)</div>
+      </div>
+
       <div style="display:flex;gap:12px;flex-wrap:wrap">
-        <a href="student-dashboard.html" class="btn btn-primary">🏠 Back to Dashboard</a>
-        <a href="student-progress.html" class="btn btn-outline">📊 View My Progress</a>
+        <a href="student-dashboard.html" class="btn btn-primary">Back to Dashboard</a>
+        <a href="student-passage.html" class="btn btn-outline">View Weekly Passages</a>
       </div>
     </div>
   </main>
@@ -67,41 +73,59 @@
 <script src="../mockData.js"></script>
 <script>
   const params = new URLSearchParams(location.search);
-  const pid = params.get("id")||"p3";
-  const p = getPassage(pid);
-  const s = getCurrentStudent();
-  document.getElementById("sb-name").textContent = s?s.name:"Student";
-  document.getElementById("result-sub").textContent = p.title+" — "+p.label;
+  const pid = params.get("id") || "p3";
+  const passage = getPassage(pid);
+  const student = getCurrentStudent();
+  if (!student) {
+    window.location.href = "../login.html";
+    throw new Error("Missing student session");
+  }
+  const activeWeek = getActiveWeek();
+  document.getElementById("sb-name").textContent = student ? student.name : "Student";
+  document.getElementById("result-sub").textContent = passage ? (passage.title + " - " + passage.label) : "Session completed";
 
-  const raw = sessionStorage.getItem("result_"+pid);
-  const res = raw ? JSON.parse(raw) : {score:67,correct:2,total:3,difficulty:3,readingTime:"3:24",shortAnswer:""};
+  const raw = sessionStorage.getItem("result_" + pid);
+  const fallback = { score: 0, correct: 0, total: 1, difficulty: 3, readingTime: "-", shortAnswer: "", week: activeWeek };
+  const result = raw ? JSON.parse(raw) : fallback;
+  const resultWeek = Number(result.week || activeWeek);
 
-  document.getElementById("score-big").textContent = res.score+"%";
-  document.getElementById("score-fraction").textContent = res.correct+" of "+res.total+" correct";
-  document.getElementById("score-bar").style.width = res.score+"%";
-  document.getElementById("reading-time").textContent = "⏱ Reading Time: "+res.readingTime;
+  if (student && student.id) {
+    markPassageCompleted(student.id, resultWeek, pid);
+  }
 
-  let label="", color="";
-  if(res.score>=75){label="Excellent! 🌟";color="var(--easy)";}
-  else if(res.score>=60){label="Good Job! 👍";color="var(--accent)";}
-  else{label="Needs Improvement 📚";color="var(--hard)";}
+  document.getElementById("score-big").textContent = result.score + "%";
+  document.getElementById("score-fraction").textContent = result.correct + " of " + result.total + " fully correct";
+  document.getElementById("score-bar").style.width = result.score + "%";
+  document.getElementById("reading-time").textContent = "Reading Time: " + result.readingTime;
+
+  let label = "", color = "";
+  if (result.score >= 75) { label = "Excellent"; color = "var(--easy)"; }
+  else if (result.score >= 60) { label = "Good Job"; color = "var(--accent)"; }
+  else { label = "Needs Improvement"; color = "var(--hard)"; }
   document.getElementById("score-label").textContent = label;
   document.getElementById("score-label").style.color = color;
 
-  document.getElementById("diff-val").textContent = res.difficulty+"/5";
+  document.getElementById("diff-val").textContent = result.difficulty + "/5";
 
-  let rec="", recColor="";
-  if(res.score>=75){rec="Step UP ↑";recColor="var(--easy)";}
-  else if(res.score>=60){rec="Maintain ✓";recColor="var(--accent)";}
-  else{rec="Step DOWN ↓";recColor="var(--hard)";}
+  let recommendation = "", recColor = "";
+  if (result.score >= 75) { recommendation = "Step UP"; recColor = "var(--easy)"; }
+  else if (result.score >= 60) { recommendation = "Maintain"; recColor = "var(--accent)"; }
+  else { recommendation = "Step DOWN"; recColor = "var(--hard)"; }
   document.getElementById("rec-badge").innerHTML =
-    `<span style="font-size:16px;font-weight:800;color:${recColor}">${rec}</span>
-     <div style="font-size:12px;color:var(--muted);margin-top:4px">Based on your score</div>`;
+    '<span style="font-size:16px;font-weight:800;color:' + recColor + '">' + recommendation + '</span>' +
+    '<div style="font-size:12px;color:var(--muted);margin-top:4px">Based on your score</div>';
 
-  if(res.shortAnswer){
-    document.getElementById("sa-section").style.display="block";
-    document.getElementById("sa-display").textContent = res.shortAnswer;
+  if (result.shortAnswer) {
+    document.getElementById("sa-section").style.display = "block";
+    document.getElementById("sa-display").textContent = result.shortAnswer;
   }
+
+  const weeklyPassages = student ? getStudentWeeklyPassages(student, resultWeek) : [];
+  const completed = student ? getCompletedPassages(student.id, resultWeek) : [];
+  const completedCount = weeklyPassages.filter(function(p) { return completed.includes(p.id); }).length;
+  const total = weeklyPassages.length || MAX_WEEKLY_PASSAGES_PER_CLASS;
+  document.getElementById("week-status").textContent =
+    "Week " + resultWeek + ": " + completedCount + " of " + total + " assigned passages completed.";
 </script>
 </body>
 </html>

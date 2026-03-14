@@ -32,10 +32,25 @@
     <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap">
       <div>
         <h1>Passage Library</h1>
-        <p id="library-summary">Manage the passages you have saved for your class.</p>
+        <p id="library-summary">Manage passages and weekly class assignments.</p>
       </div>
       <a href="teacher-submit.html" class="btn btn-primary">Add New Passage</a>
     </div>
+
+    <div class="card" style="margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-end;flex-wrap:wrap">
+        <div>
+          <div class="section-title" style="margin-bottom:6px">Weekly Class Assignments</div>
+          <p style="font-size:13px;color:var(--muted)">Assign 5 passages per class for each week. Label matching is enforced automatically.</p>
+        </div>
+        <div style="min-width:180px">
+          <label class="form-label" for="week-selector">Active Week</label>
+          <select class="form-control" id="week-selector"></select>
+        </div>
+      </div>
+      <div class="card-grid card-grid-3" id="assignment-grid" style="margin-top:14px"></div>
+    </div>
+
     <div id="passage-grid" style="display:flex;flex-direction:column;gap:14px"></div>
   </main>
 </div>
@@ -44,31 +59,98 @@
 <script>
   const grid = document.getElementById("passage-grid");
   const summary = document.getElementById("library-summary");
+  const assignmentGrid = document.getElementById("assignment-grid");
+  const weekSelector = document.getElementById("week-selector");
 
   function escapeHtml(value) {
     return String(value).replace(/[&<>"']/g, function(character) {
-      return {
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        "\"": "&quot;",
-        "'": "&#39;"
-      }[character];
+      return { "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[character];
+    });
+  }
+
+  function getCurrentWeek() {
+    return Number(weekSelector.value || getActiveWeek());
+  }
+
+  function renderWeekSelector() {
+    weekSelector.innerHTML = "";
+    for (let week = 1; week <= TOTAL_PROGRAM_WEEKS; week++) {
+      const option = document.createElement("option");
+      option.value = String(week);
+      option.textContent = "Week " + week;
+      if (week === getActiveWeek()) option.selected = true;
+      weekSelector.appendChild(option);
+    }
+  }
+
+  function getClassColor(level) {
+    const normalized = normalizeClassLevel(level);
+    if (normalized === "EASY") return "var(--easy)";
+    if (normalized === "MODERATE") return "var(--moderate)";
+    return "var(--hard)";
+  }
+
+  function renderAssignmentPanels() {
+    const week = getCurrentWeek();
+    const weekly = getWeeklyAssignments(week);
+    assignmentGrid.innerHTML = "";
+
+    ["EASY", "MODERATE", "HARD"].forEach(function(level) {
+      const assignedIds = Array.isArray(weekly[level]) ? weekly[level] : [];
+      const assignedPassages = assignedIds.map(function(id) { return getPassage(id); }).filter(Boolean);
+      const color = getClassColor(level);
+      const display = getClassDisplayName(level);
+      const availablePool = getPassages().filter(function(passage) {
+        return mapPassageLabelToClassLevel(passage.label) === normalizeClassLevel(level);
+      }).length;
+
+      const card = document.createElement("div");
+      card.className = "card";
+      card.style.borderTop = "4px solid " + color;
+
+      const countText = assignedPassages.length + " / " + MAX_WEEKLY_PASSAGES_PER_CLASS + " assigned";
+      card.innerHTML =
+        '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px">' +
+        '<div><div style="font-size:12px;color:var(--muted)">CLASS</div><div style="font-size:18px;font-weight:800;color:' + color + '">' + display + '</div></div>' +
+        '<span class="badge badge-primary">' + countText + "</span></div>" +
+        (availablePool < MAX_WEEKLY_PASSAGES_PER_CLASS
+          ? '<div style="font-size:12px;color:var(--hard);margin-bottom:8px">Only ' + availablePool + ' matching passage(s) available. Add more to reach 5.</div>'
+          : "") +
+        '<div id="class_list_' + level + '" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px"></div>' +
+        '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
+        '<button class="btn btn-sm btn-outline" onclick="autofillClass(\'' + level + '\')">Auto Fill to 5</button>' +
+        '<button class="btn btn-sm" style="background:#f0f4f8;color:var(--secondary)" onclick="clearClass(\'' + level + '\')">Clear</button>' +
+        "</div>";
+
+      assignmentGrid.appendChild(card);
+
+      const listEl = document.getElementById("class_list_" + level);
+      if (!assignedPassages.length) {
+        listEl.innerHTML = '<div style="font-size:12px;color:var(--muted)">No passages assigned yet.</div>';
+      } else {
+        listEl.innerHTML = assignedPassages.map(function(passage) {
+          return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px;background:#f7fafc;border-radius:8px">' +
+            '<span style="font-size:12px;color:var(--secondary);font-weight:600">' + escapeHtml(passage.title) + '</span>' +
+            '<button class="btn btn-sm btn-danger" onclick="removeFromClass(\'' + level + '\',\'' + passage.id + '\')">Remove</button>' +
+            '</div>';
+        }).join("");
+      }
     });
   }
 
   function renderPassages() {
     const passages = getPassages();
-    summary.textContent = passages.length + " passage" + (passages.length === 1 ? "" : "s") + " in your teacher library.";
+    const week = getCurrentWeek();
+    const weekly = getWeeklyAssignments(week);
+    summary.textContent = passages.length + " passages in library. Assign exactly 5 per class for Week " + week + ".";
 
     if (!passages.length) {
-      grid.innerHTML = `
-        <div class="card" style="text-align:center;padding:40px 24px">
-          <div style="font-size:18px;font-weight:700;color:var(--secondary);margin-bottom:10px">No passages saved yet</div>
-          <p style="font-size:14px;color:var(--muted);margin-bottom:18px">Create your first passage and save it here after running the SVM classifier.</p>
-          <a href="teacher-submit.html" class="btn btn-primary">Create Passage</a>
-        </div>
-      `;
+      grid.innerHTML =
+        '<div class="card" style="text-align:center;padding:40px 24px">' +
+        '<div style="font-size:18px;font-weight:700;color:var(--secondary);margin-bottom:10px">No passages saved yet</div>' +
+        '<p style="font-size:14px;color:var(--muted);margin-bottom:18px">Create your first passage and save it after analysis.</p>' +
+        '<a href="teacher-submit.html" class="btn btn-primary">Create Passage</a>' +
+        "</div>";
       return;
     }
 
@@ -79,41 +161,75 @@
         : "Saved without confidence score";
       const assessment = passage.assessment || { questions: [], shortAnswerPrompt: "" };
       const questionCount = Array.isArray(assessment.questions) ? assessment.questions.length : 0;
-      const assessmentText = questionCount + " MCQ" + (questionCount === 1 ? "" : "s") +
+      const assessmentText = questionCount + " question" + (questionCount === 1 ? "" : "s") +
         (assessment.shortAnswerPrompt ? " + short answer" : "");
+      const classLevel = mapPassageLabelToClassLevel(passage.label);
+      const classDisplay = getClassDisplayName(classLevel);
+      const isAssigned = Array.isArray(weekly[classLevel]) && weekly[classLevel].includes(passage.id);
+      const disabled = isAssigned ? "disabled" : "";
+      const assignText = isAssigned ? "Assigned to " + classDisplay : "Assign to " + classDisplay + " Class";
 
-      return `
-        <div class="card" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:16px">
-          <div style="flex:1;min-width:280px">
-            <div style="margin-bottom:8px;display:flex;flex-wrap:wrap;gap:6px;align-items:center">
-              <span class="badge ${badgeClass(passage.label)}">${escapeHtml(passage.label)}</span>
-              <span class="badge badge-primary">${escapeHtml(passage.genre)}</span>
-              <span style="font-size:11px;color:var(--muted);background:#f0f4f8;padding:2px 8px;border-radius:4px">
-                ${confidenceText}
-              </span>
-            </div>
-            <h3 style="font-size:18px;font-weight:700;color:var(--secondary);margin-bottom:6px">${escapeHtml(passage.title)}</h3>
-            <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${passage.words} words - ~${passage.time} min reading time</p>
-            <p style="font-size:13px;color:var(--muted);margin-bottom:10px">Assessment: ${escapeHtml(assessmentText)}</p>
-            <p style="font-size:14px;color:#4a5568;line-height:1.7">${escapeHtml(preview)}</p>
-          </div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
-            <button class="btn btn-outline btn-sm" onclick="assignPassage('${passage.id}')">Assign</button>
-            <button class="btn btn-sm" style="background:#f0f4f8;color:var(--secondary)" onclick="editPassage('${passage.id}')">Edit</button>
-            <button class="btn btn-danger btn-sm" onclick="removePassage('${passage.id}')">Delete</button>
-          </div>
-        </div>
-      `;
+      return (
+        '<div class="card" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:16px">' +
+          '<div style="flex:1;min-width:280px">' +
+            '<div style="margin-bottom:8px;display:flex;flex-wrap:wrap;gap:6px;align-items:center">' +
+              '<span class="badge ' + badgeClass(passage.label) + '">' + escapeHtml(passage.label) + '</span>' +
+              '<span class="badge badge-primary">' + escapeHtml(passage.genre) + "</span>" +
+              '<span style="font-size:11px;color:var(--muted);background:#f0f4f8;padding:2px 8px;border-radius:4px">' + escapeHtml(confidenceText) + "</span>" +
+            "</div>" +
+            '<h3 style="font-size:18px;font-weight:700;color:var(--secondary);margin-bottom:6px">' + escapeHtml(passage.title) + "</h3>" +
+            '<p style="font-size:13px;color:var(--muted);margin-bottom:8px">' + passage.words + " words - ~" + passage.time + " min</p>" +
+            '<p style="font-size:13px;color:var(--muted);margin-bottom:8px">Target class: <strong>' + classDisplay + "</strong></p>" +
+            '<p style="font-size:13px;color:var(--muted);margin-bottom:10px">Assessment: ' + escapeHtml(assessmentText) + "</p>" +
+            '<p style="font-size:14px;color:#4a5568;line-height:1.7">' + escapeHtml(preview) + "</p>" +
+          "</div>" +
+          '<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">' +
+            '<button class="btn btn-outline btn-sm" ' + disabled + ' onclick="assignPassage(\'' + passage.id + '\')">' + escapeHtml(assignText) + "</button>" +
+            '<button class="btn btn-sm" style="background:#f0f4f8;color:var(--secondary)" onclick="editPassage(\'' + passage.id + '\')">Edit</button>' +
+            '<button class="btn btn-danger btn-sm" onclick="removePassage(\'' + passage.id + '\')">Delete</button>' +
+          "</div>" +
+        "</div>"
+      );
     }).join("");
   }
 
   function assignPassage(id) {
+    const week = getCurrentWeek();
     const passage = getPassage(id);
     if (!passage) {
       showToast("Passage not found.", "#c0392b");
       return;
     }
-    showToast("'" + passage.title + "' is ready to assign to a class.");
+    const targetClass = mapPassageLabelToClassLevel(passage.label);
+    const result = assignPassageToWeekClass(week, targetClass, id);
+    if (!result.ok) {
+      showToast(result.message, "#c0392b");
+      return;
+    }
+    showToast("Assigned to " + getClassDisplayName(targetClass) + " class for Week " + week + ".");
+    renderAll();
+  }
+
+  function removeFromClass(level, id) {
+    removePassageFromWeekClass(getCurrentWeek(), level, id);
+    showToast("Removed from " + getClassDisplayName(level) + " class.");
+    renderAll();
+  }
+
+  function autofillClass(level) {
+    autofillWeekClass(getCurrentWeek(), level);
+    showToast(getClassDisplayName(level) + " class filled up to 5 passages.");
+    renderAll();
+  }
+
+  function clearClass(level) {
+    const weekly = getWeeklyAssignments(getCurrentWeek());
+    const ids = Array.isArray(weekly[normalizeClassLevel(level)]) ? weekly[normalizeClassLevel(level)].slice() : [];
+    ids.forEach(function(id) {
+      removePassageFromWeekClass(getCurrentWeek(), level, id);
+    });
+    showToast(getClassDisplayName(level) + " class cleared.");
+    renderAll();
   }
 
   function editPassage(id) {
@@ -127,18 +243,35 @@
       return;
     }
 
-    const confirmed = window.confirm("Delete '" + passage.title + "' from the passage library?");
-    if (!confirmed) return;
+    if (!window.confirm("Delete '" + passage.title + "' from library and assignments?")) return;
 
-    if (deletePassage(id)) {
-      renderPassages();
-      showToast("Passage removed from the library.");
-    } else {
-      showToast("Could not remove the passage.", "#c0392b");
+    if (!deletePassage(id)) {
+      showToast("Could not remove passage.", "#c0392b");
+      return;
     }
+
+    for (let week = 1; week <= TOTAL_PROGRAM_WEEKS; week++) {
+      ["EASY", "MODERATE", "HARD"].forEach(function(level) {
+        removePassageFromWeekClass(week, level, id);
+      });
+    }
+
+    showToast("Passage removed.");
+    renderAll();
   }
 
-  renderPassages();
+  function renderAll() {
+    renderAssignmentPanels();
+    renderPassages();
+  }
+
+  renderWeekSelector();
+  weekSelector.addEventListener("change", function() {
+    const week = setActiveWeek(weekSelector.value);
+    weekSelector.value = String(week);
+    renderAll();
+  });
+  renderAll();
 </script>
 </body>
 </html>
