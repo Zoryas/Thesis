@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Questions — ReadWise</title>
+  <title>Questions - ReadWise</title>
   <link rel="stylesheet" href="../stylesheets/shared.css">
 </head>
 <body>
@@ -10,32 +10,33 @@
 <div class="layout">
   <aside class="sidebar">
     <div class="sidebar-logo">
-      <div class="logo-mark">RW</div><h2>ReadWise</h2><p>Student Portal</p>
+      <div class="logo-mark">RW</div>
+      <h2>ReadWise</h2>
+      <p>Student Portal</p>
     </div>
     <nav>
-        <a href="student-profile.html"><span class="icon">👤</span> My Profile</a>
-      <a href="student-dashboard.html"><span class="icon">🏠</span> Dashboard</a>
-      <a href="student-passage.html" class="active"><span class="icon">📖</span> My Passage</a>
-      <a href="student-progress.html"><span class="icon">📊</span> My Progress</a>
-      <a href="student-pre-assessment.html"><span class="icon">📝</span> Pre-Assessment</a>
+      <a href="student-profile.html"><span class="icon">&#128100;</span> My Profile</a>
+      <a href="student-dashboard.html"><span class="icon">&#8962;</span> Dashboard</a>
+      <a href="student-passage.html" class="active"><span class="icon">&#128214;</span> My Passage</a>
+      <a href="student-progress.html"><span class="icon">&#128202;</span> My Progress</a>
+      <a href="student-pre-assessment.html"><span class="icon">&#128221;</span> Pre-Assessment</a>
     </nav>
     <div class="sidebar-footer">
-      <div class="user-info"><strong id="sb-name">—</strong>Grade 7</div>
-      <button class="logout-btn" onclick="sessionStorage.clear();window.location.href='../login.html'">⬅ Logout</button>
+      <div class="user-info"><strong id="sb-name">-</strong>Grade 7</div>
+      <button class="logout-btn" onclick="sessionStorage.clear();window.location.href='../login.html'">&larr; Logout</button>
     </div>
   </aside>
   <main class="main">
     <div style="max-width:700px;margin:0 auto">
-      <button class="back-btn" onclick="history.back()">← Back to Passage</button>
+      <button class="back-btn" onclick="history.back()">&larr; Back to Passage</button>
       <div class="page-header">
         <h1 id="q-title">Comprehension Questions</h1>
         <p id="q-sub"></p>
       </div>
       <div id="questions-wrap"></div>
 
-      <!-- Difficulty Rating -->
       <div class="card" style="margin-top:16px">
-        <div class="section-title">🎯 Difficulty Rating</div>
+        <div class="section-title">Difficulty Rating</div>
         <p style="font-size:13px;color:var(--muted);margin-bottom:14px">
           How difficult did you find this passage? (1 = Very Easy, 5 = Very Hard)
         </p>
@@ -51,19 +52,15 @@
         </div>
       </div>
 
-      <!-- Short Answer (HARD only) -->
       <div class="card" id="sa-card" style="margin-top:16px;display:none">
-        <div class="section-title">📝 Short Answer <span style="font-size:12px;font-weight:400;color:var(--muted)">(HARD Level)</span></div>
+        <div class="section-title">Short Answer</div>
         <p id="sa-prompt" style="font-size:14px;color:var(--secondary);margin-bottom:10px;font-weight:600"></p>
-        <textarea class="form-control" id="short-answer" rows="5"
-          placeholder="Write your answer here in complete sentences..."></textarea>
-        <p style="font-size:12px;color:var(--muted);margin-top:6px">⏳ This will be scored by your teacher (0–3 points).</p>
+        <textarea class="form-control" id="short-answer" rows="5" placeholder="Write your answer here in complete sentences..."></textarea>
+        <p style="font-size:12px;color:var(--muted);margin-top:6px">This response will be reviewed and scored by your teacher.</p>
       </div>
 
       <div style="margin-top:20px;text-align:right">
-        <button class="btn btn-primary" onclick="submitAnswers()" style="font-size:15px;padding:12px 28px">
-          📤 Submit Answers
-        </button>
+        <button class="btn btn-primary" id="submit-btn" onclick="submitAnswers()" style="font-size:15px;padding:12px 28px">Submit Answers</button>
       </div>
     </div>
   </main>
@@ -72,118 +69,264 @@
 <script src="../mockData.js"></script>
 <script>
   const params = new URLSearchParams(location.search);
-  const pid    = params.get("id") || "p3";
-  const p      = getPassage(pid);
-  const qs     = MOCK.questions[pid] || [];
-  const s      = getCurrentStudent();
+  const pid = params.get("id") || "p3";
+  const p = getPassage(pid);
+  const assessment = getPassageAssessment(pid);
+  const qs = (assessment.questions || []).map(function(q) { return normalizeAssessmentQuestion(q); });
+  const shortAnswerPrompt = assessment.shortAnswerPrompt || "";
+  const s = getCurrentStudent();
 
   document.getElementById("sb-name").textContent = s ? s.name : "Student";
-  document.getElementById("q-title").textContent = "Questions: " + p.title;
-  document.getElementById("q-sub").textContent   = p.label + " | " + p.genre + " | " + p.words + " words";
 
-  // Slider
+  if (!p) {
+    document.getElementById("q-title").textContent = "Passage not found";
+    document.getElementById("q-sub").textContent = "Please go back to your dashboard.";
+    document.getElementById("submit-btn").disabled = true;
+    document.getElementById("questions-wrap").innerHTML =
+      '<div class="card"><p style="color:var(--hard)">No passage data was found for this assessment.</p></div>';
+  } else {
+    document.getElementById("q-title").textContent = "Questions: " + p.title;
+    document.getElementById("q-sub").textContent = p.label + " | " + p.genre + " | " + p.words + " words";
+  }
+
   const slider = document.getElementById("difficulty-slider");
   slider.addEventListener("input", function() {
     document.getElementById("slider-val").textContent = slider.value;
   });
 
-  // Build questions using createElement (NO innerHTML for label tags)
   const wrap = document.getElementById("questions-wrap");
 
-  qs.forEach(function(q, i) {
-    const card = document.createElement("div");
-    card.className = "card";
-    card.style.marginBottom = "14px";
+  function normalizeText(value) {
+    return String(value || "").toLowerCase().trim().replace(/\s+/g, " ");
+  }
 
-    // Question text
-    const qText = document.createElement("div");
-    qText.style.cssText = "font-weight:700;margin-bottom:12px;color:var(--secondary);font-size:15px";
-    qText.textContent = "Q" + (i + 1) + ". " + q.q;
-    card.appendChild(qText);
+  function parseCommaList(value) {
+    return String(value || "")
+      .split(",")
+      .map(function(item) { return normalizeText(item); })
+      .filter(function(item) { return item; });
+  }
 
-    // Options container
+  function renderNoQuestionsState() {
+    wrap.innerHTML =
+      '<div class="card">' +
+      '<div style="font-size:15px;font-weight:700;color:var(--secondary);margin-bottom:8px">No assessment questions yet</div>' +
+      '<p style="font-size:14px;color:var(--muted)">Your teacher has not added questions for this passage yet.</p>' +
+      "</div>";
+  }
+
+  function addTypeBadge(container, question) {
+    const row = document.createElement("div");
+    row.style.cssText = "display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap";
+    const levelBadge = document.createElement("span");
+    levelBadge.className = "badge badge-primary";
+    levelBadge.textContent = question.difficulty;
+    row.appendChild(levelBadge);
+
+    const typeBadge = document.createElement("span");
+    typeBadge.className = "badge";
+    typeBadge.style.cssText = "background:#f0f4f8;color:var(--secondary)";
+    typeBadge.textContent = getQuestionTypeLabel(question.type);
+    row.appendChild(typeBadge);
+    container.appendChild(row);
+  }
+
+  function renderMCQ(question, index, card) {
+    const options = Array.isArray(question.options) ? question.options.filter(Boolean) : [];
     const optWrap = document.createElement("div");
     optWrap.style.cssText = "display:flex;flex-direction:column;gap:8px";
-
-    q.opts.forEach(function(opt, j) {
+    options.forEach(function(opt, optionIndex) {
       const lbl = document.createElement("label");
-      lbl.id = "lbl" + i + "_" + j;
       lbl.style.cssText =
         "display:flex;align-items:center;gap:10px;cursor:pointer;" +
         "padding:10px 14px;border:1.5px solid var(--border);" +
         "border-radius:8px;font-size:14px;transition:.2s;";
-
-      lbl.onmouseover = function() { lbl.style.borderColor = "var(--primary)"; };
-      lbl.onmouseout  = function() {
-        const inp = lbl.querySelector("input");
-        if (!inp.checked) lbl.style.borderColor = "var(--border)";
-      };
-
       const radio = document.createElement("input");
-      radio.type  = "radio";
-      radio.name  = "q" + i;
-      radio.value = j;
+      radio.type = "radio";
+      radio.name = "q" + index;
+      radio.value = String(optionIndex);
       radio.style.accentColor = "var(--primary)";
-      radio.addEventListener("change", function() {
-        // Reset all options for this question
-        q.opts.forEach(function(_, k) {
-          const other = document.getElementById("lbl" + i + "_" + k);
-          if (other) other.style.cssText =
-            "display:flex;align-items:center;gap:10px;cursor:pointer;" +
-            "padding:10px 14px;border:1.5px solid var(--border);" +
-            "border-radius:8px;font-size:14px;transition:.2s;";
-        });
-        // Highlight selected
-        lbl.style.borderColor = "var(--primary)";
-        lbl.style.background  = "#e0f2f2";
-      });
-
       const span = document.createElement("span");
-      span.textContent = String.fromCharCode(65 + j) + ". " + opt;
-
+      span.textContent = String.fromCharCode(65 + optionIndex) + ". " + opt;
       lbl.appendChild(radio);
       lbl.appendChild(span);
       optWrap.appendChild(lbl);
     });
-
     card.appendChild(optWrap);
-    wrap.appendChild(card);
-  });
-
-  // Short answer for HARD passages
-  if (p.label === "HARD" && MOCK.shortAnswer[pid]) {
-    const saCard = document.getElementById("sa-card");
-    saCard.style.display = "block";
-    document.getElementById("sa-prompt").textContent = MOCK.shortAnswer[pid];
   }
 
-  // Submit
+  function renderTrueFalse(index, card) {
+    const optWrap = document.createElement("div");
+    optWrap.style.cssText = "display:flex;flex-direction:column;gap:8px";
+    ["true", "false"].forEach(function(value) {
+      const lbl = document.createElement("label");
+      lbl.style.cssText =
+        "display:flex;align-items:center;gap:10px;cursor:pointer;" +
+        "padding:10px 14px;border:1.5px solid var(--border);" +
+        "border-radius:8px;font-size:14px;transition:.2s;";
+      const radio = document.createElement("input");
+      radio.type = "radio";
+      radio.name = "q" + index;
+      radio.value = value;
+      radio.style.accentColor = "var(--primary)";
+      const span = document.createElement("span");
+      span.textContent = value === "true" ? "True" : "False";
+      lbl.appendChild(radio);
+      lbl.appendChild(span);
+      optWrap.appendChild(lbl);
+    });
+    card.appendChild(optWrap);
+  }
+
+  function addTextInput(card, id, placeholder, rows) {
+    if (rows && rows > 1) {
+      const textarea = document.createElement("textarea");
+      textarea.className = "form-control";
+      textarea.rows = rows;
+      textarea.id = id;
+      textarea.placeholder = placeholder;
+      card.appendChild(textarea);
+      return;
+    }
+    const input = document.createElement("input");
+    input.className = "form-control";
+    input.type = "text";
+    input.id = id;
+    input.placeholder = placeholder;
+    card.appendChild(input);
+  }
+
+  function renderQuestions() {
+    wrap.innerHTML = "";
+    if (!qs.length) {
+      renderNoQuestionsState();
+      return;
+    }
+
+    qs.forEach(function(question, index) {
+      const card = document.createElement("div");
+      card.className = "card";
+      card.style.marginBottom = "14px";
+
+      addTypeBadge(card, question);
+
+      const qText = document.createElement("div");
+      qText.style.cssText = "font-weight:700;margin-bottom:12px;color:var(--secondary);font-size:15px";
+      qText.textContent = "Q" + (index + 1) + ". " + question.prompt;
+      card.appendChild(qText);
+
+      if (question.type === "multiple_choice" || question.type === "multiple_choice_harder") {
+        renderMCQ(question, index, card);
+      } else if (question.type === "true_false" || question.type === "true_false_modified") {
+        renderTrueFalse(index, card);
+      } else if (question.type === "sequence") {
+        addTextInput(card, "q_text_" + index, "Enter the sequence in order, separated by commas.", 2);
+      } else if (question.type === "fill_in_the_blanks" || question.type === "identification") {
+        addTextInput(card, "q_text_" + index, "Type your answer", 1);
+      } else if (question.type === "enumeration") {
+        addTextInput(card, "q_text_" + index, "List your answers separated by commas.", 3);
+      } else {
+        addTextInput(card, "q_text_" + index, "Type your custom response.", 3);
+      }
+
+      wrap.appendChild(card);
+    });
+  }
+
+  function getResponse(index, question) {
+    if (question.type === "multiple_choice" || question.type === "multiple_choice_harder" || question.type === "true_false" || question.type === "true_false_modified") {
+      const selected = document.querySelector('input[name="q' + index + '"]:checked');
+      return selected ? selected.value : "";
+    }
+    const textInput = document.getElementById("q_text_" + index);
+    return textInput ? textInput.value.trim() : "";
+  }
+
+  function evaluateResponse(question, response) {
+    if (question.type === "multiple_choice" || question.type === "multiple_choice_harder") {
+      const ok = Number(response) === Number(question.answerIndex);
+      return { earned: ok ? 1 : 0, possible: 1, correct: ok };
+    }
+
+    if (question.type === "true_false" || question.type === "true_false_modified") {
+      const ok = normalizeText(response) === normalizeText(question.answerKey);
+      return { earned: ok ? 1 : 0, possible: 1, correct: ok };
+    }
+
+    if (question.type === "sequence") {
+      const expected = (question.answerKeys || []).map(normalizeText).filter(Boolean);
+      const actual = parseCommaList(response);
+      const ok = expected.length > 0 &&
+        expected.length === actual.length &&
+        expected.every(function(item, i) { return item === actual[i]; });
+      return { earned: ok ? 1 : 0, possible: 1, correct: ok };
+    }
+
+    if (question.type === "enumeration") {
+      const expected = (question.answerKeys || []).map(normalizeText).filter(Boolean);
+      const actual = parseCommaList(response);
+      if (!expected.length) return { earned: 0, possible: 1, correct: false };
+      const matched = expected.filter(function(item) { return actual.includes(item); }).length;
+      const perfect = matched === expected.length;
+      return { earned: matched, possible: expected.length, correct: perfect };
+    }
+
+    const accepted = (question.answerKeys || []).map(normalizeText).filter(Boolean);
+    const ok = accepted.includes(normalizeText(response));
+    return { earned: ok ? 1 : 0, possible: 1, correct: ok };
+  }
+
+  if (shortAnswerPrompt) {
+    document.getElementById("sa-card").style.display = "block";
+    document.getElementById("sa-prompt").textContent = shortAnswerPrompt;
+  }
+
+  renderQuestions();
+
   function submitAnswers() {
-    let correct = 0;
-    qs.forEach(function(q, i) {
-      const sel = document.querySelector('input[name="q' + i + '"]:checked');
-      if (sel && parseInt(sel.value) === q.ans) correct++;
+    if (!p) {
+      showToast("No passage loaded for this session.", "#c0392b");
+      return;
+    }
+    if (!qs.length) {
+      showToast("No assessment questions are available yet.", "#c0392b");
+      return;
+    }
+
+    let totalEarned = 0;
+    let totalPossible = 0;
+    let fullyCorrect = 0;
+    const responses = [];
+
+    qs.forEach(function(question, index) {
+      const response = getResponse(index, question);
+      const result = evaluateResponse(question, response);
+      totalEarned += result.earned;
+      totalPossible += result.possible;
+      if (result.correct) fullyCorrect++;
+      responses.push({ type: question.type, value: response, earned: result.earned, possible: result.possible });
     });
 
-    const pct  = Math.round((correct / qs.length) * 100);
+    const pct = totalPossible ? Math.round((totalEarned / totalPossible) * 100) : 0;
     const diff = slider.value;
-    const sa   = document.getElementById("short-answer");
+    const sa = document.getElementById("short-answer");
     const saVal = sa ? sa.value.trim() : "";
 
     sessionStorage.setItem("result_" + pid, JSON.stringify({
       score: pct,
-      correct: correct,
+      correct: fullyCorrect,
       total: qs.length,
       difficulty: diff,
       passageId: pid,
       shortAnswer: saVal,
-      readingTime: sessionStorage.getItem("readingTime_" + pid) || "—"
+      responses: responses,
+      readingTime: sessionStorage.getItem("readingTime_" + pid) || "-"
     }));
 
-    showToast("✅ Answers submitted successfully!");
+    showToast("Answers submitted successfully.");
     setTimeout(function() {
       window.location.href = "student-results.html?id=" + pid;
-    }, 1000);
+    }, 900);
   }
 </script>
 </body>

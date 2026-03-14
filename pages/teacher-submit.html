@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Submit Passage — ReadWise</title>
+  <title>Submit Passage - ReadWise</title>
   <link rel="stylesheet" href="../stylesheets/shared.css">
 </head>
 <body>
@@ -10,56 +10,73 @@
 <div class="layout">
   <aside class="sidebar">
     <div class="sidebar-logo">
-      <div class="logo-mark">RW</div><h2>ReadWise</h2><p>Teacher Portal</p>
+      <div class="logo-mark">RW</div>
+      <h2>ReadWise</h2>
+      <p>Teacher Portal</p>
     </div>
     <nav>
-      <a href="teacher-dashboard.html"><span class="icon">🏠</span> Dashboard</a>
-      <a href="teacher-passages.html"><span class="icon">📚</span> Passage Library</a>
-      <a href="teacher-submit.html" class="active"><span class="icon">➕</span> Submit Passage</a>
-      <a href="teacher-students.html"><span class="icon">👥</span> Students</a>
-      <a href="teacher-recommendations.html"><span class="icon">🔔</span> Recommendations</a>
-      <a href="teacher-reports.html"><span class="icon">📊</span> Reports</a>
+      <a href="teacher-dashboard.html"><span class="icon">&#8962;</span> Dashboard</a>
+      <a href="teacher-passages.html"><span class="icon">&#128214;</span> Passage Library</a>
+      <a href="teacher-submit.html" class="active"><span class="icon">&#10133;</span> Submit Passage</a>
+      <a href="teacher-students.html"><span class="icon">&#128101;</span> Students</a>
+      <a href="teacher-recommendations.html"><span class="icon">&#128276;</span> Recommendations</a>
+      <a href="teacher-reports.html"><span class="icon">&#128202;</span> Reports</a>
     </nav>
     <div class="sidebar-footer">
       <div class="user-info"><strong>Ms. Ana Villanueva</strong>Grade 7 English</div>
-      <button class="logout-btn" onclick="sessionStorage.clear();window.location.href='../login.html'">⬅ Logout</button>
+      <button class="logout-btn" onclick="sessionStorage.clear();window.location.href='../login.html'">&larr; Logout</button>
     </div>
   </aside>
   <main class="main">
-    <div class="breadcrumb"><a href="teacher-dashboard.html">Dashboard</a> › Submit Passage</div>
+    <div class="breadcrumb"><a href="teacher-dashboard.html">Dashboard</a> > <a href="teacher-passages.html">Passage Library</a> > <span id="crumb-mode">Submit Passage</span></div>
     <div class="page-header">
-      <h1>➕ Submit New Passage</h1>
-      <p>Paste a reading passage and let the SVM classifier predict its difficulty level.</p>
+      <h1 id="page-title">Submit New Passage</h1>
+      <p id="page-subtitle">Paste a reading passage and let the SVM classifier predict its difficulty level.</p>
     </div>
     <div class="card-grid card-grid-2">
       <div class="card">
-        <div class="section-title">📄 Passage Input</div>
+        <div class="section-title">Passage Input</div>
         <div class="form-group">
-          <label class="form-label">Passage Title</label>
+          <label class="form-label" for="passage-title">Passage Title</label>
           <input class="form-control" id="passage-title" placeholder="e.g. The Solar System">
         </div>
         <div class="form-group">
-          <label class="form-label">Genre</label>
+          <label class="form-label" for="passage-genre">Genre</label>
           <select class="form-control" id="passage-genre">
-            <option>Expository</option><option>Narrative</option>
-            <option>Persuasive</option><option>Descriptive</option>
+            <option>Expository</option>
+            <option>Narrative</option>
+            <option>Persuasive</option>
+            <option>Descriptive</option>
           </select>
         </div>
         <div class="form-group">
-          <label class="form-label">Passage Text</label>
-          <textarea class="form-control" id="passage-text" rows="10"
-            placeholder="Paste or type the reading passage here (minimum 80 words)..."></textarea>
+          <label class="form-label" for="passage-text">Passage Text</label>
+          <textarea class="form-control" id="passage-text" rows="10" placeholder="Paste or type the reading passage here (minimum 30 words)..."></textarea>
         </div>
-        <button class="btn btn-primary btn-block" id="analyze-btn" onclick="analyzePassage()">
-          🔍 Analyze Passage (SVM)
-        </button>
+
+        <div class="section-title">Assessment Builder</div>
+        <p style="font-size:13px;color:var(--muted);margin:-6px 0 10px 0">
+          Easy: Multiple Choice, True/False | Moderate: MCQ Harder, True/False Modified, Sequence |
+          Difficult: Fill in the Blanks, Identification, Enumeration | Custom: Custom Question
+        </p>
+        <div id="assessment-builder" style="display:flex;flex-direction:column;gap:10px;margin-bottom:10px"></div>
+        <button class="btn btn-outline btn-sm" type="button" onclick="addQuestionField()">+ Add Question</button>
+        <div class="form-group" style="margin-top:12px">
+          <label class="form-label" for="short-answer-prompt">Optional Short Answer Prompt</label>
+          <textarea class="form-control" id="short-answer-prompt" rows="3" placeholder="Optional teacher-scored prompt."></textarea>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn btn-primary" id="analyze-btn" onclick="analyzePassage()">Analyze Passage (SVM)</button>
+          <a class="btn btn-outline" href="teacher-passages.html">Back to Library</a>
+        </div>
       </div>
-      <div class="card" id="result-panel">
-        <div class="section-title">🤖 SVM Prediction Results</div>
+      <div class="card">
+        <div class="section-title">SVM Prediction Results</div>
         <div id="result-content">
           <div style="text-align:center;padding:40px 0;color:var(--muted)">
-            <div style="font-size:48px;margin-bottom:12px">🔍</div>
-            <p>Paste a passage and click Analyze to see the SVM classifier results.</p>
+            <div style="font-size:20px;font-weight:700;margin-bottom:12px">Prediction Ready</div>
+            <p>Analyze the passage, then save with your assessment.</p>
+            <p style="font-size:12px;margin-top:12px">API: http://127.0.0.1:5000/predict</p>
           </div>
         </div>
       </div>
@@ -69,70 +86,438 @@
 <div class="toast" id="toast"></div>
 <script src="../mockData.js"></script>
 <script>
-  function analyzePassage(){
-    const text = document.getElementById("passage-text").value.trim();
-    if(text.length < 50){
-      showToast("⚠️ Please enter a longer passage (min 80 words).", "#c0392b");
+  const PREDICTION_API_URL = "http://127.0.0.1:5000/predict";
+  const pageParams = new URLSearchParams(window.location.search);
+  const LEVELS = ["EASY", "MODERATE", "DIFFICULT", "CUSTOM"];
+  const TYPE_CATALOG = getQuestionTypeCatalog();
+
+  let currentPassageId = pageParams.get("id");
+  let lastPrediction = null;
+  let lastAnalyzedText = "";
+  let assessmentDraft = [];
+
+  function escapeHtml(value) {
+    return String(value).replace(/[&<>"']/g, function(ch) {
+      return { "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[ch];
+    });
+  }
+
+  function calculateSurfaceFeatures(text) {
+    const words = String(text || "").match(/[A-Za-z]+(?:'[A-Za-z]+)?/g) || [];
+    const sentences = String(text || "").split(/[.!?]+/).filter(function(s) { return s.trim(); });
+    const wordCount = words.length;
+    const sentenceCount = Math.max(sentences.length, 1);
+    const avgSentenceLength = wordCount ? wordCount / sentenceCount : 0;
+    const avgWordLength = wordCount ? words.reduce(function(total, w) { return total + w.length; }, 0) / wordCount : 0;
+    const uniqueWords = wordCount ? new Set(words.map(function(w) { return w.toLowerCase(); })).size : 0;
+    return {
+      avg_sentence_length: Number(avgSentenceLength.toFixed(2)),
+      avg_word_length: Number(avgWordLength.toFixed(2)),
+      type_token_ratio: Number((wordCount ? uniqueWords / wordCount : 0).toFixed(3)),
+      passage_length: wordCount
+    };
+  }
+
+  function createQuestionTemplate(level, type) {
+    const selectedLevel = LEVELS.includes(String(level || "").toUpperCase()) ? String(level).toUpperCase() : "EASY";
+    const allowed = TYPE_CATALOG[selectedLevel].map(function(entry) { return entry.value; });
+    const selectedType = allowed.includes(type) ? type : allowed[0];
+    const q = normalizeAssessmentQuestion({ difficulty: selectedLevel, type: selectedType, prompt: "" });
+    if (selectedType === "multiple_choice" || selectedType === "multiple_choice_harder" || selectedType === "sequence") {
+      q.options = Array.isArray(q.options) ? q.options.slice(0, 4) : [];
+      while (q.options.length < 4) q.options.push("");
+    }
+    if (!Array.isArray(q.answerKeys)) q.answerKeys = [];
+    return q;
+  }
+
+  function cloneQuestion(question) {
+    const normalized = normalizeAssessmentQuestion(question || {});
+    const q = createQuestionTemplate(normalized.difficulty, normalized.type);
+    q.prompt = normalized.prompt;
+    q.options = Array.isArray(normalized.options) ? normalized.options.slice() : q.options;
+    q.answerIndex = Number.isInteger(normalized.answerIndex) ? normalized.answerIndex : q.answerIndex;
+    q.answerKey = normalized.answerKey || q.answerKey;
+    q.answerKeys = Array.isArray(normalized.answerKeys) ? normalized.answerKeys.slice() : q.answerKeys;
+    return q;
+  }
+
+  function renderDynamicFields(body, q, index) {
+    function addInput(label, value, placeholder, onChange) {
+      const wrap = document.createElement("div");
+      const l = document.createElement("label");
+      l.className = "form-label";
+      l.style.marginBottom = "2px";
+      l.textContent = label;
+      const input = document.createElement("input");
+      input.className = "form-control";
+      input.type = "text";
+      input.value = value || "";
+      input.placeholder = placeholder || "";
+      input.oninput = function() { onChange(input.value); };
+      wrap.appendChild(l);
+      wrap.appendChild(input);
+      body.appendChild(wrap);
+    }
+
+    if (q.type === "multiple_choice" || q.type === "multiple_choice_harder") {
+      q.options.forEach(function(opt, optIndex) {
+        addInput("Option " + String.fromCharCode(65 + optIndex), opt, "Enter option", function(next) {
+          q.options[optIndex] = next;
+        });
+      });
+      const l = document.createElement("label");
+      l.className = "form-label";
+      l.textContent = "Correct Option";
+      l.style.marginTop = "8px";
+      const select = document.createElement("select");
+      select.className = "form-control";
+      ["A","B","C","D"].forEach(function(letter, answerIndex) {
+        const option = document.createElement("option");
+        option.value = String(answerIndex);
+        option.textContent = letter;
+        if (Number(q.answerIndex) === answerIndex) option.selected = true;
+        select.appendChild(option);
+      });
+      select.onchange = function() { q.answerIndex = Number(select.value); };
+      body.appendChild(l);
+      body.appendChild(select);
       return;
     }
+
+    if (q.type === "true_false" || q.type === "true_false_modified") {
+      const l = document.createElement("label");
+      l.className = "form-label";
+      l.textContent = "Correct Answer";
+      l.style.marginTop = "8px";
+      const select = document.createElement("select");
+      select.className = "form-control";
+      [{v:"true",t:"True"},{v:"false",t:"False"}].forEach(function(entry) {
+        const option = document.createElement("option");
+        option.value = entry.v;
+        option.textContent = entry.t;
+        if ((q.answerKey || "true") === entry.v) option.selected = true;
+        select.appendChild(option);
+      });
+      select.onchange = function() { q.answerKey = select.value; };
+      body.appendChild(l);
+      body.appendChild(select);
+      return;
+    }
+
+    if (q.type === "sequence") {
+      q.options.forEach(function(step, stepIndex) {
+        addInput("Step " + (stepIndex + 1), step, "Enter sequence step", function(next) {
+          q.options[stepIndex] = next;
+        });
+      });
+      addInput("Correct Sequence", q.answerKeys.join(", "), "Example: step 1, step 2, step 3", function(next) {
+        q.answerKeys = next.split(",").map(function(x) { return x.trim(); }).filter(Boolean);
+      });
+      return;
+    }
+
+    if (q.type === "enumeration") {
+      addInput("Expected Items", q.answerKeys.join(", "), "Example: item 1, item 2, item 3", function(next) {
+        q.answerKeys = next.split(",").map(function(x) { return x.trim(); }).filter(Boolean);
+      });
+      return;
+    }
+
+    addInput("Answer Key", q.answerKeys.join(" | "), "Use | between alternatives", function(next) {
+      q.answerKeys = next.split("|").map(function(x) { return x.trim(); }).filter(Boolean);
+    });
+  }
+
+  function renderAssessmentBuilder() {
+    const container = document.getElementById("assessment-builder");
+    container.innerHTML = "";
+
+    assessmentDraft.forEach(function(raw, index) {
+      const q = cloneQuestion(raw);
+      assessmentDraft[index] = q;
+
+      const card = document.createElement("div");
+      card.style.cssText = "border:1px solid var(--border);border-radius:8px;padding:12px;background:#f7fafc";
+
+      const header = document.createElement("div");
+      header.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin-bottom:8px";
+      header.innerHTML = "<strong style='color:var(--secondary)'>Question " + (index + 1) + "</strong>";
+      if (assessmentDraft.length > 1) {
+        const remove = document.createElement("button");
+        remove.type = "button";
+        remove.className = "btn btn-sm";
+        remove.style.cssText = "background:#fde8e8;color:var(--hard)";
+        remove.textContent = "Remove";
+        remove.onclick = function() { removeQuestionField(index); };
+        header.appendChild(remove);
+      }
+      card.appendChild(header);
+
+      const row = document.createElement("div");
+      row.style.cssText = "display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px";
+      const levelWrap = document.createElement("div");
+      const levelLabel = document.createElement("label");
+      levelLabel.className = "form-label";
+      levelLabel.textContent = "Question Level";
+      const levelSelect = document.createElement("select");
+      levelSelect.className = "form-control";
+      LEVELS.forEach(function(level) {
+        const option = document.createElement("option");
+        option.value = level;
+        option.textContent = level.charAt(0) + level.slice(1).toLowerCase();
+        if (q.difficulty === level) option.selected = true;
+        levelSelect.appendChild(option);
+      });
+      levelSelect.onchange = function() {
+        const updated = createQuestionTemplate(levelSelect.value);
+        updated.prompt = q.prompt;
+        assessmentDraft[index] = updated;
+        renderAssessmentBuilder();
+      };
+      levelWrap.appendChild(levelLabel);
+      levelWrap.appendChild(levelSelect);
+      row.appendChild(levelWrap);
+
+      const typeWrap = document.createElement("div");
+      const typeLabel = document.createElement("label");
+      typeLabel.className = "form-label";
+      typeLabel.textContent = "Question Type";
+      const typeSelect = document.createElement("select");
+      typeSelect.className = "form-control";
+      getQuestionTypesForDifficulty(q.difficulty).forEach(function(entry) {
+        const option = document.createElement("option");
+        option.value = entry.value;
+        option.textContent = entry.label;
+        if (entry.value === q.type) option.selected = true;
+        typeSelect.appendChild(option);
+      });
+      typeSelect.onchange = function() {
+        const updated = createQuestionTemplate(q.difficulty, typeSelect.value);
+        updated.prompt = q.prompt;
+        assessmentDraft[index] = updated;
+        renderAssessmentBuilder();
+      };
+      typeWrap.appendChild(typeLabel);
+      typeWrap.appendChild(typeSelect);
+      row.appendChild(typeWrap);
+      card.appendChild(row);
+
+      const promptLabel = document.createElement("label");
+      promptLabel.className = "form-label";
+      promptLabel.textContent = "Question Prompt";
+      const prompt = document.createElement("textarea");
+      prompt.className = "form-control";
+      prompt.rows = 2;
+      prompt.value = q.prompt || "";
+      prompt.placeholder = "Enter question text";
+      prompt.oninput = function() { q.prompt = prompt.value; };
+      card.appendChild(promptLabel);
+      card.appendChild(prompt);
+
+      const body = document.createElement("div");
+      body.style.marginTop = "8px";
+      renderDynamicFields(body, q, index);
+      card.appendChild(body);
+      container.appendChild(card);
+    });
+  }
+
+  function addQuestionField() {
+    assessmentDraft.push(createQuestionTemplate("EASY"));
+    renderAssessmentBuilder();
+  }
+
+  function removeQuestionField(index) {
+    assessmentDraft = assessmentDraft.filter(function(_, i) { return i !== index; });
+    if (!assessmentDraft.length) assessmentDraft = [createQuestionTemplate("EASY")];
+    renderAssessmentBuilder();
+  }
+
+  function buildAssessmentPayload() {
+    const questions = [];
+    let error = "";
+
+    assessmentDraft.forEach(function(raw, index) {
+      if (error) return;
+      const hasData = String(raw.prompt || "").trim() ||
+        (Array.isArray(raw.options) && raw.options.some(function(x) { return String(x || "").trim(); })) ||
+        (Array.isArray(raw.answerKeys) && raw.answerKeys.some(function(x) { return String(x || "").trim(); })) ||
+        String(raw.answerKey || "").trim();
+      if (!hasData) return;
+
+      const q = normalizeAssessmentQuestion(raw);
+      if (!q.prompt) { error = "Question " + (index + 1) + " is missing a prompt."; return; }
+
+      if (q.type === "multiple_choice" || q.type === "multiple_choice_harder") {
+        if (!q.options.every(function(opt) { return opt; })) { error = "Question " + (index + 1) + " needs 4 options."; return; }
+      } else if (q.type === "sequence") {
+        if (q.options.filter(Boolean).length < 3) { error = "Question " + (index + 1) + " needs at least 3 sequence items."; return; }
+        if (q.answerKeys.length < 3) { error = "Question " + (index + 1) + " needs a complete sequence answer."; return; }
+      } else if (q.type === "enumeration") {
+        if (q.answerKeys.length < 2) { error = "Question " + (index + 1) + " needs at least 2 expected items."; return; }
+      } else if (q.type !== "true_false" && q.type !== "true_false_modified") {
+        if (!q.answerKeys.length) { error = "Question " + (index + 1) + " needs an answer key."; return; }
+      }
+
+      questions.push(q);
+    });
+
+    if (error) return { error: error };
+    if (!questions.length) return { error: "Add at least 1 complete assessment question." };
+    return {
+      assessment: {
+        questions: questions,
+        shortAnswerPrompt: document.getElementById("short-answer-prompt").value.trim()
+      }
+    };
+  }
+
+  function setAssessmentFromData(assessment) {
+    const source = assessment || {};
+    const questions = Array.isArray(source.questions) ? source.questions.map(cloneQuestion) : [];
+    assessmentDraft = questions.length ? questions : [createQuestionTemplate("EASY")];
+    document.getElementById("short-answer-prompt").value = String(source.shortAnswerPrompt || "").trim();
+    renderAssessmentBuilder();
+  }
+
+  function renderLoadingState() {
     document.getElementById("result-content").innerHTML =
-      `<div style="text-align:center;padding:40px 0">
-        <div class="spinner"></div>
-        <p style="margin-top:16px;color:var(--muted);font-size:14px">Running SVM classifier...<br>Extracting linguistic features...</p>
-      </div>`;
-
-    const words = text.split(/\s+/).filter(Boolean);
-    const wordCount = words.length;
-    const sentences = text.split(/[.!?]+/).filter(s=>s.trim().length>3);
-    const avgSentLen = (wordCount/(sentences.length||1)).toFixed(1);
-    const avgWordLen = (words.reduce((a,w)=>a+w.replace(/[^a-zA-Z]/g,"").length,0)/wordCount).toFixed(1);
-    const uniqueWords = new Set(words.map(w=>w.toLowerCase().replace(/[^a-z]/g,""))).size;
-    const ttr = (uniqueWords/wordCount).toFixed(2);
-
-    let label="MODERATE";
-    if(parseFloat(avgSentLen)<12 && parseFloat(avgWordLen)<5 && wordCount<150) label="EASY";
-    else if(parseFloat(avgSentLen)>18 || parseFloat(avgWordLen)>6 || wordCount>250) label="HARD";
-
-    setTimeout(()=>{
-      document.getElementById("result-content").innerHTML = `
-        <div style="text-align:center;margin-bottom:20px">
-          <div style="font-size:12px;color:var(--muted);margin-bottom:8px">PREDICTED LABEL</div>
-          <span class="badge ${badgeClass(label)}" style="font-size:22px;padding:10px 28px">${label}</span>
-          <div style="font-size:12px;color:var(--muted);margin-top:8px">SVM Classifier — Linear Kernel — One-vs-Rest</div>
-        </div>
-        <div style="background:#f7fafc;border-radius:8px;padding:16px;margin-bottom:16px">
-          <div style="font-size:13px;font-weight:700;color:var(--secondary);margin-bottom:12px">📊 Feature Breakdown</div>
-          ${[
-            ["Avg Sentence Length", avgSentLen+" words"],
-            ["Avg Word Length", avgWordLen+" characters"],
-            ["Type-Token Ratio", ttr],
-            ["Passage Length", wordCount+" words"],
-            ["Sentence Count", sentences.length]
-          ].map(([k,v])=>`
-            <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px">
-              <span style="color:var(--muted)">${k}</span>
-              <strong>${v}</strong>
-            </div>
-          `).join("")}
-        </div>
-        <div class="form-group">
-          <label class="form-label">Override Label (Optional)</label>
-          <select class="form-control" id="override-label">
-            <option value="">— Use Predicted: ${label} —</option>
-            <option>EASY</option><option>MODERATE</option><option>HARD</option>
-          </select>
-        </div>
-        <button class="btn btn-success btn-block" onclick="saveToLibrary('${label}')">💾 Save to Passage Library</button>
-      `;
-    }, 2000);
+      '<div style="text-align:center;padding:40px 0"><div class="spinner"></div><p style="margin-top:16px;color:var(--muted);font-size:14px">Running SVM classifier...</p></div>';
   }
 
-  function saveToLibrary(predictedLabel){
-    const override = document.getElementById("override-label").value;
-    const finalLabel = override || predictedLabel;
-    showToast("✅ Passage saved to library as "+finalLabel+"!");
-    setTimeout(()=>window.location.href="teacher-passages.html",1500);
+  function renderErrorState(message) {
+    document.getElementById("result-content").innerHTML =
+      '<div style="background:#fde8e8;border-radius:8px;padding:16px;color:var(--hard)"><div style="font-size:14px;font-weight:700;margin-bottom:8px">Prediction unavailable</div><div style="font-size:13px;line-height:1.6">' +
+      escapeHtml(message) +
+      '</div><div style="font-size:12px;color:var(--muted);margin-top:12px">Start the local Flask server with: python app.py</div></div>';
   }
+
+  function renderResult(data, options) {
+    const settings = options || {};
+    const label = escapeHtml(data.label);
+    const features = data.features || {};
+    const confidenceText = typeof data.confidence === "number" ? Number(data.confidence).toFixed(1) + "%" : "Saved";
+    const saveLabel = currentPassageId ? "Update Passage" : "Save to Passage Library";
+    const heading = settings.saved ? "CURRENT SAVED LABEL" : "PREDICTED LABEL";
+    document.getElementById("result-content").innerHTML =
+      '<div style="text-align:center;margin-bottom:20px">' +
+      '<div style="font-size:12px;color:var(--muted);margin-bottom:8px">' + heading + '</div>' +
+      '<span class="badge ' + badgeClass(data.label) + '" style="font-size:22px;padding:10px 28px">' + label + '</span>' +
+      '<div style="font-size:13px;color:var(--muted);margin-top:10px">Confidence: ' + confidenceText + '</div>' +
+      '</div>' +
+      '<div style="background:#f7fafc;border-radius:8px;padding:16px;margin-bottom:16px">' +
+      '<div style="font-size:13px;font-weight:700;color:var(--secondary);margin-bottom:12px">Feature Breakdown</div>' +
+      '<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px"><span style="color:var(--muted)">Avg Sentence Length</span><strong>' + escapeHtml((features.avg_sentence_length || 0) + " words") + '</strong></div>' +
+      '<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px"><span style="color:var(--muted)">Avg Word Length</span><strong>' + escapeHtml((features.avg_word_length || 0) + " characters") + '</strong></div>' +
+      '<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px"><span style="color:var(--muted)">Type-Token Ratio</span><strong>' + escapeHtml(features.type_token_ratio || 0) + '</strong></div>' +
+      '<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px"><span style="color:var(--muted)">Passage Length</span><strong>' + escapeHtml((features.passage_length || 0) + " words") + '</strong></div>' +
+      '</div>' +
+      '<div class="form-group"><label class="form-label" for="override-label">Override Label (Optional)</label>' +
+      '<select class="form-control" id="override-label"><option value="">Use ' + (settings.saved ? "Current" : "Predicted") + ': ' + label + '</option><option>EASY</option><option>MODERATE</option><option>HARD</option></select></div>' +
+      '<button class="btn btn-success btn-block" onclick="saveToLibrary()">' + saveLabel + '</button>';
+  }
+
+  function loadPassageForEditing() {
+    if (!currentPassageId) return;
+    const existingPassage = getPassage(currentPassageId);
+    if (!existingPassage) {
+      showToast("Passage not found.", "#c0392b");
+      currentPassageId = null;
+      return;
+    }
+
+    document.getElementById("page-title").textContent = "Edit Passage";
+    document.getElementById("page-subtitle").textContent = "Update passage text and assessment, then save.";
+    document.getElementById("crumb-mode").textContent = "Edit Passage";
+    document.getElementById("passage-title").value = existingPassage.title;
+    document.getElementById("passage-genre").value = existingPassage.genre;
+    document.getElementById("passage-text").value = existingPassage.text;
+    setAssessmentFromData(getPassageAssessment(currentPassageId));
+
+    lastPrediction = {
+      label: existingPassage.label,
+      confidence: typeof existingPassage.confidence === "number" ? existingPassage.confidence : null,
+      features: calculateSurfaceFeatures(existingPassage.text)
+    };
+    lastAnalyzedText = existingPassage.text;
+    renderResult(lastPrediction, { saved: true });
+  }
+
+  async function analyzePassage() {
+    const text = document.getElementById("passage-text").value.trim();
+    if (!text) {
+      showToast("Please enter a passage.", "#c0392b");
+      return;
+    }
+
+    renderLoadingState();
+    const button = document.getElementById("analyze-btn");
+    button.disabled = true;
+    button.style.opacity = "0.7";
+    button.textContent = "Analyzing...";
+
+    try {
+      const response = await fetch(PREDICTION_API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: text })
+      });
+      const data = await response.json().catch(function() { return { error: "Invalid prediction response." }; });
+      if (!response.ok || data.error) throw new Error(data.error || "Prediction failed.");
+      lastPrediction = data;
+      lastAnalyzedText = text;
+      renderResult(data, { saved: false });
+      showToast("Prediction complete for " + data.label + ".");
+    } catch (error) {
+      renderErrorState(error.message || "Cannot connect to prediction server.");
+      showToast(error.message || "Cannot connect to prediction server.", "#c0392b");
+    } finally {
+      button.disabled = false;
+      button.style.opacity = "1";
+      button.textContent = "Analyze Passage (SVM)";
+    }
+  }
+
+  function saveToLibrary() {
+    const title = document.getElementById("passage-title").value.trim();
+    const genre = document.getElementById("passage-genre").value;
+    const text = document.getElementById("passage-text").value.trim();
+    const assessmentBuild = buildAssessmentPayload();
+
+    if (!title) return showToast("Please enter a passage title.", "#c0392b");
+    if (!text) return showToast("Please enter the passage text.", "#c0392b");
+    if (!lastPrediction) return showToast("Analyze the passage before saving.", "#c0392b");
+    if (text !== lastAnalyzedText) return showToast("Passage text changed. Analyze again before saving.", "#c0392b");
+    if (assessmentBuild.error) return showToast(assessmentBuild.error, "#c0392b");
+
+    const override = document.getElementById("override-label");
+    const finalLabel = override && override.value ? override.value : lastPrediction.label;
+    const isEditing = Boolean(currentPassageId);
+    const saved = savePassage({
+      id: currentPassageId,
+      title: title,
+      genre: genre,
+      text: text,
+      label: finalLabel,
+      confidence: lastPrediction.confidence,
+      assessment: assessmentBuild.assessment
+    });
+
+    currentPassageId = saved.id;
+    lastPrediction = {
+      label: saved.label,
+      confidence: typeof saved.confidence === "number" ? saved.confidence : null,
+      features: calculateSurfaceFeatures(saved.text)
+    };
+    lastAnalyzedText = saved.text;
+
+    showToast(isEditing ? "Passage and assessment updated." : "Passage and assessment saved.");
+    setTimeout(function() { window.location.href = "teacher-passages.html"; }, 1000);
+  }
+
+  setAssessmentFromData({ questions: [createQuestionTemplate("EASY")], shortAnswerPrompt: "" });
+  loadPassageForEditing();
 </script>
 </body>
 </html>

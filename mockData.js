@@ -80,14 +80,296 @@ const MOCK = {
   }
 };
 
+const PASSAGES_STORAGE_KEY = "readwise_passages_v1";
+const DEFAULT_PASSAGES = JSON.parse(JSON.stringify(MOCK.passages));
+const QUESTION_TYPE_CATALOG = {
+  EASY: [
+    { value: "multiple_choice", label: "Multiple Choice" },
+    { value: "true_false", label: "True or False" }
+  ],
+  MODERATE: [
+    { value: "multiple_choice_harder", label: "Multiple Choice (Harder)" },
+    { value: "true_false_modified", label: "True or False (Modified)" },
+    { value: "sequence", label: "Sequence" }
+  ],
+  DIFFICULT: [
+    { value: "fill_in_the_blanks", label: "Fill in the Blanks" },
+    { value: "identification", label: "Identification" },
+    { value: "enumeration", label: "Enumeration" }
+  ],
+  CUSTOM: [
+    { value: "custom", label: "Custom Question" }
+  ]
+};
+const QUESTION_TYPE_LABELS = {};
+Object.keys(QUESTION_TYPE_CATALOG).forEach(function(level) {
+  QUESTION_TYPE_CATALOG[level].forEach(function(entry) {
+    QUESTION_TYPE_LABELS[entry.value] = entry.label;
+  });
+});
+
+function cloneData(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function countPassageWords(text) {
+  const matches = String(text || "").match(/[A-Za-z]+(?:'[A-Za-z]+)?/g);
+  return matches ? matches.length : 0;
+}
+
+function estimateReadingTime(wordCount) {
+  return Math.max(1, Math.ceil((wordCount || 0) / 80));
+}
+
+function normalizeQuestionDifficulty(value) {
+  const normalized = String(value || "").trim().toUpperCase();
+  if (QUESTION_TYPE_CATALOG[normalized]) return normalized;
+  return "EASY";
+}
+
+function mapPassageLabelToQuestionDifficulty(label) {
+  const normalized = String(label || "").trim().toUpperCase();
+  if (normalized === "HARD") return "DIFFICULT";
+  if (normalized === "MODERATE") return "MODERATE";
+  return "EASY";
+}
+
+function getQuestionTypesForDifficulty(difficulty) {
+  const level = normalizeQuestionDifficulty(difficulty);
+  return cloneData(QUESTION_TYPE_CATALOG[level]);
+}
+
+function getDefaultQuestionType(difficulty) {
+  const types = getQuestionTypesForDifficulty(difficulty);
+  return types.length ? types[0].value : "multiple_choice";
+}
+
+function normalizeQuestionType(type, difficulty) {
+  const level = normalizeQuestionDifficulty(difficulty);
+  const allowed = QUESTION_TYPE_CATALOG[level].map(function(entry) { return entry.value; });
+  const normalized = String(type || "").trim().toLowerCase();
+  if (allowed.includes(normalized)) return normalized;
+  return allowed[0];
+}
+
+function toStringArray(values) {
+  if (!Array.isArray(values)) return [];
+  return values.map(function(value) { return String(value || "").trim(); });
+}
+
+function parseDelimitedAnswers(value, delimiter) {
+  return String(value || "")
+    .split(delimiter)
+    .map(function(entry) { return entry.trim(); })
+    .filter(function(entry) { return entry; });
+}
+
+function normalizeAssessmentQuestion(question) {
+  const source = question || {};
+  const difficulty = normalizeQuestionDifficulty(
+    source.difficulty || source.level || source.category || "EASY"
+  );
+
+  let candidateType = String(source.type || "").trim().toLowerCase();
+  if (!candidateType) {
+    if (Array.isArray(source.opts) || Array.isArray(source.options)) {
+      candidateType = difficulty === "MODERATE" ? "multiple_choice_harder" : "multiple_choice";
+    } else {
+      candidateType = getDefaultQuestionType(difficulty);
+    }
+  }
+  const type = normalizeQuestionType(candidateType, difficulty);
+
+  const prompt = String(source.prompt || source.q || "").trim();
+  const optionSource = Array.isArray(source.options) ? source.options : source.opts;
+  let options = toStringArray(optionSource);
+  const answerIndexRaw = source.answerIndex !== undefined ? source.answerIndex : source.ans;
+  const answerKeyRaw = source.answerKey !== undefined ? source.answerKey : source.answer;
+  const answerKeysRaw = Array.isArray(source.answerKeys) ? source.answerKeys : [];
+  const normalized = {
+    difficulty: difficulty,
+    type: type,
+    prompt: prompt,
+    options: [],
+    answerIndex: 0,
+    answerKey: "",
+    answerKeys: []
+  };
+
+  if (type === "multiple_choice" || type === "multiple_choice_harder") {
+    options = options.slice(0, 4);
+    while (options.length < 4) options.push("");
+    normalized.options = options;
+
+    const parsedIndex = Number(answerIndexRaw);
+    normalized.answerIndex = Number.isInteger(parsedIndex) && parsedIndex >= 0 && parsedIndex <= 3
+      ? parsedIndex
+      : 0;
+    return normalized;
+  }
+
+  if (type === "true_false" || type === "true_false_modified") {
+    const tfAnswer = String(answerKeyRaw || "").trim().toLowerCase();
+    normalized.answerKey = tfAnswer === "false" ? "false" : "true";
+    return normalized;
+  }
+
+  if (type === "sequence") {
+    normalized.options = options.filter(function(entry) { return entry; });
+    normalized.answerKeys = answerKeysRaw.length
+      ? toStringArray(answerKeysRaw).filter(function(entry) { return entry; })
+      : parseDelimitedAnswers(answerKeyRaw, ",");
+    return normalized;
+  }
+
+  if (type === "enumeration") {
+    normalized.answerKeys = answerKeysRaw.length
+      ? toStringArray(answerKeysRaw).filter(function(entry) { return entry; })
+      : parseDelimitedAnswers(answerKeyRaw, ",");
+    return normalized;
+  }
+
+  normalized.answerKeys = answerKeysRaw.length
+    ? toStringArray(answerKeysRaw).filter(function(entry) { return entry; })
+    : parseDelimitedAnswers(answerKeyRaw, "|");
+  return normalized;
+}
+
+function normalizePassageData(passage) {
+  const normalized = Object.assign({}, passage);
+  normalized.id = normalized.id || "";
+  normalized.title = String(normalized.title || "").trim();
+  normalized.genre = String(normalized.genre || "Expository").trim() || "Expository";
+  normalized.text = String(normalized.text || "").trim();
+  normalized.label = String(normalized.label || "MODERATE").trim().toUpperCase() || "MODERATE";
+  normalized.words = countPassageWords(normalized.text);
+  normalized.time = estimateReadingTime(normalized.words);
+
+  if (normalized.confidence !== undefined && normalized.confidence !== null && normalized.confidence !== "") {
+    normalized.confidence = Number(normalized.confidence);
+  } else {
+    delete normalized.confidence;
+  }
+
+  const legacyQuestions = (MOCK.questions[normalized.id] || []).map(function(question) {
+    return {
+      difficulty: mapPassageLabelToQuestionDifficulty(normalized.label),
+      type: mapPassageLabelToQuestionDifficulty(normalized.label) === "MODERATE"
+        ? "multiple_choice_harder"
+        : "multiple_choice",
+      q: String(question.q || "").trim(),
+      opts: Array.isArray(question.opts) ? question.opts.slice(0, 4).map(function(opt) { return String(opt || "").trim(); }) : ["", "", "", ""],
+      ans: Number.isInteger(question.ans) ? question.ans : 0
+    };
+  });
+  const legacyShortAnswer = String(MOCK.shortAnswer[normalized.id] || "").trim();
+  normalized.assessment = normalizeAssessmentData(normalized.assessment || {
+    questions: legacyQuestions,
+    shortAnswerPrompt: legacyShortAnswer
+  });
+
+  return normalized;
+}
+
+function normalizeAssessmentData(assessment) {
+  const source = assessment || {};
+  const normalizedQuestions = Array.isArray(source.questions) ? source.questions : [];
+  const questions = normalizedQuestions
+    .map(function(question) { return normalizeAssessmentQuestion(question); })
+    .filter(function(question) { return question.prompt; });
+
+  return {
+    questions: questions,
+    shortAnswerPrompt: String(source.shortAnswerPrompt || source.shortAnswer || "").trim()
+  };
+}
+
+function loadStoredPassages() {
+  try {
+    const raw = localStorage.getItem(PASSAGES_STORAGE_KEY);
+    if (!raw) return DEFAULT_PASSAGES.map(normalizePassageData);
+
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return DEFAULT_PASSAGES.map(normalizePassageData);
+    return parsed.map(normalizePassageData);
+  } catch (error) {
+    return DEFAULT_PASSAGES.map(normalizePassageData);
+  }
+}
+
+function commitPassages(passages) {
+  const normalized = passages.map(normalizePassageData);
+  MOCK.passages = normalized;
+
+  try {
+    localStorage.setItem(PASSAGES_STORAGE_KEY, JSON.stringify(normalized));
+  } catch (error) {
+    console.warn("Unable to persist passages:", error);
+  }
+
+  return normalized;
+}
+
+function getNextPassageId(passages) {
+  let maxId = 0;
+  passages.forEach(function(passage) {
+    const match = /^p(\d+)$/.exec(String(passage.id || ""));
+    if (match) maxId = Math.max(maxId, Number(match[1]));
+  });
+  return "p" + (maxId + 1);
+}
+
+MOCK.passages = loadStoredPassages();
+
 // Helpers
 function getStudent(id)       { return MOCK.students.find(s=>s.id===id); }
 function getPassage(id)       { return MOCK.passages.find(p=>p.id===id); }
+function getPassages()        { return cloneData(MOCK.passages); }
 function getCurrentStudent()  { return getStudent(sessionStorage.getItem("studentId")||"s1"); }
 function levelColor(l)        { return l==="EASY"?"#2e7d5e":l==="MODERATE"?"#c97b2a":"#c0392b"; }
 function levelBg(l)           { return l==="EASY"?"#d4edda":l==="MODERATE"?"#fff3cd":"#fde8e8"; }
 function badgeClass(l)        { return l==="EASY"?"badge-easy":l==="MODERATE"?"badge-moderate":"badge-hard"; }
 function getAssignedPassage(s){ return MOCK.passages.find(p=>p.label===s.classLevel); }
+function savePassage(data) {
+  const passages = getPassages();
+  const isEdit = Boolean(data && data.id);
+  const nextId = isEdit ? data.id : getNextPassageId(passages);
+  const record = normalizePassageData(Object.assign({}, data, {
+    id: nextId,
+    assessment: normalizeAssessmentData(data ? data.assessment : null)
+  }));
+  const index = passages.findIndex(function(passage) { return passage.id === nextId; });
+
+  if (index >= 0) passages[index] = record;
+  else passages.unshift(record);
+
+  commitPassages(passages);
+  return cloneData(record);
+}
+function deletePassage(id) {
+  const passages = getPassages();
+  const filtered = passages.filter(function(passage) { return passage.id !== id; });
+  if (filtered.length === passages.length) return false;
+  commitPassages(filtered);
+  return true;
+}
+function getPassageAssessment(id) {
+  const passage = getPassage(id);
+  if (!passage) return { questions: [], shortAnswerPrompt: "" };
+
+  if (passage.assessment) return cloneData(normalizeAssessmentData(passage.assessment));
+
+  return normalizeAssessmentData({
+    questions: MOCK.questions[id] || [],
+    shortAnswerPrompt: MOCK.shortAnswer[id] || ""
+  });
+}
+function getQuestionTypeCatalog() {
+  return cloneData(QUESTION_TYPE_CATALOG);
+}
+function getQuestionTypeLabel(type) {
+  return QUESTION_TYPE_LABELS[String(type || "").trim().toLowerCase()] || "Question";
+}
 function showToast(msg,color="#2c3e6b") {
   const t=document.getElementById("toast");
   if(!t)return;

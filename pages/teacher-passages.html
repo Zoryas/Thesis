@@ -2,37 +2,39 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Passage Library — ReadWise</title>
- <link rel="stylesheet" href="../stylesheets/shared.css">
+  <title>Passage Library - ReadWise</title>
+  <link rel="stylesheet" href="../stylesheets/shared.css">
 </head>
 <body>
 <div class="demo-banner">ReadWise System | Pulo National High School</div>
 <div class="layout">
   <aside class="sidebar">
     <div class="sidebar-logo">
-      <div class="logo-mark">RW</div><h2>ReadWise</h2><p>Teacher Portal</p>
+      <div class="logo-mark">RW</div>
+      <h2>ReadWise</h2>
+      <p>Teacher Portal</p>
     </div>
     <nav>
-      <a href="teacher-dashboard.html"><span class="icon">🏠</span> Dashboard</a>
-      <a href="teacher-passages.html" class="active"><span class="icon">📚</span> Passage Library</a>
-      <a href="teacher-submit.html"><span class="icon">➕</span> Submit Passage</a>
-      <a href="teacher-students.html"><span class="icon">👥</span> Students</a>
-      <a href="teacher-recommendations.html"><span class="icon">🔔</span> Recommendations</a>
-      <a href="teacher-reports.html"><span class="icon">📊</span> Reports</a>
+      <a href="teacher-dashboard.html"><span class="icon">&#8962;</span> Dashboard</a>
+      <a href="teacher-passages.html" class="active"><span class="icon">&#128214;</span> Passage Library</a>
+      <a href="teacher-submit.html"><span class="icon">&#10133;</span> Submit Passage</a>
+      <a href="teacher-students.html"><span class="icon">&#128101;</span> Students</a>
+      <a href="teacher-recommendations.html"><span class="icon">&#128276;</span> Recommendations</a>
+      <a href="teacher-reports.html"><span class="icon">&#128202;</span> Reports</a>
     </nav>
     <div class="sidebar-footer">
       <div class="user-info"><strong>Ms. Ana Villanueva</strong>Grade 7 English</div>
-      <button class="logout-btn" onclick="sessionStorage.clear();window.location.href='../login.html'">⬅ Logout</button>
+      <button class="logout-btn" onclick="sessionStorage.clear();window.location.href='../login.html'">&larr; Logout</button>
     </div>
   </aside>
   <main class="main">
-    <div class="breadcrumb"><a href="teacher-dashboard.html">Dashboard</a> › Passage Library</div>
-    <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start">
+    <div class="breadcrumb"><a href="teacher-dashboard.html">Dashboard</a> > Passage Library</div>
+    <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap">
       <div>
-        <h1>📚 Passage Library</h1>
-        <p>All 6 passages with SVM-predicted difficulty labels</p>
+        <h1>Passage Library</h1>
+        <p id="library-summary">Manage the passages you have saved for your class.</p>
       </div>
-      <a href="teacher-submit.html" class="btn btn-primary">➕ Add New Passage</a>
+      <a href="teacher-submit.html" class="btn btn-primary">Add New Passage</a>
     </div>
     <div id="passage-grid" style="display:flex;flex-direction:column;gap:14px"></div>
   </main>
@@ -41,38 +43,102 @@
 <script src="../mockData.js"></script>
 <script>
   const grid = document.getElementById("passage-grid");
-  MOCK.passages.forEach(p=>{
-    grid.innerHTML += `
-      <div class="card" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
-        <div style="flex:1;min-width:200px">
-          <div style="margin-bottom:6px">
-            <span class="badge ${badgeClass(p.label)}">${p.label}</span>
-            <span class="badge badge-primary" style="margin-left:6px">${p.genre}</span>
-            <span style="font-size:11px;color:var(--muted);margin-left:8px;background:#f0f4f8;padding:2px 8px;border-radius:4px">
-              SVM: Linear Kernel
-            </span>
-          </div>
-          <h3 style="font-size:15px;font-weight:700;color:var(--secondary);margin-bottom:3px">${p.title}</h3>
-          <p style="font-size:13px;color:var(--muted)">📝 ${p.words} words · ⏱ ~${p.time} min</p>
-        </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn btn-outline btn-sm" onclick="assignPassage('${p.id}','${p.title}')">📌 Assign</button>
-          <button class="btn btn-sm" style="background:#f0f4f8;color:var(--secondary)" onclick="editLabel('${p.id}')">✏️ Edit Label</button>
-        </div>
-      </div>
-    `;
-  });
+  const summary = document.getElementById("library-summary");
 
-  function assignPassage(id,title){
-    showToast("✅ '"+title+"' assigned to class!");
+  function escapeHtml(value) {
+    return String(value).replace(/[&<>"']/g, function(character) {
+      return {
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        "\"": "&quot;",
+        "'": "&#39;"
+      }[character];
+    });
   }
-  function editLabel(id){
-    const p = getPassage(id);
-    const newLabel = prompt("Override label for '"+p.title+"'?\nEnter: EASY, MODERATE, or HARD",""+p.label);
-    if(newLabel && ["EASY","MODERATE","HARD"].includes(newLabel.toUpperCase())){
-      showToast("✅ Label updated to "+newLabel.toUpperCase());
+
+  function renderPassages() {
+    const passages = getPassages();
+    summary.textContent = passages.length + " passage" + (passages.length === 1 ? "" : "s") + " in your teacher library.";
+
+    if (!passages.length) {
+      grid.innerHTML = `
+        <div class="card" style="text-align:center;padding:40px 24px">
+          <div style="font-size:18px;font-weight:700;color:var(--secondary);margin-bottom:10px">No passages saved yet</div>
+          <p style="font-size:14px;color:var(--muted);margin-bottom:18px">Create your first passage and save it here after running the SVM classifier.</p>
+          <a href="teacher-submit.html" class="btn btn-primary">Create Passage</a>
+        </div>
+      `;
+      return;
+    }
+
+    grid.innerHTML = passages.map(function(passage) {
+      const preview = passage.text.length > 220 ? passage.text.slice(0, 220).trim() + "..." : passage.text;
+      const confidenceText = typeof passage.confidence === "number" && !Number.isNaN(passage.confidence)
+        ? "Confidence: " + passage.confidence.toFixed(1) + "%"
+        : "Saved without confidence score";
+      const assessment = passage.assessment || { questions: [], shortAnswerPrompt: "" };
+      const questionCount = Array.isArray(assessment.questions) ? assessment.questions.length : 0;
+      const assessmentText = questionCount + " MCQ" + (questionCount === 1 ? "" : "s") +
+        (assessment.shortAnswerPrompt ? " + short answer" : "");
+
+      return `
+        <div class="card" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:16px">
+          <div style="flex:1;min-width:280px">
+            <div style="margin-bottom:8px;display:flex;flex-wrap:wrap;gap:6px;align-items:center">
+              <span class="badge ${badgeClass(passage.label)}">${escapeHtml(passage.label)}</span>
+              <span class="badge badge-primary">${escapeHtml(passage.genre)}</span>
+              <span style="font-size:11px;color:var(--muted);background:#f0f4f8;padding:2px 8px;border-radius:4px">
+                ${confidenceText}
+              </span>
+            </div>
+            <h3 style="font-size:18px;font-weight:700;color:var(--secondary);margin-bottom:6px">${escapeHtml(passage.title)}</h3>
+            <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${passage.words} words - ~${passage.time} min reading time</p>
+            <p style="font-size:13px;color:var(--muted);margin-bottom:10px">Assessment: ${escapeHtml(assessmentText)}</p>
+            <p style="font-size:14px;color:#4a5568;line-height:1.7">${escapeHtml(preview)}</p>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
+            <button class="btn btn-outline btn-sm" onclick="assignPassage('${passage.id}')">Assign</button>
+            <button class="btn btn-sm" style="background:#f0f4f8;color:var(--secondary)" onclick="editPassage('${passage.id}')">Edit</button>
+            <button class="btn btn-danger btn-sm" onclick="removePassage('${passage.id}')">Delete</button>
+          </div>
+        </div>
+      `;
+    }).join("");
+  }
+
+  function assignPassage(id) {
+    const passage = getPassage(id);
+    if (!passage) {
+      showToast("Passage not found.", "#c0392b");
+      return;
+    }
+    showToast("'" + passage.title + "' is ready to assign to a class.");
+  }
+
+  function editPassage(id) {
+    window.location.href = "teacher-submit.html?id=" + encodeURIComponent(id);
+  }
+
+  function removePassage(id) {
+    const passage = getPassage(id);
+    if (!passage) {
+      showToast("Passage not found.", "#c0392b");
+      return;
+    }
+
+    const confirmed = window.confirm("Delete '" + passage.title + "' from the passage library?");
+    if (!confirmed) return;
+
+    if (deletePassage(id)) {
+      renderPassages();
+      showToast("Passage removed from the library.");
+    } else {
+      showToast("Could not remove the passage.", "#c0392b");
     }
   }
+
+  renderPassages();
 </script>
 </body>
 </html>
