@@ -22,7 +22,7 @@
     </nav>
     <div class="sidebar-footer">
       <div class="user-info"><strong id="sb-name">-</strong>Grade 7</div>
-      <button class="logout-btn" onclick="sessionStorage.clear();window.location.href='../login.html'">&larr; Logout</button>
+      <button class="logout-btn" onclick="logout()">&larr; Logout</button>
     </div>
   </aside>
   <main class="main">
@@ -71,62 +71,89 @@
     </div>
   </main>
 </div>
+<script src="../api.js"></script>
 <script src="../mockData.js"></script>
 <script>
   const params = new URLSearchParams(location.search);
   const pid = params.get("id") || "p3";
-  const passage = getPassage(pid);
-  const student = getCurrentStudent();
-  if (!student) {
+
+  async function bootstrapPage() {
+    let auth = null;
+    let passage = null;
+    try {
+      auth = await ReadWiseAPI.me();
+      if (!auth || !auth.user || auth.user.role !== "student" || !auth.user.student) {
+        throw new Error("Unauthorized");
+      }
+      passage = await ReadWiseAPI.getPassage(pid);
+    } catch (error) {
+      window.location.href = "../login.html";
+      return;
+    }
+
+    const student = auth.user.student;
+    const activeWeek = ReadWiseAPI.getActiveWeek();
+    document.getElementById("sb-name").textContent = student ? student.name : "Student";
+    document.getElementById("result-sub").textContent = passage ? (passage.title + " - " + passage.label) : "Session completed";
+
+    const raw = sessionStorage.getItem("result_" + pid);
+    const fallback = { score: 0, correct: 0, total: 1, difficulty: 3, readingTime: "-", shortAnswer: "", week: activeWeek };
+    const result = raw ? JSON.parse(raw) : fallback;
+    const resultWeek = Number(result.week || activeWeek);
+
+    document.getElementById("score-big").textContent = result.score + "%";
+    document.getElementById("score-fraction").textContent = result.correct + " of " + result.total + " fully correct";
+    document.getElementById("score-bar").style.width = result.score + "%";
+    document.getElementById("reading-time").textContent = "Reading Time: " + result.readingTime;
+
+    let label = "", color = "";
+    if (result.score >= 75) { label = "Excellent"; color = "var(--easy)"; }
+    else if (result.score >= 60) { label = "Good Job"; color = "var(--accent)"; }
+    else { label = "Needs Improvement"; color = "var(--hard)"; }
+    document.getElementById("score-label").textContent = label;
+    document.getElementById("score-label").style.color = color;
+
+    document.getElementById("diff-val").textContent = result.difficulty + "/5";
+
+    let recommendation = "", recColor = "";
+    if (result.score >= 75) { recommendation = "Step UP"; recColor = "var(--easy)"; }
+    else if (result.score >= 60) { recommendation = "Maintain"; recColor = "var(--accent)"; }
+    else { recommendation = "Step DOWN"; recColor = "var(--hard)"; }
+    document.getElementById("rec-badge").innerHTML =
+      '<span style="font-size:16px;font-weight:800;color:' + recColor + '">' + recommendation + '</span>' +
+      '<div style="font-size:12px;color:var(--muted);margin-top:4px">Based on your score</div>';
+
+    if (result.shortAnswer) {
+      document.getElementById("sa-section").style.display = "block";
+      document.getElementById("sa-display").textContent = result.shortAnswer;
+    }
+
+    try {
+      const weekly = await ReadWiseAPI.getStudentWeeklyPassages(resultWeek);
+      const completion = await ReadWiseAPI.getStudentCompletions(resultWeek);
+      const weeklyPassages = (weekly && weekly.passages) || [];
+      const completed = (completion && completion.completedPassageIds) || [];
+      const completedCount = weeklyPassages.filter(function(p) { return completed.includes(p.id); }).length;
+      const total = weeklyPassages.length || MAX_WEEKLY_PASSAGES_PER_CLASS;
+      document.getElementById("week-status").textContent =
+        "Week " + resultWeek + ": " + completedCount + " of " + total + " assigned passages completed.";
+    } catch (error) {
+      document.getElementById("week-status").textContent =
+        "Week " + resultWeek + ": status unavailable.";
+    }
+  }
+
+  async function logout() {
+    try {
+      await ReadWiseAPI.logout();
+    } catch (error) {
+      // ignore logout API errors
+    }
+    sessionStorage.clear();
     window.location.href = "../login.html";
-    throw new Error("Missing student session");
-  }
-  const activeWeek = getActiveWeek();
-  document.getElementById("sb-name").textContent = student ? student.name : "Student";
-  document.getElementById("result-sub").textContent = passage ? (passage.title + " - " + passage.label) : "Session completed";
-
-  const raw = sessionStorage.getItem("result_" + pid);
-  const fallback = { score: 0, correct: 0, total: 1, difficulty: 3, readingTime: "-", shortAnswer: "", week: activeWeek };
-  const result = raw ? JSON.parse(raw) : fallback;
-  const resultWeek = Number(result.week || activeWeek);
-
-  if (student && student.id) {
-    markPassageCompleted(student.id, resultWeek, pid);
   }
 
-  document.getElementById("score-big").textContent = result.score + "%";
-  document.getElementById("score-fraction").textContent = result.correct + " of " + result.total + " fully correct";
-  document.getElementById("score-bar").style.width = result.score + "%";
-  document.getElementById("reading-time").textContent = "Reading Time: " + result.readingTime;
-
-  let label = "", color = "";
-  if (result.score >= 75) { label = "Excellent"; color = "var(--easy)"; }
-  else if (result.score >= 60) { label = "Good Job"; color = "var(--accent)"; }
-  else { label = "Needs Improvement"; color = "var(--hard)"; }
-  document.getElementById("score-label").textContent = label;
-  document.getElementById("score-label").style.color = color;
-
-  document.getElementById("diff-val").textContent = result.difficulty + "/5";
-
-  let recommendation = "", recColor = "";
-  if (result.score >= 75) { recommendation = "Step UP"; recColor = "var(--easy)"; }
-  else if (result.score >= 60) { recommendation = "Maintain"; recColor = "var(--accent)"; }
-  else { recommendation = "Step DOWN"; recColor = "var(--hard)"; }
-  document.getElementById("rec-badge").innerHTML =
-    '<span style="font-size:16px;font-weight:800;color:' + recColor + '">' + recommendation + '</span>' +
-    '<div style="font-size:12px;color:var(--muted);margin-top:4px">Based on your score</div>';
-
-  if (result.shortAnswer) {
-    document.getElementById("sa-section").style.display = "block";
-    document.getElementById("sa-display").textContent = result.shortAnswer;
-  }
-
-  const weeklyPassages = student ? getStudentWeeklyPassages(student, resultWeek) : [];
-  const completed = student ? getCompletedPassages(student.id, resultWeek) : [];
-  const completedCount = weeklyPassages.filter(function(p) { return completed.includes(p.id); }).length;
-  const total = weeklyPassages.length || MAX_WEEKLY_PASSAGES_PER_CLASS;
-  document.getElementById("week-status").textContent =
-    "Week " + resultWeek + ": " + completedCount + " of " + total + " assigned passages completed.";
+  bootstrapPage();
 </script>
 </body>
 </html>

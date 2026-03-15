@@ -22,7 +22,7 @@
     </nav>
     <div class="sidebar-footer">
       <div class="user-info"><strong id="sb-name">-</strong>Grade 7</div>
-      <button class="logout-btn" onclick="sessionStorage.clear();window.location.href='../login.html'">Logout</button>
+      <button class="logout-btn" onclick="logout()">Logout</button>
     </div>
   </aside>
   <main class="main">
@@ -33,30 +33,51 @@
     <div class="card" id="passage-detail"></div>
   </main>
 </div>
+<script src="../api.js"></script>
 <script src="../mockData.js"></script>
 <script>
-  const student = getCurrentStudent();
-  if (!student) {
-    window.location.href = "../login.html";
-    throw new Error("Missing student session");
-  }
-  const week = getActiveWeek();
-  const passages = getStudentWeeklyPassages(student, week);
-  const completedIds = getCompletedPassages(student.id, week);
-  document.getElementById("sb-name").textContent = student.name;
-  document.getElementById("week-subtitle").textContent =
-    "Week " + week + " assignments for " + getClassDisplayName(student.classLevel) + " class (" +
-    passages.length + " passages)";
+  async function bootstrapPage() {
+    const container = document.getElementById("passage-detail");
+    let auth = null;
+    try {
+      auth = await ReadWiseAPI.me();
+      if (!auth || !auth.user || auth.user.role !== "student" || !auth.user.student) {
+        throw new Error("Unauthorized");
+      }
+    } catch (error) {
+      window.location.href = "../login.html";
+      return;
+    }
 
-  const container = document.getElementById("passage-detail");
+    const student = auth.user.student;
+    const week = ReadWiseAPI.getActiveWeek();
 
-  if (!passages.length) {
-    container.innerHTML =
-      '<div style="padding:20px;background:#fff3cd;border-radius:8px;color:var(--secondary)">' +
-      "<strong>No passages assigned yet.</strong><br>" +
-      "Your teacher has not assigned this week's set of passages for your class." +
-      "</div>";
-  } else {
+    let passages = [];
+    let completedIds = [];
+    try {
+      const weekly = await ReadWiseAPI.getStudentWeeklyPassages(week);
+      const completion = await ReadWiseAPI.getStudentCompletions(week);
+      passages = (weekly && weekly.passages) || [];
+      completedIds = (completion && completion.completedPassageIds) || [];
+    } catch (error) {
+      showToast(error.message || "Unable to load weekly passages.", "#c0392b");
+      return;
+    }
+
+    document.getElementById("sb-name").textContent = student.name;
+    document.getElementById("week-subtitle").textContent =
+      "Week " + week + " assignments for " + getClassDisplayName(student.classLevel) + " class (" +
+      passages.length + " passages)";
+
+    if (!passages.length) {
+      container.innerHTML =
+        '<div style="padding:20px;background:#fff3cd;border-radius:8px;color:var(--secondary)">' +
+        "<strong>No passages assigned yet.</strong><br>" +
+        "Your teacher has not assigned this week's set of passages for your class." +
+        "</div>";
+      return;
+    }
+
     const pending = passages.filter(function(passage) { return !completedIds.includes(passage.id); });
     const nextPassage = pending[0] || passages[0];
     container.innerHTML =
@@ -91,6 +112,18 @@
         );
       }).join("");
   }
+
+  async function logout() {
+    try {
+      await ReadWiseAPI.logout();
+    } catch (error) {
+      // ignore logout API errors
+    }
+    sessionStorage.clear();
+    window.location.href = "../login.html";
+  }
+
+  bootstrapPage();
 </script>
 </body>
 </html>

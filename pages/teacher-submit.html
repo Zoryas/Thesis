@@ -25,7 +25,7 @@
     </nav>
     <div class="sidebar-footer">
       <div class="user-info"><strong>Ms. Ana Villanueva</strong>Grade 7 English</div>
-      <button class="logout-btn" onclick="sessionStorage.clear();window.location.href='../login.html'">&larr; Logout</button>
+      <button class="logout-btn" onclick="logout()">&larr; Logout</button>
     </div>
   </aside>
   <main class="main">
@@ -77,7 +77,7 @@
           <div style="text-align:center;padding:40px 0;color:var(--muted)">
             <div style="font-size:20px;font-weight:700;margin-bottom:12px">Prediction Ready</div>
             <p>Analyze the passage, then save with your assessment.</p>
-            <p style="font-size:12px;margin-top:12px">API: http://127.0.0.1:5000/predict</p>
+            <p style="font-size:12px;margin-top:12px">API: http://localhost:5000/predict</p>
           </div>
         </div>
       </div>
@@ -85,9 +85,10 @@
   </main>
 </div>
 <div class="toast" id="toast"></div>
+<script src="../api.js"></script>
 <script src="../mockData.js"></script>
 <script>
-  const PREDICTION_API_URL = "http://127.0.0.1:5000/predict";
+  const PREDICTION_API_URL = ReadWiseAPI.baseUrl + "/predict";
   const pageParams = new URLSearchParams(window.location.search);
   const LEVELS = ["EASY", "MODERATE", "DIFFICULT", "CUSTOM"];
   const TYPE_CATALOG = getQuestionTypeCatalog();
@@ -419,11 +420,13 @@
       '<button class="btn btn-success btn-block" onclick="saveToLibrary()">' + saveLabel + '</button>';
   }
 
-  function loadPassageForEditing() {
+  async function loadPassageForEditing() {
     if (!currentPassageId) return;
-    const existingPassage = getPassage(currentPassageId);
-    if (!existingPassage) {
-      showToast("Passage not found.", "#c0392b");
+    let existingPassage = null;
+    try {
+      existingPassage = await ReadWiseAPI.getPassage(currentPassageId);
+    } catch (error) {
+      showToast(error.message || "Passage not found.", "#c0392b");
       currentPassageId = null;
       return;
     }
@@ -434,7 +437,7 @@
     document.getElementById("passage-title").value = existingPassage.title;
     document.getElementById("passage-genre").value = existingPassage.genre;
     document.getElementById("passage-text").value = existingPassage.text;
-    setAssessmentFromData(getPassageAssessment(currentPassageId));
+    setAssessmentFromData(existingPassage.assessment || { questions: [], shortAnswerPrompt: "" });
 
     lastPrediction = {
       label: existingPassage.label,
@@ -480,7 +483,7 @@
     }
   }
 
-  function saveToLibrary() {
+  async function saveToLibrary() {
     const title = document.getElementById("passage-title").value.trim();
     const genre = document.getElementById("passage-genre").value;
     const text = document.getElementById("passage-text").value.trim();
@@ -495,15 +498,23 @@
     const override = document.getElementById("override-label");
     const finalLabel = override && override.value ? override.value : lastPrediction.label;
     const isEditing = Boolean(currentPassageId);
-    const saved = savePassage({
-      id: currentPassageId,
-      title: title,
-      genre: genre,
-      text: text,
-      label: finalLabel,
-      confidence: lastPrediction.confidence,
-      assessment: assessmentBuild.assessment
-    });
+    let saved = null;
+    try {
+      const payload = {
+        title: title,
+        genre: genre,
+        text: text,
+        label: finalLabel,
+        confidence: lastPrediction.confidence,
+        assessment: assessmentBuild.assessment
+      };
+      saved = isEditing
+        ? await ReadWiseAPI.updatePassage(currentPassageId, payload)
+        : await ReadWiseAPI.createPassage(payload);
+    } catch (error) {
+      showToast(error.message || "Failed to save passage.", "#c0392b");
+      return;
+    }
 
     currentPassageId = saved.id;
     lastPrediction = {
@@ -517,8 +528,28 @@
     setTimeout(function() { window.location.href = "teacher-passages.html"; }, 1000);
   }
 
-  setAssessmentFromData({ questions: [createQuestionTemplate("EASY")], shortAnswerPrompt: "" });
-  loadPassageForEditing();
+  async function bootstrapPage() {
+    setAssessmentFromData({ questions: [createQuestionTemplate("EASY")], shortAnswerPrompt: "" });
+    try {
+      const auth = await ReadWiseAPI.me();
+      if (!auth || !auth.user || auth.user.role !== "teacher") throw new Error("Unauthorized");
+      await loadPassageForEditing();
+    } catch (error) {
+      window.location.href = "../login.html";
+    }
+  }
+
+  async function logout() {
+    try {
+      await ReadWiseAPI.logout();
+    } catch (error) {
+      // ignore logout API errors
+    }
+    sessionStorage.clear();
+    window.location.href = "../login.html";
+  }
+
+  bootstrapPage();
 </script>
 </body>
 </html>

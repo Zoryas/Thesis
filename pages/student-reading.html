@@ -39,7 +39,7 @@
     </nav>
     <div class="sidebar-footer">
       <div class="user-info"><strong id="sb-name">-</strong>Grade 7</div>
-      <button class="logout-btn" onclick="sessionStorage.clear();window.location.href='../login.html'">Logout</button>
+      <button class="logout-btn" onclick="logout()">Logout</button>
     </div>
   </aside>
   <main class="main">
@@ -65,24 +65,38 @@
     </div>
   </main>
 </div>
+<script src="../api.js"></script>
 <script src="../mockData.js"></script>
 <script>
   const params = new URLSearchParams(location.search);
   const pid = params.get("id") || "p3";
-  const week = getActiveWeek();
-  const passage = getPassage(pid);
-  const student = getCurrentStudent();
-  if (!student) {
-    window.location.href = "../login.html";
-    throw new Error("Missing student session");
-  }
-  document.getElementById("sb-name").textContent = student ? student.name : "Student";
+  const week = ReadWiseAPI.getActiveWeek();
 
-  if (!passage) {
-    document.getElementById("passage-body").innerHTML =
-      '<div style="font-size:14px;color:var(--hard)">Passage not found.</div>';
-  } else {
-    const weeklyIds = getStudentWeeklyPassages(student, week).map(function(p) { return p.id; });
+  async function bootstrapPage() {
+    let auth = null;
+    let passage = null;
+    let weeklyIds = [];
+
+    try {
+      auth = await ReadWiseAPI.me();
+      if (!auth || !auth.user || auth.user.role !== "student" || !auth.user.student) {
+        throw new Error("Unauthorized");
+      }
+      document.getElementById("sb-name").textContent = auth.user.student.name || "Student";
+      passage = await ReadWiseAPI.getPassage(pid);
+      const weekly = await ReadWiseAPI.getStudentWeeklyPassages(week);
+      weeklyIds = ((weekly && weekly.passages) || []).map(function(entry) { return entry.id; });
+    } catch (error) {
+      window.location.href = "../login.html";
+      return;
+    }
+
+    if (!passage) {
+      document.getElementById("passage-body").innerHTML =
+        '<div style="font-size:14px;color:var(--hard)">Passage not found.</div>';
+      return;
+    }
+
     if (!weeklyIds.includes(pid)) {
       const warning = document.getElementById("week-warning");
       warning.style.display = "block";
@@ -126,6 +140,18 @@
       window.location.href = "student-questions.html?id=" + pid;
     }, 600);
   }
+
+  async function logout() {
+    try {
+      await ReadWiseAPI.logout();
+    } catch (error) {
+      // ignore logout API errors
+    }
+    sessionStorage.clear();
+    window.location.href = "../login.html";
+  }
+
+  bootstrapPage();
 </script>
 </body>
 </html>

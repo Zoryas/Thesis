@@ -16,44 +16,46 @@ teacherBtn.addEventListener("click", () => {
   studentBtn.classList.remove("active");
 });
 
-loginBtn.addEventListener("click", () => {
+loginBtn.addEventListener("click", async () => {
   const email = document.getElementById("email").value.trim();
   const password = document.getElementById("password").value;
 
-  const students = [
-    { email: "juan.delacruz@pnhs.edu", password: "password123", id: "s1" },
-    { email: "maria.santos@pnhs.edu", password: "password123", id: "s2" },
-    { email: "carlo.reyes@pnhs.edu", password: "password123", id: "s3" },
-    { email: "student@example.com", password: "1234", id: "s1" }
-  ];
-  const teacher = { email: "ms.villanueva@pnhs.edu", password: "teacher123" };
-  const demoT = { email: "teacher@example.com", password: "abcd" };
+  if (!email || !password) {
+    showError("Please enter both email and password.");
+    return;
+  }
 
-  if (role === "student") {
-    const found = students.find((student) => student.email === email && student.password === password);
-    if (found) {
-      sessionStorage.setItem("role", "student");
-      sessionStorage.setItem("studentId", found.id);
+  loginBtn.disabled = true;
+  loginBtn.style.opacity = "0.7";
+  loginBtn.textContent = "Signing in...";
+
+  try {
+    const result = await ReadWiseAPI.login(email, password, role);
+    const user = result && result.user ? result.user : null;
+    if (!user) throw new Error("Invalid login response.");
+
+    sessionStorage.setItem("role", user.role);
+    if (user.student && user.student.id) {
+      sessionStorage.setItem("studentId", user.student.id);
+    } else {
+      sessionStorage.removeItem("studentId");
+    }
+
+    if (user.role === "student") {
       window.location.href = "pages/student-dashboard.html";
     } else {
-      showError();
+      window.location.href = "pages/teacher-dashboard.html";
     }
-    return;
+  } catch (error) {
+    showError(error.message || "Invalid credentials. Try again.");
+  } finally {
+    loginBtn.disabled = false;
+    loginBtn.style.opacity = "1";
+    loginBtn.textContent = "Login";
   }
-
-  if (
-    (email === teacher.email && password === teacher.password) ||
-    (email === demoT.email && password === demoT.password)
-  ) {
-    sessionStorage.setItem("role", "teacher");
-    window.location.href = "pages/teacher-dashboard.html";
-    return;
-  }
-
-  showError();
 });
 
-function showError() {
+function showError(message) {
   let error = document.getElementById("loginError");
   if (!error) {
     error = document.createElement("p");
@@ -61,6 +63,5 @@ function showError() {
     error.className = "login-error";
     document.querySelector(".card").appendChild(error);
   }
-
-  error.textContent = "Invalid credentials. Try again.";
+  error.textContent = message || "Invalid credentials. Try again.";
 }

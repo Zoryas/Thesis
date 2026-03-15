@@ -25,7 +25,7 @@
     </nav>
     <div class="sidebar-footer">
       <div class="user-info"><strong>Ms. Ana Villanueva</strong>Grade 7 English</div>
-      <button class="logout-btn" onclick="sessionStorage.clear();window.location.href='../login.html'">&larr; Logout</button>
+      <button class="logout-btn" onclick="logout()">&larr; Logout</button>
     </div>
   </aside>
   <main class="main">
@@ -56,12 +56,16 @@
   </main>
 </div>
 <div class="toast" id="toast"></div>
+<script src="../api.js"></script>
 <script src="../mockData.js"></script>
 <script>
   const grid = document.getElementById("passage-grid");
   const summary = document.getElementById("library-summary");
   const assignmentGrid = document.getElementById("assignment-grid");
   const weekSelector = document.getElementById("week-selector");
+
+  let passages = [];
+  let weeklyAssignments = { EASY: [], MODERATE: [], HARD: [] };
 
   function escapeHtml(value) {
     return String(value).replace(/[&<>"']/g, function(character) {
@@ -70,16 +74,17 @@
   }
 
   function getCurrentWeek() {
-    return Number(weekSelector.value || getActiveWeek());
+    return Number(weekSelector.value || ReadWiseAPI.getActiveWeek());
   }
 
   function renderWeekSelector() {
+    const active = ReadWiseAPI.getActiveWeek();
     weekSelector.innerHTML = "";
     for (let week = 1; week <= TOTAL_PROGRAM_WEEKS; week++) {
       const option = document.createElement("option");
       option.value = String(week);
       option.textContent = "Week " + week;
-      if (week === getActiveWeek()) option.selected = true;
+      if (week === active) option.selected = true;
       weekSelector.appendChild(option);
     }
   }
@@ -91,17 +96,23 @@
     return "var(--hard)";
   }
 
+  function getAssignmentsFor(level) {
+    const normalized = normalizeClassLevel(level);
+    return Array.isArray(weeklyAssignments[normalized]) ? weeklyAssignments[normalized] : [];
+  }
+
   function renderAssignmentPanels() {
     const week = getCurrentWeek();
-    const weekly = getWeeklyAssignments(week);
     assignmentGrid.innerHTML = "";
 
     ["EASY", "MODERATE", "HARD"].forEach(function(level) {
-      const assignedIds = Array.isArray(weekly[level]) ? weekly[level] : [];
-      const assignedPassages = assignedIds.map(function(id) { return getPassage(id); }).filter(Boolean);
+      const assignedIds = getAssignmentsFor(level);
+      const assignedPassages = assignedIds.map(function(id) {
+        return passages.find(function(entry) { return entry.id === id; });
+      }).filter(Boolean);
       const color = getClassColor(level);
       const display = getClassDisplayName(level);
-      const availablePool = getPassages().filter(function(passage) {
+      const availablePool = passages.filter(function(passage) {
         return mapPassageLabelToClassLevel(passage.label) === normalizeClassLevel(level);
       }).length;
 
@@ -140,9 +151,7 @@
   }
 
   function renderPassages() {
-    const passages = getPassages();
     const week = getCurrentWeek();
-    const weekly = getWeeklyAssignments(week);
     summary.textContent = passages.length + " passages in library. Assign exactly 5 per class for Week " + week + ".";
 
     if (!passages.length) {
@@ -166,7 +175,7 @@
         (assessment.shortAnswerPrompt ? " + short answer" : "");
       const classLevel = mapPassageLabelToClassLevel(passage.label);
       const classDisplay = getClassDisplayName(classLevel);
-      const isAssigned = Array.isArray(weekly[classLevel]) && weekly[classLevel].includes(passage.id);
+      const isAssigned = getAssignmentsFor(classLevel).includes(passage.id);
       const disabled = isAssigned ? "disabled" : "";
       const assignText = isAssigned ? "Assigned to " + classDisplay : "Assign to " + classDisplay + " Class";
 
@@ -194,51 +203,91 @@
     }).join("");
   }
 
-  function assignPassage(id) {
+  async function loadPassages() {
+    passages = await ReadWiseAPI.getPassages();
+  }
+
+  async function loadAssignments() {
     const week = getCurrentWeek();
-    const passage = getPassage(id);
+    const result = await ReadWiseAPI.getAssignments(week);
+    weeklyAssignments = (result && result.assignments) || { EASY: [], MODERATE: [], HARD: [] };
+  }
+
+  async function assignPassage(id) {
+    const week = getCurrentWeek();
+    const passage = passages.find(function(entry) { return entry.id === id; });
     if (!passage) {
       showToast("Passage not found.", "#c0392b");
       return;
     }
     const targetClass = mapPassageLabelToClassLevel(passage.label);
-    const result = assignPassageToWeekClass(week, targetClass, id);
-    if (!result.ok) {
-      showToast(result.message, "#c0392b");
+    try {
+      await ReadWiseAPI.assignPassage(week, targetClass, id);
+      await loadAssignments();
+      renderAll();
+      showToast("Assigned to " + getClassDisplayName(targetClass) + " class for Week " + week + ".");
+    } catch (error) {
+      showToast(error.message || "Unable to assign passage.", "#c0392b");
+    }
+  }
+
+  async function removeFromClass(level, id) {
+    try {
+      await ReadWiseAPI.removeAssignment(getCurrentWeek(), normalizeClassLevel(level), id);
+      await loadAssignments();
+      renderAll();
+      showToast("Removed from " + getClassDisplayName(level) + " class.");
+    } catch (error) {
+      showToast(error.message || "Unable to remove assignment.", "#c0392b");
+    }
+  }
+
+  async function autofillClass(level) {
+    const normalized = normalizeClassLevel(level);
+    const assigned = getAssignmentsFor(normalized).slice();
+    const available = passages.filter(function(passage) {
+      return mapPassageLabelToClassLevel(passage.label) === normalized && !assigned.includes(passage.id);
+    });
+    const slots = Math.max(0, MAX_WEEKLY_PASSAGES_PER_CLASS - assigned.length);
+    const candidates = available.slice(0, slots);
+
+    if (!candidates.length) {
+      showToast("No available passages to auto-fill.", "#c0392b");
       return;
     }
-    showToast("Assigned to " + getClassDisplayName(targetClass) + " class for Week " + week + ".");
-    renderAll();
+
+    try {
+      for (let i = 0; i < candidates.length; i += 1) {
+        await ReadWiseAPI.assignPassage(getCurrentWeek(), normalized, candidates[i].id);
+      }
+      await loadAssignments();
+      renderAll();
+      showToast(getClassDisplayName(level) + " class filled up to " + getAssignmentsFor(level).length + ".");
+    } catch (error) {
+      showToast(error.message || "Unable to auto-fill class.", "#c0392b");
+    }
   }
 
-  function removeFromClass(level, id) {
-    removePassageFromWeekClass(getCurrentWeek(), level, id);
-    showToast("Removed from " + getClassDisplayName(level) + " class.");
-    renderAll();
-  }
-
-  function autofillClass(level) {
-    autofillWeekClass(getCurrentWeek(), level);
-    showToast(getClassDisplayName(level) + " class filled up to 5 passages.");
-    renderAll();
-  }
-
-  function clearClass(level) {
-    const weekly = getWeeklyAssignments(getCurrentWeek());
-    const ids = Array.isArray(weekly[normalizeClassLevel(level)]) ? weekly[normalizeClassLevel(level)].slice() : [];
-    ids.forEach(function(id) {
-      removePassageFromWeekClass(getCurrentWeek(), level, id);
-    });
-    showToast(getClassDisplayName(level) + " class cleared.");
-    renderAll();
+  async function clearClass(level) {
+    const ids = getAssignmentsFor(level).slice();
+    try {
+      for (let i = 0; i < ids.length; i += 1) {
+        await ReadWiseAPI.removeAssignment(getCurrentWeek(), normalizeClassLevel(level), ids[i]);
+      }
+      await loadAssignments();
+      renderAll();
+      showToast(getClassDisplayName(level) + " class cleared.");
+    } catch (error) {
+      showToast(error.message || "Unable to clear class.", "#c0392b");
+    }
   }
 
   function editPassage(id) {
     window.location.href = "teacher-submit.html?id=" + encodeURIComponent(id);
   }
 
-  function removePassage(id) {
-    const passage = getPassage(id);
+  async function removePassage(id) {
+    const passage = passages.find(function(entry) { return entry.id === id; });
     if (!passage) {
       showToast("Passage not found.", "#c0392b");
       return;
@@ -246,19 +295,14 @@
 
     if (!window.confirm("Delete '" + passage.title + "' from library and assignments?")) return;
 
-    if (!deletePassage(id)) {
-      showToast("Could not remove passage.", "#c0392b");
-      return;
+    try {
+      await ReadWiseAPI.deletePassage(id);
+      await Promise.all([loadPassages(), loadAssignments()]);
+      renderAll();
+      showToast("Passage removed.");
+    } catch (error) {
+      showToast(error.message || "Could not remove passage.", "#c0392b");
     }
-
-    for (let week = 1; week <= TOTAL_PROGRAM_WEEKS; week++) {
-      ["EASY", "MODERATE", "HARD"].forEach(function(level) {
-        removePassageFromWeekClass(week, level, id);
-      });
-    }
-
-    showToast("Passage removed.");
-    renderAll();
   }
 
   function renderAll() {
@@ -266,13 +310,42 @@
     renderPassages();
   }
 
-  renderWeekSelector();
-  weekSelector.addEventListener("change", function() {
-    const week = setActiveWeek(weekSelector.value);
-    weekSelector.value = String(week);
+  async function bootstrapPage() {
+    try {
+      const auth = await ReadWiseAPI.me();
+      if (!auth || !auth.user || auth.user.role !== "teacher") throw new Error("Unauthorized");
+    } catch (error) {
+      window.location.href = "../login.html";
+      return;
+    }
+
+    renderWeekSelector();
+    await Promise.all([loadPassages(), loadAssignments()]);
     renderAll();
+  }
+
+  async function logout() {
+    try {
+      await ReadWiseAPI.logout();
+    } catch (error) {
+      // ignore logout API errors
+    }
+    sessionStorage.clear();
+    window.location.href = "../login.html";
+  }
+
+  weekSelector.addEventListener("change", async function() {
+    const week = ReadWiseAPI.setActiveWeek(weekSelector.value);
+    weekSelector.value = String(week);
+    try {
+      await loadAssignments();
+      renderAll();
+    } catch (error) {
+      showToast(error.message || "Unable to load assignments.", "#c0392b");
+    }
   });
-  renderAll();
+
+  bootstrapPage();
 </script>
 </body>
 </html>

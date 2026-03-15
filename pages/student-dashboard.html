@@ -76,118 +76,144 @@
   </main>
 </div>
 <div class="toast" id="toast"></div>
+<script src="../api.js"></script>
 <script src="../mockData.js"></script>
 <script>
-  const student = getCurrentStudent();
-  if (!student) {
-    window.location.href = "../login.html";
-    throw new Error("Missing student session");
-  }
-
-  const week = getActiveWeek();
-  const weeklyPassages = getStudentWeeklyPassages(student, week);
-  const completedIds = getCompletedPassages(student.id, week);
-
-  document.getElementById("sb-name").textContent = student.name;
-  document.getElementById("welcome-msg").textContent = "Good morning, " + student.name.split(" ")[0] + "!";
-  document.getElementById("program-week-label").textContent = "Week " + week + " of " + TOTAL_PROGRAM_WEEKS + " - 5 passages assigned per class";
-
-  const levelBadge = document.getElementById("level-badge");
-  levelBadge.textContent = getClassDisplayName(student.classLevel);
-  function syncLevelBadgeTheme() {
-    levelBadge.style.background = levelBg(student.classLevel);
-    levelBadge.style.color = levelColor(student.classLevel);
-  }
-  syncLevelBadgeTheme();
-
-  document.getElementById("pre-score").textContent = student.preScore + "%";
-  document.getElementById("pre-bar").style.width = student.preScore + "%";
-
-  const totalAssigned = weeklyPassages.length || MAX_WEEKLY_PASSAGES_PER_CLASS;
-  const completedCount = completedIds.filter(function(id) {
-    return weeklyPassages.some(function(passage) { return passage.id === id; });
-  }).length;
-  const completionPct = totalAssigned ? Math.round((completedCount / totalAssigned) * 100) : 0;
-  document.getElementById("weekly-completion").textContent = completedCount + " / " + totalAssigned;
-  document.getElementById("week-progress-bar").style.width = completionPct + "%";
-  document.getElementById("week-progress-text").textContent =
-    completedCount >= totalAssigned
-      ? "All assigned passages completed for Week " + week + "."
-      : (totalAssigned - completedCount) + " passage(s) remaining this week.";
-
-  const progress = MOCK.weeklyProgress[student.id] || [];
-  const latest = progress.length ? progress[progress.length - 1] : null;
-  document.getElementById("rec-text").textContent = latest
-    ? "Week " + latest.week + " - " + latest.recommendation + ". Teacher confirmed."
-    : "No recommendation yet.";
-
-  const list = document.getElementById("weekly-passages-list");
-  if (!weeklyPassages.length) {
-    list.innerHTML =
-      '<div style="padding:12px;background:#fff3cd;border-radius:8px;color:var(--secondary);font-size:13px">' +
-      "No weekly passages assigned yet for your class. Please check back soon." +
-      "</div>";
-  } else {
-    list.innerHTML = weeklyPassages.map(function(passage, index) {
-      const done = completedIds.includes(passage.id);
-      const statusBadge = done
-        ? '<span class="badge badge-easy">Completed</span>'
-        : '<span class="badge badge-moderate">Pending</span>';
-      return (
-        '<div style="padding:12px;border:1px solid var(--border);border-radius:8px;margin-bottom:10px;background:#fff">' +
-          '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px">' +
-            '<strong style="color:var(--secondary)">#' + (index + 1) + " " + passage.title + "</strong>" +
-            statusBadge +
-          "</div>" +
-          '<div style="font-size:12px;color:var(--muted);margin-bottom:8px">' + passage.words + " words - ~" + passage.time + " min</div>" +
-          '<a class="btn btn-primary btn-sm" href="student-reading.html?id=' + passage.id + '">Open Passage</a>' +
-        "</div>"
-      );
-    }).join("");
-  }
-
   function scoreColor(score) {
     if (score >= 65) return levelColor("EASY");
     if (score >= 50) return levelColor("MODERATE");
     return levelColor("HARD");
   }
 
-  const miniChart = new Chart(document.getElementById("miniChart"), {
-    type: "bar",
-    data: {
-      labels: progress.map(function(w) { return "Week " + w.week; }),
-      datasets: [{
-        label: "Score %",
-        data: progress.map(function(w) { return w.score; }),
-        backgroundColor: progress.map(function(w) {
-          return scoreColor(w.score);
-        }),
-        borderRadius: 6
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: {
-        y: { beginAtZero: true, max: 100, ticks: { callback: function(v) { return v + "%"; } } },
-        x: { grid: { display: false } }
+  async function bootstrapPage() {
+    let auth = null;
+    let weeklyPassages = [];
+    let completedIds = [];
+    let progress = [];
+    const week = ReadWiseAPI.getActiveWeek();
+
+    try {
+      auth = await ReadWiseAPI.me();
+      if (!auth || !auth.user || auth.user.role !== "student" || !auth.user.student) {
+        throw new Error("Unauthorized");
       }
+    } catch (error) {
+      window.location.href = "../login.html";
+      return;
     }
-  });
 
-  window.addEventListener("readwise:themechange", function() {
+    const student = auth.user.student;
+    try {
+      const weekly = await ReadWiseAPI.getStudentWeeklyPassages(week);
+      const completion = await ReadWiseAPI.getStudentCompletions(week);
+      const progressResult = await ReadWiseAPI.getStudentProgress();
+      weeklyPassages = (weekly && weekly.passages) || [];
+      completedIds = (completion && completion.completedPassageIds) || [];
+      progress = (progressResult && progressResult.progress) || [];
+    } catch (error) {
+      showToast(error.message || "Unable to load dashboard data.", "#c0392b");
+    }
+
+    document.getElementById("sb-name").textContent = student.name;
+    document.getElementById("welcome-msg").textContent = "Good morning, " + student.name.split(" ")[0] + "!";
+    document.getElementById("program-week-label").textContent =
+      "Week " + week + " of " + TOTAL_PROGRAM_WEEKS + " - 5 passages assigned per class";
+
+    const levelBadge = document.getElementById("level-badge");
+    levelBadge.textContent = getClassDisplayName(student.classLevel);
+    function syncLevelBadgeTheme() {
+      levelBadge.style.background = levelBg(student.classLevel);
+      levelBadge.style.color = levelColor(student.classLevel);
+    }
     syncLevelBadgeTheme();
-    miniChart.data.datasets[0].backgroundColor = progress.map(function(w) {
-      return scoreColor(w.score);
-    });
-    miniChart.update("none");
-  });
 
-  function logout() {
+    document.getElementById("pre-score").textContent = student.preScore + "%";
+    document.getElementById("pre-bar").style.width = student.preScore + "%";
+
+    const totalAssigned = weeklyPassages.length || MAX_WEEKLY_PASSAGES_PER_CLASS;
+    const completedCount = completedIds.filter(function(id) {
+      return weeklyPassages.some(function(passage) { return passage.id === id; });
+    }).length;
+    const completionPct = totalAssigned ? Math.round((completedCount / totalAssigned) * 100) : 0;
+    document.getElementById("weekly-completion").textContent = completedCount + " / " + totalAssigned;
+    document.getElementById("week-progress-bar").style.width = completionPct + "%";
+    document.getElementById("week-progress-text").textContent =
+      completedCount >= totalAssigned
+        ? "All assigned passages completed for Week " + week + "."
+        : (totalAssigned - completedCount) + " passage(s) remaining this week.";
+
+    const latest = progress.length ? progress[progress.length - 1] : null;
+    document.getElementById("rec-text").textContent = latest
+      ? "Week " + latest.week + " - " + latest.recommendation + "."
+      : "No recommendation yet.";
+
+    const list = document.getElementById("weekly-passages-list");
+    if (!weeklyPassages.length) {
+      list.innerHTML =
+        '<div style="padding:12px;background:#fff3cd;border-radius:8px;color:var(--secondary);font-size:13px">' +
+        "No weekly passages assigned yet for your class. Please check back soon." +
+        "</div>";
+    } else {
+      list.innerHTML = weeklyPassages.map(function(passage, index) {
+        const done = completedIds.includes(passage.id);
+        const statusBadge = done
+          ? '<span class="badge badge-easy">Completed</span>'
+          : '<span class="badge badge-moderate">Pending</span>';
+        return (
+          '<div style="padding:12px;border:1px solid var(--border);border-radius:8px;margin-bottom:10px;background:#fff">' +
+            '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px">' +
+              '<strong style="color:var(--secondary)">#' + (index + 1) + " " + passage.title + "</strong>" +
+              statusBadge +
+            "</div>" +
+            '<div style="font-size:12px;color:var(--muted);margin-bottom:8px">' + passage.words + " words - ~" + passage.time + " min</div>" +
+            '<a class="btn btn-primary btn-sm" href="student-reading.html?id=' + passage.id + '">Open Passage</a>' +
+          "</div>"
+        );
+      }).join("");
+    }
+
+    const miniChart = new Chart(document.getElementById("miniChart"), {
+      type: "bar",
+      data: {
+        labels: progress.map(function(w) { return "Week " + w.week; }),
+        datasets: [{
+          label: "Score %",
+          data: progress.map(function(w) { return w.score; }),
+          backgroundColor: progress.map(function(w) { return scoreColor(w.score); }),
+          borderRadius: 6
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { beginAtZero: true, max: 100, ticks: { callback: function(v) { return v + "%"; } } },
+          x: { grid: { display: false } }
+        }
+      }
+    });
+
+    window.addEventListener("readwise:themechange", function() {
+      syncLevelBadgeTheme();
+      miniChart.data.datasets[0].backgroundColor = progress.map(function(w) {
+        return scoreColor(w.score);
+      });
+      miniChart.update("none");
+    });
+  }
+
+  async function logout() {
+    try {
+      await ReadWiseAPI.logout();
+    } catch (error) {
+      // ignore logout API errors, still clear client state
+    }
     sessionStorage.clear();
     window.location.href = "../login.html";
   }
+
+  bootstrapPage();
 </script>
 </body>
 </html>

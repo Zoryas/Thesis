@@ -24,7 +24,7 @@
     </nav>
     <div class="sidebar-footer">
       <div class="user-info"><strong id="sb-name">-</strong>Grade 7</div>
-      <button class="logout-btn" onclick="sessionStorage.clear();window.location.href='../login.html'">&larr; Logout</button>
+      <button class="logout-btn" onclick="logout()">&larr; Logout</button>
     </div>
   </aside>
   <main class="main">
@@ -67,33 +67,16 @@
   </main>
 </div>
 <div class="toast" id="toast"></div>
+<script src="../api.js"></script>
 <script src="../mockData.js"></script>
 <script>
   const params = new URLSearchParams(location.search);
   const pid = params.get("id") || "p3";
-  const p = getPassage(pid);
-  const activeWeek = getActiveWeek();
-  const assessment = getPassageAssessment(pid);
-  const qs = (assessment.questions || []).map(function(q) { return normalizeAssessmentQuestion(q); });
-  const shortAnswerPrompt = assessment.shortAnswerPrompt || "";
-  const s = getCurrentStudent();
-  if (!s) {
-    window.location.href = "../login.html";
-    throw new Error("Missing student session");
-  }
-
-  document.getElementById("sb-name").textContent = s ? s.name : "Student";
-
-  if (!p) {
-    document.getElementById("q-title").textContent = "Passage not found";
-    document.getElementById("q-sub").textContent = "Please go back to your dashboard.";
-    document.getElementById("submit-btn").disabled = true;
-    document.getElementById("questions-wrap").innerHTML =
-      '<div class="card"><p style="color:var(--hard)">No passage data was found for this assessment.</p></div>';
-  } else {
-    document.getElementById("q-title").textContent = "Questions: " + p.title;
-    document.getElementById("q-sub").textContent = p.label + " | " + p.genre + " | " + p.words + " words";
-  }
+  const activeWeek = ReadWiseAPI.getActiveWeek();
+  let p = null;
+  let s = null;
+  let qs = [];
+  let shortAnswerPrompt = "";
 
   const slider = document.getElementById("difficulty-slider");
   slider.addEventListener("input", function() {
@@ -101,6 +84,43 @@
   });
 
   const wrap = document.getElementById("questions-wrap");
+
+  async function bootstrapPage() {
+    try {
+      const auth = await ReadWiseAPI.me();
+      if (!auth || !auth.user || auth.user.role !== "student" || !auth.user.student) {
+        throw new Error("Unauthorized");
+      }
+      s = auth.user.student;
+      document.getElementById("sb-name").textContent = s.name || "Student";
+
+      p = await ReadWiseAPI.getPassage(pid);
+      const assessment = p.assessment || { questions: [], shortAnswerPrompt: "" };
+      qs = (assessment.questions || []).map(function(q) { return normalizeAssessmentQuestion(q); });
+      shortAnswerPrompt = assessment.shortAnswerPrompt || "";
+
+      if (!p) {
+        document.getElementById("q-title").textContent = "Passage not found";
+        document.getElementById("q-sub").textContent = "Please go back to your dashboard.";
+        document.getElementById("submit-btn").disabled = true;
+        document.getElementById("questions-wrap").innerHTML =
+          '<div class="card"><p style="color:var(--hard)">No passage data was found for this assessment.</p></div>';
+        return;
+      }
+
+      document.getElementById("q-title").textContent = "Questions: " + p.title;
+      document.getElementById("q-sub").textContent = p.label + " | " + p.genre + " | " + p.words + " words";
+
+      if (shortAnswerPrompt) {
+        document.getElementById("sa-card").style.display = "block";
+        document.getElementById("sa-prompt").textContent = shortAnswerPrompt;
+      }
+
+      renderQuestions();
+    } catch (error) {
+      window.location.href = "../login.html";
+    }
+  }
 
   function normalizeText(value) {
     return String(value || "").toLowerCase().trim().replace(/\s+/g, " ");
@@ -282,14 +302,7 @@
     return { earned: ok ? 1 : 0, possible: 1, correct: ok };
   }
 
-  if (shortAnswerPrompt) {
-    document.getElementById("sa-card").style.display = "block";
-    document.getElementById("sa-prompt").textContent = shortAnswerPrompt;
-  }
-
-  renderQuestions();
-
-  function submitAnswers() {
+  async function submitAnswers() {
     if (!p) {
       showToast("No passage loaded for this session.", "#c0392b");
       return;
@@ -330,8 +343,21 @@
       readingTime: sessionStorage.getItem("readingTime_" + pid) || "-"
     }));
 
-    if (s && s.id) {
-      markPassageCompleted(s.id, activeWeek, pid);
+    try {
+      await ReadWiseAPI.submitStudentAttempt({
+        week: activeWeek,
+        passageId: pid,
+        score: pct,
+        correct: fullyCorrect,
+        total: qs.length,
+        difficulty: diff,
+        shortAnswer: saVal,
+        responses: responses,
+        readingTime: sessionStorage.getItem("readingTime_" + pid) || "-"
+      });
+    } catch (error) {
+      showToast(error.message || "Unable to submit to server.", "#c0392b");
+      return;
     }
 
     showToast("Answers submitted successfully.");
@@ -339,6 +365,18 @@
       window.location.href = "student-results.html?id=" + pid;
     }, 900);
   }
+
+  async function logout() {
+    try {
+      await ReadWiseAPI.logout();
+    } catch (error) {
+      // ignore logout API errors
+    }
+    sessionStorage.clear();
+    window.location.href = "../login.html";
+  }
+
+  bootstrapPage();
 </script>
 </body>
 </html>
