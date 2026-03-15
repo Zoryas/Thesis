@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: readwise-api
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    envVars:
+      - key: READWISE_ENV
+        value: production
+      - key: READWISE_SECRET_KEY
+        generateValue: true
+      - key: READWISE_DB_HOST
+        sync: false
+      - key: READWISE_DB_PORT
+        sync: false
+      - key: READWISE_DB_USER
+        sync: false
+      - key: READWISE_DB_PASSWORD
+        sync: false
+      - key: READWISE_DB_NAME
+        sync: false
+      - key: READWISE_ALLOWED_ORIGINS
+        sync: false

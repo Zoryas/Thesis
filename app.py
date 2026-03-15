@@ -30,18 +30,22 @@ if not re.fullmatch(r"[A-Za-z0-9_]+", DB_NAME):
     raise RuntimeError("Invalid READWISE_DB_NAME")
 
 app = Flask(__name__)
+IS_PRODUCTION = os.environ.get("READWISE_ENV") == "production"
+
 app.config.update(
     SECRET_KEY=os.environ.get("READWISE_SECRET_KEY", "readwise-dev-secret"),
     SESSION_COOKIE_HTTPONLY=True,
-    SESSION_COOKIE_SAMESITE="Lax",
-    SESSION_COOKIE_SECURE=False,
+    SESSION_COOKIE_SAMESITE="None" if IS_PRODUCTION else "Lax",
+    SESSION_COOKIE_SECURE=IS_PRODUCTION,
 )
+
+ALLOWED_ORIGINS = os.environ.get("READWISE_ALLOWED_ORIGINS", "http://localhost,http://127.0.0.1")
+origins_list = [o.strip() for o in ALLOWED_ORIGINS.split(",") if o.strip()]
 
 CORS(
     app,
     supports_credentials=True,
-    # Allow any localhost/127.0.0.1 port (common with XAMPP port changes like :8080).
-    origins=[r"http://localhost(:\d+)?", r"http://127\.0\.0\.1(:\d+)?"],
+    origins=origins_list,
 )
 
 ARTIFACTS = {
