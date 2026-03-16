@@ -5,6 +5,7 @@
   var BASE_URL = String(RAW_BASE).replace(/\/+$/, "");
   var ACTIVE_WEEK_KEY = "readwise_active_week_v1";
   var USER_CACHE_KEY = "readwise_user_v1";
+  var TOKEN_KEY = "readwise_token";
   var TOTAL_WEEKS = 8;
 
   function normalizeWeek(value) {
@@ -78,10 +79,45 @@
     emitUserCacheChange(null);
   }
 
+  function getStoredToken() {
+    try {
+      var raw = global.localStorage.getItem(TOKEN_KEY);
+      if (!raw) return null;
+      var token = String(raw).trim();
+      return token || null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function setStoredToken(token) {
+    try {
+      if (token && typeof token === "string") {
+        global.localStorage.setItem(TOKEN_KEY, token);
+      } else {
+        global.localStorage.removeItem(TOKEN_KEY);
+      }
+    } catch (error) {
+      // ignore storage errors
+    }
+  }
+
+  function clearStoredToken() {
+    try {
+      global.localStorage.removeItem(TOKEN_KEY);
+    } catch (error) {
+      // ignore storage errors
+    }
+  }
+
   async function request(path, options) {
     var settings = options || {};
     var headers = Object.assign({}, settings.headers || {});
     var body = settings.body;
+    var token = getStoredToken();
+    if (token && !headers["X-Auth-Token"]) {
+      headers["X-Auth-Token"] = token;
+    }
 
     if (body !== undefined && body !== null && typeof body !== "string") {
       headers["Content-Type"] = headers["Content-Type"] || "application/json";
@@ -103,7 +139,10 @@
     }
 
     if (!response.ok) {
-      if (response.status === 401) clearCachedUser();
+      if (response.status === 401) {
+        clearStoredToken();
+        clearCachedUser();
+      }
       throw new Error((payload && payload.error) || ("Request failed (" + response.status + ")"));
     }
 
@@ -140,15 +179,18 @@
         method: "POST",
         body: { email: email, password: password, role: role }
       }).then(function(data) {
+        if (data && data.token) setStoredToken(data.token);
         if (data && data.user) cacheUser(data.user);
         return data;
       });
     },
     logout: function() {
       return request("/api/auth/logout", { method: "POST" }).then(function(data) {
+        clearStoredToken();
         clearCachedUser();
         return data;
       }, function(error) {
+        clearStoredToken();
         clearCachedUser();
         throw error;
       });

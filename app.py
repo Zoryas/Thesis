@@ -4,6 +4,7 @@ from pathlib import Path
 import json
 import os
 import re
+import secrets
 
 import joblib
 import mysql.connector
@@ -46,6 +47,7 @@ CORS(
     app,
     supports_credentials=True,
     origins=origins_list,
+    allow_headers=["Content-Type", "X-Auth-Token", "Authorization"],
 )
 
 ARTIFACTS = {
@@ -198,7 +200,39 @@ def fetch_user_by_id(cur, user_id):
     return cur.fetchone()
 
 
+def get_request_token():
+    header_token = str(request.headers.get("X-Auth-Token") or "").strip()
+    if header_token:
+        return header_token
+    auth_header = str(request.headers.get("Authorization") or "").strip()
+    if auth_header.lower().startswith("bearer "):
+        bearer_token = auth_header[7:].strip()
+        if bearer_token:
+            return bearer_token
+    return None
+
+
 def current_user():
+    token = get_request_token()
+    if token:
+        with db_cursor(True) as (_, cur):
+            cur.execute(
+                """
+                SELECT u.id,u.email,u.role,u.is_active,
+                       s.id AS student_id,s.full_name,s.grade,s.section,
+                       s.class_level,s.pre_score,s.avatar_type,s.avatar_value
+                FROM auth_tokens t
+                JOIN users u ON u.id=t.user_id
+                LEFT JOIN students s ON s.user_id=u.id
+                WHERE t.token=%s
+                """,
+                (token,),
+            )
+            row = cur.fetchone()
+            if row and row.get("is_active"):
+                return row
+            return None
+
     uid = session.get("user_id")
     if not uid:
         return None
@@ -381,6 +415,7 @@ def init_database():
     with db_cursor(True) as (_, cur):
         schema = [
             """CREATE TABLE IF NOT EXISTS users (id INT AUTO_INCREMENT PRIMARY KEY,email VARCHAR(255) UNIQUE NOT NULL,password_hash VARCHAR(255) NOT NULL,role ENUM('teacher','student') NOT NULL,is_active TINYINT(1) NOT NULL DEFAULT 1,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
+            """CREATE TABLE IF NOT EXISTS auth_tokens (id BIGINT AUTO_INCREMENT PRIMARY KEY,user_id INT NOT NULL,token VARCHAR(128) UNIQUE NOT NULL,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,INDEX idx_auth_tokens_user (user_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
             """CREATE TABLE IF NOT EXISTS students (id VARCHAR(20) PRIMARY KEY,user_id INT UNIQUE NOT NULL,full_name VARCHAR(255) NOT NULL,grade VARCHAR(20) NOT NULL,section VARCHAR(100) NOT NULL,class_level ENUM('EASY','MODERATE','HARD') NOT NULL DEFAULT 'EASY',pre_score INT NOT NULL DEFAULT 0,avatar_type ENUM('initials','preset','upload') NOT NULL DEFAULT 'initials',avatar_value MEDIUMTEXT NULL,FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
             """CREATE TABLE IF NOT EXISTS passages (id VARCHAR(20) PRIMARY KEY,title VARCHAR(255) NOT NULL,genre VARCHAR(100) NOT NULL,text MEDIUMTEXT NOT NULL,label ENUM('EASY','MODERATE','HARD') NOT NULL,words INT NOT NULL,est_minutes INT NOT NULL,confidence DECIMAL(5,2) NULL,created_by INT NULL,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
             """CREATE TABLE IF NOT EXISTS assessments (id INT AUTO_INCREMENT PRIMARY KEY,passage_id VARCHAR(20) UNIQUE NOT NULL,short_answer_prompt TEXT NULL,FOREIGN KEY (passage_id) REFERENCES passages(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
@@ -474,10 +509,13 @@ def api_health():
 def api_debug_session():
     user = current_user()
     raw_cookie = request.headers.get("Cookie") or ""
+    raw_token = get_request_token() or ""
     return api_ok(
         {
             "hasCookieHeader": bool(raw_cookie),
             "cookieHeaderPreview": raw_cookie[:200],
+            "hasTokenHeader": bool(raw_token),
+            "tokenPreview": raw_token[:24],
             "sessionKeys": sorted(list(session.keys())),
             "sessionUserId": session.get("user_id"),
             "sessionRole": session.get("role"),
@@ -567,17 +605,23 @@ def auth_login():
             return api_error("Invalid credentials.", 401)
         if not check_password_hash(row["password_hash"], password):
             return api_error("Invalid credentials.", 401)
+        token = secrets.token_hex(32)
+        cur.execute("INSERT INTO auth_tokens (user_id, token) VALUES (%s, %s)", (row["id"], token))
 
     session.clear()
     session["user_id"] = row["id"]
     session["role"] = row["role"]
     if row.get("student_id"):
         session["student_id"] = row["student_id"]
-    return api_ok({"user": serialize_user(row)})
+    return api_ok({"user": serialize_user(row), "token": token})
 
 
 @app.post("/api/auth/logout")
 def auth_logout():
+    token = get_request_token()
+    if token:
+        with db_cursor(True) as (_, cur):
+            cur.execute("DELETE FROM auth_tokens WHERE token=%s", (token,))
     session.clear()
     return api_ok({"message": "Logged out."})
 
