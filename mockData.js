@@ -650,11 +650,29 @@ function getUserInitials(name, email) {
   }
   return source.slice(0, 2).toUpperCase();
 }
+function getReadWiseBasePath() {
+  if (typeof window === "undefined") return "";
+  const base = String(window.READWISE_BASE_PATH || "").trim();
+  if (!base || base === "/") return "";
+  return base.replace(/\/+$/, "");
+}
+function normalizeAvatarSrc(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  if (/^data:image\//i.test(raw) || /^https?:\/\//i.test(raw)) return raw;
+
+  const basePath = getReadWiseBasePath();
+  const avatarMatch = raw.match(/^\/(?:[^/]+\/)?avatar\/(.+)$/i);
+  if (avatarMatch) {
+    return (basePath ? basePath : "") + "/avatar/" + avatarMatch[1];
+  }
+  return raw;
+}
 function getShellAvatarData(user) {
   const student = user && user.student ? user.student : null;
   if (!student) return null;
   const type = String(student.avatarType || "initials").trim().toLowerCase();
-  const value = String(student.avatarValue || "").trim();
+  const value = normalizeAvatarSrc(student.avatarValue || "");
   if ((type === "preset" || type === "upload") && value) {
     return { type: type, value: value };
   }

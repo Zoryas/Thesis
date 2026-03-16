@@ -25,7 +25,7 @@ DB_PORT = int(os.environ.get("READWISE_DB_PORT", "3306"))
 DB_USER = os.environ.get("READWISE_DB_USER", "root")
 DB_PASSWORD = os.environ.get("READWISE_DB_PASSWORD", "")
 DB_NAME = os.environ.get("READWISE_DB_NAME", "readwise_db")
-PRESET_AVATAR_PATTERN = re.compile(r"^/readwise/avatar/[A-Za-z0-9 _().-]+\.svg$")
+PRESET_AVATAR_PATTERN = re.compile(r"^/(?:[A-Za-z0-9._-]+/)?avatar/[A-Za-z0-9 _().-]+\.svg$")
 
 if not re.fullmatch(r"[A-Za-z0-9_]+", DB_NAME):
     raise RuntimeError("Invalid READWISE_DB_NAME")

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>My Profile - ReadWise</title>
   <link rel="stylesheet" href="../stylesheets/shared.css?v=20260316b">
-  <script>window.READWISE_API_BASE_URL = "https://read-wise-3tto.onrender.com";</script>
+  <script src="../runtime-config.js?v=20260316c"></script>
 </head>
 <body class="student-profile-page">
 <div class="demo-banner">ReadWise System | Pulo National High School</div>
@@ -189,33 +189,37 @@
 
 <div class="toast" id="toast"></div>
 
-<script src="../api.js?v=20260316b"></script>
+<script src="../api.js?v=20260316c"></script>
 <script src="../mockData.js?v=20260316b"></script>
 <script>
-  const DEFAULT_AVATARS = [
-    "/readwise/avatar/avatar-boy-svgrepo-com.svg",
-    "/readwise/avatar/avatar-boy-svgrepo-com (1).svg",
-    "/readwise/avatar/avatar-boy-svgrepo-com (2).svg",
-    "/readwise/avatar/avatar-boy-svgrepo-com (3).svg",
-    "/readwise/avatar/avatar-boy-svgrepo-com (4).svg",
-    "/readwise/avatar/avatar-boy-svgrepo-com (5).svg",
-    "/readwise/avatar/avatar-boy-svgrepo-com (6).svg",
-    "/readwise/avatar/avatar-girl-svgrepo-com.svg",
-    "/readwise/avatar/avatar-girl-svgrepo-com (1).svg",
-    "/readwise/avatar/avatar-girl-svgrepo-com (2).svg",
-    "/readwise/avatar/avatar-girl-svgrepo-com (3).svg",
-    "/readwise/avatar/avatar-girl-svgrepo-com (4).svg",
-    "/readwise/avatar/avatar-girl-svgrepo-com (5).svg",
-    "/readwise/avatar/avatar-girl-svgrepo-com (6).svg",
-    "/readwise/avatar/avatar-girl-svgrepo-com (7).svg",
-    "/readwise/avatar/avatar-girl-svgrepo-com (8).svg",
-    "/readwise/avatar/avatar-girl-svgrepo-com (9).svg",
-    "/readwise/avatar/avatar-girl-svgrepo-com (10).svg",
-    "/readwise/avatar/avatar-girl-svgrepo-com (11).svg",
-    "/readwise/avatar/avatar-girl-svgrepo-com (12).svg",
-    "/readwise/avatar/avatar-girl-svgrepo-com (13).svg",
-    "/readwise/avatar/avatar-girl-svgrepo-com (14).svg"
+  const AVATAR_FILES = [
+    "avatar-boy-svgrepo-com.svg",
+    "avatar-boy-svgrepo-com (1).svg",
+    "avatar-boy-svgrepo-com (2).svg",
+    "avatar-boy-svgrepo-com (3).svg",
+    "avatar-boy-svgrepo-com (4).svg",
+    "avatar-boy-svgrepo-com (5).svg",
+    "avatar-boy-svgrepo-com (6).svg",
+    "avatar-girl-svgrepo-com.svg",
+    "avatar-girl-svgrepo-com (1).svg",
+    "avatar-girl-svgrepo-com (2).svg",
+    "avatar-girl-svgrepo-com (3).svg",
+    "avatar-girl-svgrepo-com (4).svg",
+    "avatar-girl-svgrepo-com (5).svg",
+    "avatar-girl-svgrepo-com (6).svg",
+    "avatar-girl-svgrepo-com (7).svg",
+    "avatar-girl-svgrepo-com (8).svg",
+    "avatar-girl-svgrepo-com (9).svg",
+    "avatar-girl-svgrepo-com (10).svg",
+    "avatar-girl-svgrepo-com (11).svg",
+    "avatar-girl-svgrepo-com (12).svg",
+    "avatar-girl-svgrepo-com (13).svg",
+    "avatar-girl-svgrepo-com (14).svg"
   ];
+  const AVATAR_BASE_PATH = String(window.READWISE_BASE_PATH || "").replace(/\/+$/, "");
+  const DEFAULT_AVATARS = AVATAR_FILES.map(function(fileName) {
+    return (AVATAR_BASE_PATH ? AVATAR_BASE_PATH : "") + "/avatar/" + fileName;
+  });
 
   const DEMO_EMAILS = {
     s1: "juan.delacruz@pnhs.edu",
@@ -475,4 +479,3 @@
 </script>
 </body>
 </html>
-

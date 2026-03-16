@@ -128,7 +128,7 @@
       method: settings.method || "GET",
       headers: headers,
       body: body,
-      credentials: "include"
+      credentials: "omit"
     });
 
     var payload = null;
@@ -158,7 +158,7 @@
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text: text }),
-      credentials: "include"
+      credentials: "omit"
     });
     var payload = await response.json().catch(function() { return {}; });
     if (!response.ok || payload.error) {
