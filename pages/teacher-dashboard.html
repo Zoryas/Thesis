@@ -27,7 +27,7 @@
     </nav>
     <div class="sidebar-footer">
       <div class="user-info"><strong>Ms. Ana Villanueva</strong>Grade 7 English | PNHS</div>
-      <button class="logout-btn" onclick="sessionStorage.clear();window.location.href='../login.html'"><span class="icon" data-icon="logout"></span><span class="nav-label">Logout</span></button>
+      <button class="logout-btn" onclick="logout()"><span class="icon" data-icon="logout"></span><span class="nav-label">Logout</span></button>
     </div>
   </aside>
   <main class="main">
@@ -35,10 +35,10 @@
       <div class="page-header-copy">
         <p class="eyebrow">Teacher workspace</p>
         <h1>Teacher Dashboard</h1>
-        <p>Track recent submissions, weekly priorities, and class balance from one calm control center.</p>
+        <p id="dashboard-summary-copy">Track recent submissions, weekly priorities, and class balance from one calm control center.</p>
       </div>
       <div class="header-meta">
-        <span class="meta-pill"><strong>Week 5</strong> of 8</span>
+        <span class="meta-pill"><strong id="dashboard-week-label">Week 1</strong> of 8</span>
         <span class="meta-pill"><strong>Grade 7 English</strong> PNHS</span>
       </div>
     </div>
@@ -46,18 +46,18 @@
     <div class="card-grid card-grid-3 dashboard-summary-grid" style="margin-bottom:16px">
       <div class="stat-card stat-card-level stat-card-easy">
         <div class="stat-label">Easy Class</div>
-        <div class="stat-val">1</div>
-        <div class="kpi-support">Carlo Reyes</div>
+        <div class="stat-val" id="easy-count">0</div>
+        <div class="kpi-support" id="easy-names">No students yet</div>
       </div>
       <div class="stat-card stat-card-level stat-card-moderate">
         <div class="stat-label">Moderate Class</div>
-        <div class="stat-val">1</div>
-        <div class="kpi-support">Maria Santos</div>
+        <div class="stat-val" id="moderate-count">0</div>
+        <div class="kpi-support" id="moderate-names">No students yet</div>
       </div>
       <div class="stat-card stat-card-level stat-card-hard">
         <div class="stat-label">Difficult Class</div>
-        <div class="stat-val">1</div>
-        <div class="kpi-support">Juan Dela Cruz</div>
+        <div class="stat-val" id="hard-count">0</div>
+        <div class="kpi-support" id="hard-names">No students yet</div>
       </div>
     </div>
 
@@ -72,26 +72,7 @@
         <div class="table-wrap">
           <table class="dashboard-mobile-table">
             <thead><tr><th>Student</th><th>Passage</th><th>Score</th><th>Status</th></tr></thead>
-            <tbody>
-              <tr>
-                <td data-label="Student">Juan Dela Cruz</td>
-                <td data-label="Passage">Climate Change</td>
-                <td data-label="Score">71%</td>
-                <td data-label="Status"><span class="badge badge-easy">Scored</span></td>
-              </tr>
-              <tr>
-                <td data-label="Student">Maria Santos</td>
-                <td data-label="Passage">Philippine Biodiversity</td>
-                <td data-label="Score">72%</td>
-                <td data-label="Status"><span class="badge badge-easy">Scored</span></td>
-              </tr>
-              <tr>
-                <td data-label="Student">Carlo Reyes</td>
-                <td data-label="Passage">The Water Cycle</td>
-                <td data-label="Score">48%</td>
-                <td data-label="Status"><span class="badge badge-moderate">Pending SA</span></td>
-              </tr>
-            </tbody>
+            <tbody id="recent-submissions-body"></tbody>
           </table>
         </div>
       </div>
@@ -129,24 +110,12 @@
         </div>
       </div>
       <div class="dashboard-alerts">
-        <div class="dashboard-alert dashboard-alert-danger">
-          <div>
-            <strong>Short Answer Pending</strong>
-            <p>Juan Dela Cruz | Climate Change and Its Effects</p>
-          </div>
-          <a href="teacher-score.html?sid=s1&pid=p3" class="btn btn-danger btn-sm">Score Now</a>
-        </div>
-        <div class="dashboard-alert dashboard-alert-warning">
-          <div>
-            <strong>Recommendation Review</strong>
-            <p>3 students have pending confirmations for Week 5.</p>
-          </div>
-          <a href="teacher-recommendations.html" class="btn btn-amber btn-sm">Review</a>
-        </div>
+        <div id="pending-actions-list"></div>
       </div>
     </div>
   </main>
 </div>
+<script src="../api.js?v=20260316c"></script>
 <script src="../mockData.js?v=20260316b"></script>
 <script>
   function chartSurfaceBorder() {
@@ -183,6 +152,84 @@
     }
   });
 
+  function escapeHtml(value) {
+    return String(value || "").replace(/[&<>"']/g, function(character) {
+      return { "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[character];
+    });
+  }
+
+  async function bootstrapPage() {
+    try {
+      const auth = await ReadWiseAPI.me();
+      if (!auth || !auth.user || auth.user.role !== "teacher") throw new Error("Unauthorized");
+      const dashboard = await ReadWiseAPI.getTeacherDashboard();
+      const activeWeek = ReadWiseAPI.getActiveWeek();
+      const levelCounts = (dashboard && dashboard.levelCounts) || { EASY: 0, MODERATE: 0, HARD: 0 };
+      const levelStudents = (dashboard && dashboard.levelStudents) || { EASY: [], MODERATE: [], HARD: [] };
+      const recentSubmissions = (dashboard && dashboard.recentSubmissions) || [];
+      const pendingReviews = (dashboard && dashboard.pendingReviews) || [];
+      const recommendationCount = Number((dashboard && dashboard.recommendationCount) || 0);
+
+      document.getElementById("dashboard-week-label").textContent = "Week " + activeWeek;
+      document.getElementById("dashboard-summary-copy").textContent =
+        "Monitor " + ((dashboard && dashboard.studentCount) || 0) + " students, current submissions, and weekly reading movement in one place.";
+
+      document.getElementById("easy-count").textContent = levelCounts.EASY || 0;
+      document.getElementById("moderate-count").textContent = levelCounts.MODERATE || 0;
+      document.getElementById("hard-count").textContent = levelCounts.HARD || 0;
+      document.getElementById("easy-names").textContent = levelStudents.EASY && levelStudents.EASY.length ? levelStudents.EASY.join(", ") : "No students yet";
+      document.getElementById("moderate-names").textContent = levelStudents.MODERATE && levelStudents.MODERATE.length ? levelStudents.MODERATE.join(", ") : "No students yet";
+      document.getElementById("hard-names").textContent = levelStudents.HARD && levelStudents.HARD.length ? levelStudents.HARD.join(", ") : "No students yet";
+
+      classChart.data.datasets[0].data = [levelCounts.EASY || 0, levelCounts.MODERATE || 0, levelCounts.HARD || 0];
+      classChart.update("none");
+
+      const submissionsBody = document.getElementById("recent-submissions-body");
+      if (!recentSubmissions.length) {
+        submissionsBody.innerHTML = '<tr><td colspan="4">No submissions yet.</td></tr>';
+      } else {
+        submissionsBody.innerHTML = recentSubmissions.map(function(item) {
+          const badgeClassName = item.status === "Pending Review" ? "badge-moderate" : "badge-easy";
+          return '<tr>' +
+            '<td data-label="Student">' + escapeHtml(item.studentName) + '</td>' +
+            '<td data-label="Passage">' + escapeHtml(item.passageTitle) + '</td>' +
+            '<td data-label="Score">' + escapeHtml(item.score) + '%</td>' +
+            '<td data-label="Status"><span class="badge ' + badgeClassName + '">' + escapeHtml(item.status) + '</span></td>' +
+            '</tr>';
+        }).join("");
+      }
+
+      const actions = [];
+      pendingReviews.forEach(function(student) {
+        actions.push(
+          '<div class="dashboard-alert dashboard-alert-danger">' +
+            '<div><strong>Short Answer Pending</strong><p>' + escapeHtml(student.name) + ' | ' + escapeHtml(student.pendingReviewCount) + ' response(s) need review</p></div>' +
+            '<a href="teacher-student-detail.html?id=' + encodeURIComponent(student.id) + '" class="btn btn-danger btn-sm">Open Student</a>' +
+          '</div>'
+        );
+      });
+      actions.push(
+        '<div class="dashboard-alert dashboard-alert-warning">' +
+          '<div><strong>Recommendation Review</strong><p>' + recommendationCount + ' student(s) now have live recommendation history.</p></div>' +
+          '<a href="teacher-recommendations.html" class="btn btn-amber btn-sm">Review</a>' +
+        '</div>'
+      );
+      document.getElementById("pending-actions-list").innerHTML = actions.join("");
+    } catch (error) {
+      window.location.href = "../login.html";
+    }
+  }
+
+  async function logout() {
+    try {
+      await ReadWiseAPI.logout();
+    } catch (error) {
+      // ignore logout API errors
+    }
+    sessionStorage.clear();
+    window.location.href = "../login.html";
+  }
+
   window.addEventListener("readwise:themechange", function() {
     classChart.data.datasets[0].backgroundColor = [
       levelColor("EASY"),
@@ -192,8 +239,8 @@
     classChart.data.datasets[0].borderColor = chartSurfaceBorder();
     classChart.update("none");
   });
+
+  bootstrapPage();
 </script>
 </body>
 </html>
-
-

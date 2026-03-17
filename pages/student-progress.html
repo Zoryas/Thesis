@@ -30,7 +30,7 @@
   <main class="main">
     <div class="page-header">
       <h1>My Progress Tracker</h1>
-      <p>Weekly reading scores and difficulty recommendations</p>
+      <p>Weekly reading scores and class recommendations</p>
     </div>
     <div class="card-grid card-grid-3" style="margin-bottom:16px">
       <div class="stat-card">
@@ -67,46 +67,50 @@
 <script>
   const s = getCurrentStudent();
   document.getElementById("sb-name").textContent = s.name;
-  const prog = MOCK.weeklyProgress[s.id];
+  const prog = MOCK.weeklyProgress[s.id] || [];
   const scores = prog.map(w=>w.score);
 
   const cl = document.getElementById("cur-level");
-  cl.textContent = s.classLevel;
+  cl.textContent = getClassDisplayName(s.classLevel);
   cl.style.background = levelBg(s.classLevel);
   cl.style.color = levelColor(s.classLevel);
-  document.getElementById("best-score").textContent = Math.max(...scores)+"%";
-  document.getElementById("latest-score").textContent = scores[scores.length-1]+"%";
+  document.getElementById("best-score").textContent = scores.length ? (Math.max(...scores) + "%") : (s.preScore + "%");
+  document.getElementById("latest-score").textContent = scores.length ? (scores[scores.length-1] + "%") : "-%";
 
   const tbody = document.getElementById("history-body");
-  prog.forEach(w=>{
-    const recColor = w.recommendation.includes("UP")?"var(--easy)":
-                     w.recommendation.includes("DOWN")?"var(--hard)":"var(--accent)";
-    tbody.innerHTML += `
-      <tr>
-        <td><strong>Week ${w.week}</strong></td>
-        <td><strong>${w.score}%</strong></td>
-        <td><span class="badge ${badgeClass(w.difficulty)}">${w.difficulty}</span></td>
-        <td>
-          <div class="progress" style="width:120px">
-            <div class="progress-bar" style="width:${w.score}%;background:${w.score>=65?"var(--easy)":w.score>=50?"var(--accent)":"var(--hard)"}"></div>
-          </div>
-        </td>
-        <td><span style="font-weight:700;color:${recColor}">${w.recommendation}</span></td>
-      </tr>
-    `;
-  });
+  if (!prog.length) {
+    tbody.innerHTML = '<tr><td colspan="5">No weekly reading records yet. Complete a passage to start your progress history.</td></tr>';
+  } else {
+    prog.forEach(w=>{
+      const recColor = w.recommendation.includes("UP")?"var(--easy)":
+                       w.recommendation.includes("DOWN")?"var(--hard)":"var(--accent)";
+      tbody.innerHTML += `
+        <tr>
+          <td><strong>Week ${w.week}</strong></td>
+          <td><strong>${w.score}%</strong></td>
+          <td><span class="badge ${badgeClass(w.difficulty)}">${getClassDisplayName(w.difficulty)}</span></td>
+          <td>
+            <div class="progress" style="width:120px">
+              <div class="progress-bar" style="width:${w.score}%;background:${w.score>=65?"var(--easy)":w.score>=50?"var(--accent)":"var(--hard)"}"></div>
+            </div>
+          </td>
+          <td><span style="font-weight:700;color:${recColor}">${formatRecommendationDisplay(w.recommendation)}</span></td>
+        </tr>
+      `;
+    });
+  }
 
   new Chart(document.getElementById("progressChart"),{
     type:"line",
     data:{
-      labels:prog.map(w=>"Week "+w.week),
+      labels:prog.length ? prog.map(w=>"Week "+w.week) : ["No Weekly Score Yet"],
       datasets:[{
         label:"Score %",
-        data:scores,
+        data:prog.length ? scores : [s.preScore || 0],
         borderColor:"var(--primary)",
         backgroundColor:"rgba(30,127,127,0.1)",
         fill:true, tension:.4, pointRadius:6,
-        pointBackgroundColor:scores.map(s=>s>=65?"#2e7d5e":s>=50?"#c97b2a":"#c0392b"),
+        pointBackgroundColor:(prog.length ? scores : [s.preScore || 0]).map(s=>s>=65?"#2e7d5e":s>=50?"#c97b2a":"#c0392b"),
         pointBorderColor:"#fff", pointBorderWidth:2
       }]
     },

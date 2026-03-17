@@ -5,7 +5,15 @@ const MOCK = {
   students: [
     { id:"s1", name:"Juan Dela Cruz",  grade:"7", section:"Sampaguita", classLevel:"HARD",     preScore:58 },
     { id:"s2", name:"Maria Santos",    grade:"7", section:"Sampaguita", classLevel:"MODERATE", preScore:72 },
-    { id:"s3", name:"Carlo Reyes",     grade:"7", section:"Sampaguita", classLevel:"EASY",     preScore:45 }
+    { id:"s3", name:"Carlo Reyes",     grade:"7", section:"Sampaguita", classLevel:"EASY",     preScore:45 },
+    { id:"s4", name:"New Student",     grade:"7", section:"Sampaguita", classLevel:"EASY",     preScore:0 },
+    { id:"s5", name:"Lea Garcia",      grade:"7", section:"Rosal",      classLevel:"MODERATE", preScore:64 },
+    { id:"s6", name:"Paolo Mendoza",   grade:"7", section:"Rosal",      classLevel:"HARD",     preScore:81 },
+    { id:"s7", name:"Trisha Navarro",  grade:"7", section:"Rosal",      classLevel:"EASY",     preScore:43 },
+    { id:"s8", name:"Adrian Lopez",    grade:"7", section:"Makahiya",   classLevel:"MODERATE", preScore:59 },
+    { id:"s9", name:"Bea Cortez",      grade:"7", section:"Makahiya",   classLevel:"HARD",     preScore:74 },
+    { id:"s10", name:"Noah Flores",    grade:"7", section:"Makahiya",   classLevel:"EASY",     preScore:0 },
+    { id:"s11", name:"Jamie Ong",      grade:"7", section:"Sampaguita", classLevel:"EASY",     preScore:0 }
   ],
   teacher: { name:"Ms. Ana Villanueva", subject:"Grade 7 English", school:"Pulo National High School" },
   passages: [
@@ -76,7 +84,40 @@ const MOCK = {
       { week:2, score:50, difficulty:"EASY",     recommendation:"Maintain" },
       { week:3, score:55, difficulty:"EASY",     recommendation:"Step UP to MODERATE" },
       { week:4, score:48, difficulty:"MODERATE", recommendation:"Step DOWN to EASY" }
-    ]
+    ],
+    s4:[],
+    s5:[
+      { week:1, score:63, difficulty:"MODERATE", recommendation:"Maintain" },
+      { week:2, score:67, difficulty:"MODERATE", recommendation:"Maintain" },
+      { week:3, score:72, difficulty:"MODERATE", recommendation:"Maintain" },
+      { week:4, score:78, difficulty:"MODERATE", recommendation:"Step UP to HARD" }
+    ],
+    s6:[
+      { week:1, score:76, difficulty:"HARD",     recommendation:"Maintain" },
+      { week:2, score:82, difficulty:"HARD",     recommendation:"Maintain" },
+      { week:3, score:79, difficulty:"HARD",     recommendation:"Maintain" },
+      { week:4, score:85, difficulty:"HARD",     recommendation:"Maintain" }
+    ],
+    s7:[
+      { week:1, score:40, difficulty:"EASY",     recommendation:"Maintain" },
+      { week:2, score:47, difficulty:"EASY",     recommendation:"Maintain" },
+      { week:3, score:53, difficulty:"EASY",     recommendation:"Maintain" },
+      { week:4, score:58, difficulty:"EASY",     recommendation:"Step UP to MODERATE" }
+    ],
+    s8:[
+      { week:1, score:57, difficulty:"MODERATE", recommendation:"Maintain" },
+      { week:2, score:61, difficulty:"MODERATE", recommendation:"Maintain" },
+      { week:3, score:66, difficulty:"MODERATE", recommendation:"Maintain" },
+      { week:4, score:70, difficulty:"MODERATE", recommendation:"Maintain" }
+    ],
+    s9:[
+      { week:1, score:71, difficulty:"HARD",     recommendation:"Maintain" },
+      { week:2, score:75, difficulty:"HARD",     recommendation:"Maintain" },
+      { week:3, score:80, difficulty:"HARD",     recommendation:"Maintain" },
+      { week:4, score:77, difficulty:"HARD",     recommendation:"Maintain" }
+    ],
+    s10:[],
+    s11:[]
   }
 };
 
@@ -131,6 +172,56 @@ const USER_CACHE_KEY = "readwise_user_v1";
 const MAX_WEEKLY_PASSAGES_PER_CLASS = 5;
 const TOTAL_PROGRAM_WEEKS = 8;
 const CLASS_LEVELS = ["EASY", "MODERATE", "HARD"];
+const DEFAULT_FALLBACK_ASSESSMENTS = {
+  p1: {
+    questions: [
+      { difficulty: "EASY", type: "multiple_choice", prompt: "What process changes liquid water into water vapor?", options: ["Condensation", "Evaporation", "Runoff", "Precipitation"], answerIndex: 1 },
+      { difficulty: "EASY", type: "true_false", prompt: "Clouds form when water vapor cools and condenses.", answerKey: "true" },
+      { difficulty: "EASY", type: "multiple_choice", prompt: "What do we call water that soaks into the ground?", options: ["Runoff", "Precipitation", "Groundwater", "Fog"], answerIndex: 2 }
+    ],
+    shortAnswerPrompt: ""
+  },
+  p2: {
+    questions: [
+      { difficulty: "MODERATE", type: "multiple_choice_harder", prompt: "Where was Jose Rizal born?", options: ["Manila", "Calamba, Laguna", "Baguio", "Cebu"], answerIndex: 1 },
+      { difficulty: "MODERATE", type: "true_false_modified", prompt: "Rizal continued some of his studies in Spain.", answerKey: "true" },
+      { difficulty: "MODERATE", type: "sequence", prompt: "Arrange these events from Rizal's life in the order they appear in the passage.", options: ["Studied at Ateneo Municipal", "Pursued medicine and studies abroad", "Published Noli Me Tangere and El Filibusterismo"], answerKeys: ["Studied at Ateneo Municipal", "Pursued medicine and studies abroad", "Published Noli Me Tangere and El Filibusterismo"] }
+    ],
+    shortAnswerPrompt: ""
+  },
+  p3: {
+    questions: [
+      { difficulty: "DIFFICULT", type: "fill_in_the_blanks", prompt: "The greenhouse effect traps heat in the ______.", answerKeys: ["atmosphere"] },
+      { difficulty: "DIFFICULT", type: "identification", prompt: "Which greenhouse gas is specifically named in the passage?", answerKeys: ["carbon dioxide", "co2"] },
+      { difficulty: "DIFFICULT", type: "enumeration", prompt: "Name two climate-related risks mentioned in the passage.", answerKeys: ["sea-level rise", "stronger tropical cyclones"] }
+    ],
+    shortAnswerPrompt: "In your own words, explain one effect of climate change on the Philippines."
+  },
+  p4: {
+    questions: [
+      { difficulty: "EASY", type: "multiple_choice", prompt: "What lesson does the fox teach the little prince?", options: ["Money solves problems", "One sees clearly only with the heart", "Adults are always right", "Travel is better than friendship"], answerIndex: 1 },
+      { difficulty: "EASY", type: "true_false", prompt: "The little prince meets the pilot in the desert.", answerKey: "true" },
+      { difficulty: "EASY", type: "multiple_choice", prompt: "What living thing does the little prince care for on his home planet?", options: ["A tree", "A fox", "A single rose", "A sheep"], answerIndex: 2 }
+    ],
+    shortAnswerPrompt: ""
+  },
+  p5: {
+    questions: [
+      { difficulty: "MODERATE", type: "multiple_choice_harder", prompt: "The Philippines is identified as one of how many megadiverse countries?", options: ["10", "17", "25", "30"], answerIndex: 1 },
+      { difficulty: "MODERATE", type: "true_false_modified", prompt: "The Philippine eagle is an endemic species mentioned in the passage.", answerKey: "true" },
+      { difficulty: "MODERATE", type: "sequence", prompt: "Arrange these ecosystems in the same order used in the passage.", options: ["Tropical rainforests", "Mangroves", "Coral reefs"], answerKeys: ["Tropical rainforests", "Mangroves", "Coral reefs"] }
+    ],
+    shortAnswerPrompt: ""
+  },
+  p6: {
+    questions: [
+      { difficulty: "DIFFICULT", type: "fill_in_the_blanks", prompt: "No person shall be deprived of life, liberty, or property without ______ process of law.", answerKeys: ["due", "due process"] },
+      { difficulty: "DIFFICULT", type: "identification", prompt: "Which article of the Constitution contains the Bill of Rights?", answerKeys: ["article iii", "article 3", "iii"] },
+      { difficulty: "DIFFICULT", type: "enumeration", prompt: "Name two rights mentioned in the passage.", answerKeys: ["freedom of speech", "right to counsel"] }
+    ],
+    shortAnswerPrompt: "Explain what due process of law means in your own words."
+  }
+};
 const DEFAULT_PASSAGES = JSON.parse(JSON.stringify(MOCK.passages));
 const QUESTION_TYPE_CATALOG = {
   EASY: [
@@ -173,14 +264,31 @@ function estimateReadingTime(wordCount) {
 
 function normalizeClassLevel(value) {
   const normalized = String(value || "").trim().toUpperCase();
+  if (normalized === "MEDIUM") return "MODERATE";
   if (normalized === "DIFFICULT") return "HARD";
   if (CLASS_LEVELS.includes(normalized)) return normalized;
   return "EASY";
 }
 
-function getClassDisplayName(level) {
+function getClassDisplayName(level, format) {
   const normalized = normalizeClassLevel(level);
-  return normalized === "HARD" ? "DIFFICULT" : normalized;
+  const display = normalized === "HARD" ? "DIFFICULT" : normalized;
+  if (format === "upper") return display;
+  if (format === "lower") return display.toLowerCase();
+  return display.charAt(0) + display.slice(1).toLowerCase();
+}
+
+function formatRecommendationDisplay(value) {
+  const text = String(value || "").trim();
+  if (!text) return "";
+  return text
+    .replace(/\bUP\b/g, "Up")
+    .replace(/\bDOWN\b/g, "Down")
+    .replace(/\bMEDIUM\b/gi, getClassDisplayName("MODERATE"))
+    .replace(/\bMODERATE\b/gi, getClassDisplayName("MODERATE"))
+    .replace(/\bHARD\b/gi, getClassDisplayName("HARD"))
+    .replace(/\bDIFFICULT\b/gi, getClassDisplayName("HARD"))
+    .replace(/\bEASY\b/gi, getClassDisplayName("EASY"));
 }
 
 function mapPassageLabelToClassLevel(label) {
@@ -192,12 +300,15 @@ function mapPassageLabelToClassLevel(label) {
 
 function normalizeQuestionDifficulty(value) {
   const normalized = String(value || "").trim().toUpperCase();
+  if (normalized === "MEDIUM") return "MODERATE";
+  if (normalized === "HARD") return "DIFFICULT";
   if (QUESTION_TYPE_CATALOG[normalized]) return normalized;
   return "EASY";
 }
 
 function mapPassageLabelToQuestionDifficulty(label) {
   const normalized = String(label || "").trim().toUpperCase();
+  if (normalized === "MEDIUM") return "MODERATE";
   if (normalized === "HARD") return "DIFFICULT";
   if (normalized === "MODERATE") return "MODERATE";
   return "EASY";
@@ -280,6 +391,11 @@ function normalizeAssessmentQuestion(question) {
   if (type === "true_false" || type === "true_false_modified") {
     const tfAnswer = String(answerKeyRaw || "").trim().toLowerCase();
     normalized.answerKey = tfAnswer === "false" ? "false" : "true";
+    if (type === "true_false_modified") {
+      normalized.answerKeys = answerKeysRaw.length
+        ? toStringArray(answerKeysRaw).filter(function(entry) { return entry; })
+        : parseDelimitedAnswers(source.correctionAnswer || source.correction || "", "|");
+    }
     return normalized;
   }
 
@@ -332,7 +448,7 @@ function normalizePassageData(passage) {
     };
   });
   const legacyShortAnswer = repairLegacyText(String(MOCK.shortAnswer[normalized.id] || "").trim());
-  normalized.assessment = normalizeAssessmentData(normalized.assessment || {
+  normalized.assessment = normalizeAssessmentData(normalized.assessment || DEFAULT_FALLBACK_ASSESSMENTS[normalized.id] || {
     questions: legacyQuestions,
     shortAnswerPrompt: legacyShortAnswer
   });
@@ -351,6 +467,69 @@ function normalizeAssessmentData(assessment) {
     questions: questions,
     shortAnswerPrompt: repairLegacyText(String(source.shortAnswerPrompt || source.shortAnswer || "").trim())
   };
+}
+
+function validateAssessmentForPassageLabel(label, assessment) {
+  const normalized = normalizeAssessmentData(assessment);
+  const expectedDifficulty = mapPassageLabelToQuestionDifficulty(label);
+  const allowedTypes = QUESTION_TYPE_CATALOG[expectedDifficulty].map(function(entry) { return entry.value; });
+
+  if (!normalized.questions.length) {
+    throw new Error("Add at least 1 complete assessment question.");
+  }
+
+  normalized.questions.forEach(function(question, index) {
+    if (question.difficulty !== expectedDifficulty) {
+      throw new Error(
+        "Question " + (index + 1) + " must use " + getClassDisplayName(expectedDifficulty) + " difficulty."
+      );
+    }
+
+    if (!allowedTypes.includes(question.type)) {
+      throw new Error(
+        "Question " + (index + 1) + " must use one of the allowed " +
+        getClassDisplayName(expectedDifficulty).toLowerCase() + " question types."
+      );
+    }
+
+    if (question.type === "true_false_modified" && question.answerKey === "false") {
+      if (!Array.isArray(question.answerKeys) || !question.answerKeys.filter(Boolean).length) {
+        throw new Error("Question " + (index + 1) + " needs the corrected answer for a false statement.");
+      }
+    }
+
+    if (question.type === "multiple_choice" || question.type === "multiple_choice_harder") {
+      if (!Array.isArray(question.options) || question.options.filter(Boolean).length !== 4) {
+        throw new Error("Question " + (index + 1) + " needs exactly 4 answer options.");
+      }
+      return;
+    }
+
+    if (question.type === "sequence") {
+      if (!Array.isArray(question.options) || question.options.filter(Boolean).length < 3) {
+        throw new Error("Question " + (index + 1) + " needs at least 3 sequence items.");
+      }
+      if (!Array.isArray(question.answerKeys) || question.answerKeys.filter(Boolean).length < 3) {
+        throw new Error("Question " + (index + 1) + " needs a complete sequence answer.");
+      }
+      return;
+    }
+
+    if (question.type === "enumeration") {
+      if (!Array.isArray(question.answerKeys) || question.answerKeys.filter(Boolean).length < 2) {
+        throw new Error("Question " + (index + 1) + " needs at least 2 expected answers.");
+      }
+      return;
+    }
+
+    if (question.type !== "true_false" && question.type !== "true_false_modified") {
+      if (!Array.isArray(question.answerKeys) || !question.answerKeys.filter(Boolean).length) {
+        throw new Error("Question " + (index + 1) + " needs at least 1 accepted answer.");
+      }
+    }
+  });
+
+  return normalized;
 }
 
 function loadStoredPassages() {
@@ -806,9 +985,13 @@ function savePassage(data) {
   const passages = getPassages();
   const isEdit = Boolean(data && data.id);
   const nextId = isEdit ? data.id : getNextPassageId(passages);
+  const validatedAssessment = validateAssessmentForPassageLabel(
+    data && data.label ? data.label : "MODERATE",
+    data ? data.assessment : null
+  );
   const record = normalizePassageData(Object.assign({}, data, {
     id: nextId,
-    assessment: normalizeAssessmentData(data ? data.assessment : null)
+    assessment: validatedAssessment
   }));
   const index = passages.findIndex(function(passage) { return passage.id === nextId; });
 
@@ -1122,6 +1305,7 @@ function initReadWiseShell() {
   }
 
   syncShellUserFooter(sidebar, currentPageName);
+  enforceStudentPreAssessmentGate(currentPageName);
 
   const navLinks = Array.from(sidebar.querySelectorAll("nav a"));
   navLinks.forEach(function(link) {
@@ -1280,6 +1464,35 @@ function initReadWiseShell() {
   }
 
   syncShellState();
+}
+
+function enforceStudentPreAssessmentGate(currentPageName) {
+  const pageName = String(currentPageName || "");
+  if (!/^student-/.test(pageName)) return;
+  if (!window.ReadWiseAPI || typeof window.ReadWiseAPI.me !== "function") return;
+  if (pageName === "student-pre-assessment.html") return;
+
+  const cachedUser = typeof window.ReadWiseAPI.getCachedUser === "function"
+    ? window.ReadWiseAPI.getCachedUser()
+    : null;
+  if (cachedUser && cachedUser.role === "student" && cachedUser.student) {
+    if (!cachedUser.student.preAssessmentCompleted) {
+      window.location.href = "student-pre-assessment.html";
+    }
+    return;
+  }
+
+  window.ReadWiseAPI.me().then(function(auth) {
+    const user = auth && auth.user ? auth.user : null;
+    if (!user || user.role !== "student" || !user.student) return;
+
+    const completed = !!user.student.preAssessmentCompleted;
+    if (!completed) {
+      window.location.href = "student-pre-assessment.html";
+    }
+  }).catch(function() {
+    // Ignore auth errors here; page-level guards handle redirect flows.
+  });
 }
 
 if (typeof window !== "undefined" && typeof document !== "undefined") {

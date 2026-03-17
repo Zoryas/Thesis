@@ -59,7 +59,10 @@ loginBtn.addEventListener("click", async () => {
     }
 
     if (user.role === "student") {
-      window.location.href = "pages/student-dashboard.html";
+      const needsPreAssessment = !(user.student && user.student.preAssessmentCompleted);
+      window.location.href = needsPreAssessment
+        ? "pages/student-pre-assessment.html"
+        : "pages/student-dashboard.html";
     } else {
       window.location.href = "pages/teacher-dashboard.html";
     }

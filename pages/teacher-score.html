@@ -8,7 +8,7 @@
   <script src="../runtime-config.js?v=20260316c"></script>
 </head>
 <body>
-<div class="demo-banner">ReadWise Demo Mode | Thesis Prototype</div>
+<div class="demo-banner">ReadWise System | Pulo National High School</div>
 <div class="layout">
   <aside class="sidebar">
     <div class="sidebar-logo">
@@ -24,7 +24,7 @@
     </nav>
     <div class="sidebar-footer">
       <div class="user-info"><strong>Ms. Ana Villanueva</strong>Grade 7 English</div>
-      <button class="logout-btn" onclick="sessionStorage.clear();window.location.href='../login.html'"><span class="icon" data-icon="logout"></span><span class="nav-label">Logout</span></button>
+      <button class="logout-btn" onclick="logout()"><span class="icon" data-icon="logout"></span><span class="nav-label">Logout</span></button>
     </div>
   </aside>
   <main class="main">
@@ -45,29 +45,27 @@
         <div class="section-title">Student Response</div>
         <div style="margin-bottom:12px">
           <span style="font-size:13px;color:var(--muted)">Student:</span>
-          <strong style="margin-left:6px">Juan Dela Cruz</strong>
-          <span class="badge badge-hard" style="margin-left:8px">HARD</span>
+          <strong style="margin-left:6px" id="score-student-name">Loading...</strong>
+          <span class="badge badge-hard" style="margin-left:8px" id="score-student-level">--</span>
         </div>
         <div style="margin-bottom:12px">
           <span style="font-size:13px;color:var(--muted)">Passage:</span>
-          <strong style="margin-left:6px">Climate Change and Its Effects</strong>
+          <strong style="margin-left:6px" id="score-passage-title">Loading...</strong>
         </div>
         <div style="margin-bottom:10px">
           <div style="font-size:13px;font-weight:700;color:var(--secondary);margin-bottom:6px">Question:</div>
-          <div style="font-size:14px;color:var(--text);background:#f0fafa;padding:10px 12px;
+          <div id="score-question-text" style="font-size:14px;color:var(--text);background:#f0fafa;padding:10px 12px;
             border-radius:8px;border-left:3px solid var(--primary)">
-            In your own words, explain one effect of climate change on the Philippines.
+            Loading prompt...
           </div>
         </div>
         <div>
           <div style="font-size:13px;font-weight:700;color:var(--secondary);margin-bottom:6px">
             Student's Answer:
           </div>
-          <div style="font-size:14px;color:#4a5568;background:#fff8f0;padding:14px;
+          <div id="score-response-text" style="font-size:14px;color:#4a5568;background:#fff8f0;padding:14px;
             border-radius:8px;border-left:3px solid var(--accent);line-height:1.75;font-style:italic">
-            "The Philippines is often hit by strong typhoons because of climate change.
-            The sea level is also rising which can flood coastal barangays like those in Laguna de Bay.
-            Many farmers also have a hard time because of too much rain or drought."
+            Loading response...
           </div>
         </div>
       </div>
@@ -142,16 +140,31 @@
           onclick="submitScore()" disabled style="opacity:.5">
           Save Score
         </button>
+        <div class="micro-copy" style="margin-top:10px">
+          This scoring view now pulls the live student response. Final rubric persistence can be added next.
+        </div>
       </div>
     </div>
   </main>
 </div>
 <div class="toast" id="toast"></div>
+<script src="../api.js?v=20260316c"></script>
 <script src="../mockData.js?v=20260316b"></script>
 <script>
   var selectedScore = null;
+  var hasPendingResponse = false;
+  var scoreParams = new URLSearchParams(location.search);
+  var selectedStudentId = scoreParams.get("sid") || scoreParams.get("id") || "";
+  var selectedPassageId = scoreParams.get("pid") || "";
+
+  function escapeHtml(value) {
+    return String(value || "").replace(/[&<>"']/g, function(character) {
+      return { "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[character];
+    });
+  }
 
   function selectScore(val) {
+    if (!hasPendingResponse) return;
     selectedScore = val;
     document.querySelectorAll(".score-btn").forEach(function(btn) {
       btn.style.transform = "scale(1)";
@@ -173,12 +186,62 @@
   }
 
   function submitScore() {
-    if (selectedScore === null) return;
-    showToast("Score of " + selectedScore + "/3 saved for Juan Dela Cruz!");
+    if (selectedScore === null || !hasPendingResponse) return;
+    var name = document.getElementById("score-student-name").textContent || "the selected student";
+    showToast("Demo scoring saved locally: " + selectedScore + "/3 for " + name + ".");
     setTimeout(function() {
-      window.location.href = "teacher-student-detail.html?id=s1";
+      if (selectedStudentId) {
+        window.location.href = "teacher-student-detail.html?id=" + encodeURIComponent(selectedStudentId);
+      } else {
+        window.location.href = "teacher-students.html";
+      }
     }, 1500);
   }
+
+  async function bootstrapPage() {
+    try {
+      var auth = await ReadWiseAPI.me();
+      if (!auth || !auth.user || auth.user.role !== "teacher") throw new Error("Unauthorized");
+      if (!selectedStudentId) throw new Error("Missing student");
+
+      var detail = await ReadWiseAPI.getTeacherStudentDetail(selectedStudentId);
+      var student = detail && detail.student;
+      var pending = detail && detail.pendingShortAnswer;
+      if (!student) throw new Error("Student not found");
+
+      document.getElementById("score-student-name").textContent = student.name;
+      document.getElementById("score-student-level").textContent = getClassDisplayName(student.classLevel || "MODERATE");
+      document.getElementById("score-student-level").className = "badge " + badgeClass(student.classLevel || "MODERATE");
+
+      if (pending && (!selectedPassageId || pending.passageId === selectedPassageId)) {
+        hasPendingResponse = true;
+        document.getElementById("score-passage-title").textContent = pending.passageTitle || "Untitled passage";
+        document.getElementById("score-question-text").textContent = pending.prompt || "Short-answer prompt";
+        document.getElementById("score-response-text").textContent = pending.response || "No response text recorded.";
+      } else {
+        hasPendingResponse = false;
+        document.getElementById("score-passage-title").textContent = "No pending short answer";
+        document.getElementById("score-question-text").textContent = "This student does not currently have a live short-answer response to score.";
+        document.getElementById("score-response-text").textContent = "Return to the student detail page after a student submits a passage with a short-answer prompt.";
+        document.getElementById("submit-score-btn").disabled = true;
+        document.getElementById("submit-score-btn").style.opacity = ".5";
+      }
+    } catch (error) {
+      window.location.href = "../login.html";
+    }
+  }
+
+  async function logout() {
+    try {
+      await ReadWiseAPI.logout();
+    } catch (error) {
+      // ignore logout errors
+    }
+    sessionStorage.clear();
+    window.location.href = "../login.html";
+  }
+
+  bootstrapPage();
 </script>
 </body>
 </html>

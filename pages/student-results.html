@@ -46,8 +46,9 @@
 
       <div class="card-grid card-grid-2" style="margin-bottom:16px">
         <div class="stat-card" style="text-align:center">
-          <div class="stat-label">Difficulty Rating Submitted</div>
-          <div class="stat-val" id="diff-val" style="margin-top:6px">-/5</div>
+          <div class="stat-label">Submission Status</div>
+          <div class="stat-val" id="review-status" style="margin-top:6px">Finalized</div>
+          <div class="kpi-support" id="review-note">Auto-scored by the system.</div>
         </div>
         <div class="stat-card" style="text-align:center">
           <div class="stat-label">System Recommendation</div>
@@ -83,7 +84,8 @@
     let auth = null;
     let passage = null;
     try {
-      auth = await ReadWiseAPI.me();
+      const cachedUser = ReadWiseAPI.getCachedUser();
+      auth = cachedUser ? { user: cachedUser, cached: true } : await ReadWiseAPI.me();
       if (!auth || !auth.user || auth.user.role !== "student" || !auth.user.student) {
         throw new Error("Unauthorized");
       }
@@ -99,30 +101,47 @@
     document.getElementById("result-sub").textContent = passage ? (passage.title + " - " + passage.label) : "Session completed";
 
     const raw = sessionStorage.getItem("result_" + pid);
-    const fallback = { score: 0, correct: 0, total: 1, difficulty: 3, readingTime: "-", shortAnswer: "", week: activeWeek };
+    const fallback = { score: 0, correct: 0, total: 1, readingTime: "-", shortAnswer: "", week: activeWeek, underReview: false };
     const result = raw ? JSON.parse(raw) : fallback;
     const resultWeek = Number(result.week || activeWeek);
+    const underReview = !!result.underReview;
+    const reviewStatusEl = document.getElementById("review-status");
+    const reviewNoteEl = document.getElementById("review-note");
 
-    document.getElementById("score-big").textContent = result.score + "%";
-    document.getElementById("score-fraction").textContent = result.correct + " of " + result.total + " fully correct";
-    document.getElementById("score-bar").style.width = result.score + "%";
+    document.getElementById("score-big").textContent = underReview ? "Pending" : (result.score + "%");
+    document.getElementById("score-fraction").textContent = underReview
+      ? "Final score is hidden while teacher review is in progress."
+      : (result.correct + " of " + result.total + " fully correct");
+    document.getElementById("score-bar").style.width = underReview ? "0%" : (result.score + "%");
     document.getElementById("reading-time").textContent = "Reading Time: " + result.readingTime;
 
     let label = "", color = "";
-    if (result.score >= 75) { label = "Excellent"; color = "var(--easy)"; }
+    if (underReview) {
+      label = "Teacher Review Required";
+      color = "var(--moderate)";
+    } else if (result.score >= 75) { label = "Excellent"; color = "var(--easy)"; }
     else if (result.score >= 60) { label = "Good Job"; color = "var(--accent)"; }
     else { label = "Needs Improvement"; color = "var(--hard)"; }
     document.getElementById("score-label").textContent = label;
     document.getElementById("score-label").style.color = color;
 
-    document.getElementById("diff-val").textContent = result.difficulty + "/5";
+    reviewStatusEl.textContent = underReview ? "Under Review" : "Finalized";
+    reviewStatusEl.style.color = underReview ? "var(--moderate)" : "var(--easy)";
+    reviewNoteEl.textContent = underReview
+      ? "Short answer submitted. Waiting for teacher scoring."
+      : "Auto-scored result is finalized.";
 
     let recommendation = "", recColor = "";
-    if (result.score >= 75) { recommendation = "Step UP"; recColor = "var(--easy)"; }
+    let recommendationHint = "Based on your score";
+    if (underReview) {
+      recommendation = "Pending Review";
+      recColor = "var(--moderate)";
+      recommendationHint = "Waiting for teacher scoring";
+    } else if (result.score >= 75) { recommendation = "Step Up"; recColor = "var(--easy)"; }
     else if (result.score >= 60) { recommendation = "Maintain"; recColor = "var(--accent)"; }
-    else { recommendation = "Step DOWN"; recColor = "var(--hard)"; }
+    else { recommendation = "Step Down"; recColor = "var(--hard)"; }
     document.getElementById("rec-badge").innerHTML =
-      '<div class="result-recommendation"><strong style="color:' + recColor + '">' + recommendation + '</strong><div class="micro-copy">Based on your score</div></div>';
+      '<div class="result-recommendation"><strong style="color:' + recColor + '">' + recommendation + '</strong><div class="micro-copy">' + recommendationHint + '</div></div>';
 
     if (result.shortAnswer) {
       document.getElementById("sa-section").style.display = "block";
@@ -158,6 +177,3 @@
 </script>
 </body>
 </html>
-
-
-

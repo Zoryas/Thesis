@@ -404,7 +404,7 @@
       "var(--hard)";
     document.getElementById("stat-best").textContent = best + "%";
     document.getElementById("bar-best").style.width = best + "%";
-    document.getElementById("rec-display").textContent = latest ? latest.recommendation : getClassDisplayName(activeStudent.classLevel);
+    document.getElementById("rec-display").textContent = latest ? formatRecommendationDisplay(latest.recommendation) : getClassDisplayName(activeStudent.classLevel);
     document.getElementById("rec-note").textContent = latest
       ? "Based on your last " + Math.min(progress.length, 2) + " tracked session(s)."
       : "No completed sessions yet, so your current class level is being used.";
@@ -416,13 +416,13 @@
     } else {
       historyWrap.innerHTML = progress.map(function(entry) {
         return (
-          '<div class="profile-history-item">' +
+              '<div class="profile-history-item">' +
             '<div>' +
               '<div class="profile-history-week">Week ' + entry.week + "</div>" +
-              '<div class="micro-copy">Recommendation: ' + entry.recommendation + "</div>" +
+              '<div class="micro-copy">Recommendation: ' + formatRecommendationDisplay(entry.recommendation) + "</div>" +
             "</div>" +
             '<div class="profile-history-meta">' +
-              '<span class="badge ' + badgeClass(entry.difficulty) + '">' + entry.difficulty + "</span>" +
+              '<span class="badge ' + badgeClass(entry.difficulty) + '">' + getClassDisplayName(entry.difficulty) + "</span>" +
               '<span class="profile-history-score">' + entry.score + "%</span>" +
             "</div>" +
           "</div>"

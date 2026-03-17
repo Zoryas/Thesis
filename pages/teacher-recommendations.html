@@ -24,14 +24,14 @@
     </nav>
     <div class="sidebar-footer">
       <div class="user-info"><strong>Ms. Ana Villanueva</strong>Grade 7 English</div>
-      <button class="logout-btn" onclick="sessionStorage.clear();window.location.href='../login.html'"><span class="icon" data-icon="logout"></span><span class="nav-label">Logout</span></button>
+      <button class="logout-btn" onclick="logout()"><span class="icon" data-icon="logout"></span><span class="nav-label">Logout</span></button>
     </div>
   </aside>
   <main class="main">
     <div class="breadcrumb"><a href="teacher-dashboard.html">Dashboard</a> > Recommendations</div>
     <div class="page-header">
       <h1>System Recommendations</h1>
-      <p>Week 5 | Generated after every 2 consecutive sessions based on score and difficulty.</p>
+      <p id="recommendations-summary">Generated from each student's latest two scored weeks.</p>
     </div>
 
     <div class="card" style="margin-bottom:16px">
@@ -41,8 +41,8 @@
             <tr>
               <th>Student</th>
               <th>Current Level</th>
-              <th>Wk 3 Score</th>
-              <th>Wk 4 Score</th>
+              <th>Previous Score</th>
+              <th>Latest Score</th>
               <th>2-Session Avg</th>
               <th>System Recommendation</th>
               <th>Action</th>
@@ -93,40 +93,95 @@
 </div>
 
 <div class="toast" id="toast"></div>
+<script src="../api.js?v=20260316c"></script>
 <script src="../mockData.js?v=20260316b"></script>
 <script>
   var overrideSid = null;
 
-  var tbody = document.getElementById("rec-table");
-  MOCK.students.forEach(function(s) {
-    var prog = MOCK.weeklyProgress[s.id];
-    var wk3 = prog[2].score;
-    var wk4 = prog[3].score;
-    var avg = Math.round((wk3 + wk4) / 2);
-    var rec = avg >= 75 ? "Step Up" : avg >= 55 ? "Maintain" : "Step Down";
-    var rColor = rec === "Step Up" ? "var(--easy)" :
-      rec === "Step Down" ? "var(--hard)" : "var(--accent)";
-    var rBg = rec === "Step Up" ? "#d4edda" :
-      rec === "Step Down" ? "#fde8e8" : "#fff3cd";
+  function escapeHtml(value) {
+    return String(value || "").replace(/[&<>"']/g, function(character) {
+      return { "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[character];
+    });
+  }
 
-    var row = document.createElement("tr");
-    row.id = "row-" + s.id;
-    row.innerHTML =
-      '<td><strong>' + s.name + '</strong></td>' +
-      '<td><span class="badge ' + badgeClass(s.classLevel) + '">' + getClassDisplayName(s.classLevel) + '</span></td>' +
-      '<td>' + wk3 + '%</td>' +
-      '<td>' + wk4 + '%</td>' +
-      '<td><strong>' + avg + '%</strong></td>' +
-      '<td><span style="font-weight:800;color:' + rColor + ';background:' + rBg +
-        ';padding:4px 12px;border-radius:20px;font-size:13px">' + rec + '</span></td>' +
-      '<td style="display:flex;gap:6px;flex-wrap:wrap">' +
-        '<button class="btn btn-success btn-sm" onclick="confirmRec(\'' + s.id + '\',\'' +
-          s.name + '\')">Confirm</button>' +
-        '<button class="btn btn-outline btn-sm" onclick="openModal(\'' + s.id + '\',\'' +
-          s.name + '\')">Override</button>' +
-      '</td>';
-    tbody.appendChild(row);
-  });
+  function recommendationStyle(recommendation) {
+    if (recommendation === "Step Up") {
+      return { color: "var(--easy)", background: "#d4edda" };
+    }
+    if (recommendation === "Step Down") {
+      return { color: "var(--hard)", background: "#fde8e8" };
+    }
+    return { color: "var(--accent)", background: "#fff3cd" };
+  }
+
+  function getTwoSessionSummary(student) {
+    var progress = Array.isArray(student.progress) ? student.progress : [];
+    if (progress.length < 2) return null;
+    var recent = progress.slice(-2);
+    var previous = recent[0];
+    var latest = recent[1];
+    var average = Math.round((Number(previous.score || 0) + Number(latest.score || 0)) / 2);
+    var recommendation = average >= 75 ? "Step Up" : average >= 55 ? "Maintain" : "Step Down";
+    return {
+      previous: previous,
+      latest: latest,
+      average: average,
+      recommendation: recommendation
+    };
+  }
+
+  async function bootstrapPage() {
+    try {
+      var auth = await ReadWiseAPI.me();
+      if (!auth || !auth.user || auth.user.role !== "teacher") throw new Error("Unauthorized");
+
+      var response = await ReadWiseAPI.getTeacherStudents();
+      var students = (response && response.students) || [];
+      var tbody = document.getElementById("rec-table");
+      document.getElementById("recommendations-summary").textContent =
+        students.length
+          ? ("Showing live recommendation candidates for " + students.length + " student" + (students.length === 1 ? "" : "s") + ".")
+          : "No students are available yet.";
+
+      if (!students.length) {
+        tbody.innerHTML = '<tr><td colspan="7">No student records yet.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = students.map(function(student) {
+        var summary = getTwoSessionSummary(student);
+        var rowId = "row-" + student.id;
+        if (!summary) {
+          return '<tr id="' + rowId + '">' +
+            '<td><strong>' + escapeHtml(student.name) + '</strong><div class="micro-copy">Waiting for two scored weeks</div></td>' +
+            '<td><span class="badge ' + badgeClass(student.classLevel || "MODERATE") + '">' + escapeHtml(getClassDisplayName(student.classLevel || "MODERATE")) + '</span></td>' +
+            '<td colspan="3"><span class="muted-copy">Not enough student progress yet</span></td>' +
+            '<td><span class="badge badge-primary">Pending</span></td>' +
+            '<td style="display:flex;gap:6px;flex-wrap:wrap">' +
+              '<button class="btn btn-success btn-sm" disabled style="opacity:.55">Confirm</button>' +
+              '<button class="btn btn-outline btn-sm" disabled style="opacity:.55">Override</button>' +
+            '</td>' +
+          '</tr>';
+        }
+
+        var styles = recommendationStyle(summary.recommendation);
+        return '<tr id="' + rowId + '">' +
+          '<td><strong>' + escapeHtml(student.name) + '</strong><div class="micro-copy">Weeks ' + escapeHtml(summary.previous.week) + ' and ' + escapeHtml(summary.latest.week) + '</div></td>' +
+          '<td><span class="badge ' + badgeClass(student.classLevel || "MODERATE") + '">' + escapeHtml(getClassDisplayName(student.classLevel || "MODERATE")) + '</span></td>' +
+          '<td>' + escapeHtml(summary.previous.score) + '%</td>' +
+          '<td>' + escapeHtml(summary.latest.score) + '%</td>' +
+          '<td><strong>' + escapeHtml(summary.average) + '%</strong></td>' +
+          '<td><span style="font-weight:800;color:' + styles.color + ';background:' + styles.background + ';padding:4px 12px;border-radius:20px;font-size:13px">' + escapeHtml(summary.recommendation) + '</span></td>' +
+          '<td style="display:flex;gap:6px;flex-wrap:wrap">' +
+            '<button class="btn btn-success btn-sm" onclick="confirmRec(\'' + escapeHtml(student.id) + '\',\'' + escapeHtml(student.name).replace(/'/g, "\\'") + '\')">Confirm</button>' +
+            '<button class="btn btn-outline btn-sm" onclick="openModal(\'' + escapeHtml(student.id) + '\',\'' + escapeHtml(student.name).replace(/'/g, "\\'") + '\')">Override</button>' +
+          '</td>' +
+        '</tr>';
+      }).join("");
+    } catch (error) {
+      window.location.href = "../login.html";
+    }
+  }
 
   function confirmRec(sid, name) {
     var btn = document.querySelector("#row-" + sid + " .btn-success");
@@ -151,12 +206,23 @@
 
   function confirmOverride() {
     var level = document.getElementById("modal-level-select").value;
-    var student = getStudent(overrideSid);
-    showToast("Level overridden to " + level + " for " + student.name + ".");
+    var studentName = document.getElementById("modal-student-name").textContent || "the selected student";
+    showToast("Level overridden to " + level + " for " + studentName + ".");
     closeModal();
   }
+
+  async function logout() {
+    try {
+      await ReadWiseAPI.logout();
+    } catch (error) {
+      // ignore logout errors
+    }
+    sessionStorage.clear();
+    window.location.href = "../login.html";
+  }
+
+  bootstrapPage();
 </script>
 </body>
 </html>
-
 

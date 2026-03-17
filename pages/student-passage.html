@@ -42,7 +42,8 @@
     const container = document.getElementById("passage-detail");
     let auth = null;
     try {
-      auth = await ReadWiseAPI.me();
+      const cachedUser = ReadWiseAPI.getCachedUser();
+      auth = cachedUser ? { user: cachedUser, cached: true } : await ReadWiseAPI.me();
       if (!auth || !auth.user || auth.user.role !== "student" || !auth.user.student) {
         throw new Error("Unauthorized");
       }
@@ -57,8 +58,12 @@
     let passages = [];
     let completedIds = [];
     try {
-      const weekly = await ReadWiseAPI.getStudentWeeklyPassages(week);
-      const completion = await ReadWiseAPI.getStudentCompletions(week);
+      const results = await Promise.all([
+        ReadWiseAPI.getStudentWeeklyPassages(week),
+        ReadWiseAPI.getStudentCompletions(week)
+      ]);
+      const weekly = results[0];
+      const completion = results[1];
       passages = (weekly && weekly.passages) || [];
       completedIds = (completion && completion.completedPassageIds) || [];
     } catch (error) {
@@ -92,8 +97,9 @@
         const status = done
           ? '<span class="badge badge-easy">Completed</span>'
           : '<span class="badge badge-moderate">Pending</span>';
-        const buttonStyle = done ? "btn-outline" : "btn-primary";
-        const buttonText = done ? "Review Passage" : "Start Reading";
+        const actionButton = done
+          ? '<button class="btn btn-outline" type="button" disabled>Completed</button>'
+          : '<a href="student-reading.html?id=' + passage.id + '" class="btn btn-primary">Start Reading</a>';
         const preview = passage.text.split("\n")[0].slice(0, 260).trim() + "...";
         return (
           '<div class="passage-list-card">' +
@@ -113,7 +119,7 @@
               status +
             "</div>" +
             '<p class="passage-list-preview">' + preview + "</p>" +
-            '<a href="student-reading.html?id=' + passage.id + '" class="btn ' + buttonStyle + '">' + buttonText + "</a>" +
+            actionButton +
           "</div>"
         );
       }).join("") +
@@ -134,6 +140,4 @@
 </script>
 </body>
 </html>
-
-
 

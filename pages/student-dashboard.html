@@ -110,7 +110,8 @@
     const week = ReadWiseAPI.getActiveWeek();
 
     try {
-      auth = await ReadWiseAPI.me();
+      const cachedUser = ReadWiseAPI.getCachedUser();
+      auth = cachedUser ? { user: cachedUser, cached: true } : await ReadWiseAPI.me();
       if (!auth || !auth.user || auth.user.role !== "student" || !auth.user.student) {
         throw new Error("Unauthorized");
       }
@@ -121,9 +122,14 @@
 
     const student = auth.user.student;
     try {
-      const weekly = await ReadWiseAPI.getStudentWeeklyPassages(week);
-      const completion = await ReadWiseAPI.getStudentCompletions(week);
-      const progressResult = await ReadWiseAPI.getStudentProgress();
+      const results = await Promise.all([
+        ReadWiseAPI.getStudentWeeklyPassages(week),
+        ReadWiseAPI.getStudentCompletions(week),
+        ReadWiseAPI.getStudentProgress()
+      ]);
+      const weekly = results[0];
+      const completion = results[1];
+      const progressResult = results[2];
       weeklyPassages = (weekly && weekly.passages) || [];
       completedIds = (completion && completion.completedPassageIds) || [];
       progress = (progressResult && progressResult.progress) || [];
@@ -161,7 +167,7 @@
 
     const latest = progress.length ? progress[progress.length - 1] : null;
     document.getElementById("rec-text").textContent = latest
-      ? "Week " + latest.week + " - " + latest.recommendation + "."
+      ? "Week " + latest.week + " - " + formatRecommendationDisplay(latest.recommendation) + "."
       : "No recommendation yet.";
 
     const list = document.getElementById("weekly-passages-list");
@@ -240,6 +246,4 @@
 </script>
 </body>
 </html>
-
-
 

@@ -23,14 +23,14 @@
     </nav>
     <div class="sidebar-footer">
       <div class="user-info"><strong id="sb-name">-</strong>Grade 7</div>
-      <button class="logout-btn" onclick="sessionStorage.clear();window.location.href='../login.html'"><span class="icon" data-icon="logout"></span><span class="nav-label">Logout</span></button>
+      <button class="logout-btn" onclick="logout()"><span class="icon" data-icon="logout"></span><span class="nav-label">Logout</span></button>
     </div>
   </aside>
   <main class="main">
     <div style="max-width:700px;margin:0 auto">
       <div class="page-header">
         <h1>Pre-Assessment Test</h1>
-        <p>Read 3 passages (Easy, Moderate, Hard) and answer the questions to determine your initial reading level.</p>
+        <p>Read one Easy, one Moderate, and one Difficult passage, then answer the questions to determine your starting reading class.</p>
       </div>
       <div id="step-indicator" style="display:flex;align-items:center;gap:8px;margin-bottom:20px"></div>
       <div id="assessment-body"></div>
@@ -38,177 +38,588 @@
   </main>
 </div>
 <div class="toast" id="toast"></div>
+<script src="../api.js?v=20260316c"></script>
 <script src="../mockData.js?v=20260316b"></script>
 <script>
-  const s = getCurrentStudent();
-  document.getElementById("sb-name").textContent = s.name;
+  const PRE_ASSESSMENT_STEPS = [
+    {
+      id: "pre-easy",
+      level: "EASY",
+      label: "Step 1 - Easy Passage",
+      title: "A Morning in the School Garden",
+      genre: "Narrative",
+      text: "Mrs. Ramos asked her class to visit the school garden before the first lesson. The pupils observed the tomato seedlings and checked whether the soil was still moist from yesterday's rain. Lea wrote her notes carefully while Ben used a ruler to measure the height of each plant. Every Friday, the class compares the new measurements with the old ones to see how much the seedlings have grown. Before returning to the classroom, the pupils watered the plants near the gate and smiled when they saw a small yellow flower bloom.",
+      questions: [
+        {
+          difficulty: "EASY",
+          type: "multiple_choice",
+          prompt: "Why did Mrs. Ramos bring the class to the garden?",
+          options: ["To paint the fence", "To observe the seedlings", "To count chairs", "To buy vegetables"],
+          answerIndex: 1
+        },
+        {
+          difficulty: "EASY",
+          type: "true_false",
+          prompt: "Ben used a ruler to measure the height of the plants.",
+          answerKey: "true"
+        },
+        {
+          difficulty: "EASY",
+          type: "multiple_choice",
+          prompt: "What sign showed that the plants were growing well?",
+          options: ["The gate was open", "A flower bloomed", "The soil was dry", "The class was late"],
+          answerIndex: 1
+        }
+      ]
+    },
+    {
+      id: "pre-moderate",
+      level: "MODERATE",
+      label: "Step 2 - Moderate Passage",
+      title: "Why Communities Save Rainwater",
+      genre: "Expository",
+      text: "Many communities collect rainwater so they can use it during dry days or when the regular water supply becomes weak. Rainwater from rooftops is guided through gutters and stored in covered tanks. Families may use the stored water for cleaning pathways, washing tools, and watering plants. This practice can reduce water waste and lower household expenses. However, rainwater systems need regular cleaning. If gutters are clogged with leaves or the storage tanks are left open, dirt and insects may contaminate the water. Because of this, successful rainwater harvesting depends on both proper equipment and careful maintenance.",
+      questions: [
+        {
+          difficulty: "MODERATE",
+          type: "multiple_choice_harder",
+          prompt: "What is the main purpose of collecting rainwater in the passage?",
+          options: ["To make roofs heavier", "To use water during dry days", "To replace all drinking water", "To flood the garden"],
+          answerIndex: 1
+        },
+        {
+          difficulty: "MODERATE",
+          type: "true_false_modified",
+          prompt: "The passage says rainwater harvesting works best without any maintenance.",
+          answerKey: "false",
+          answerKeys: [
+            "successful rainwater harvesting depends on both proper equipment and careful maintenance",
+            "rainwater harvesting depends on proper equipment and careful maintenance"
+          ]
+        },
+        {
+          difficulty: "MODERATE",
+          type: "sequence",
+          prompt: "Put these steps in the correct order from the passage.",
+          options: ["Rain falls on rooftops", "Water moves through gutters", "Water is stored in covered tanks"],
+          answerKeys: ["Rain falls on rooftops", "Water moves through gutters", "Water is stored in covered tanks"]
+        }
+      ]
+    },
+    {
+      id: "pre-difficult",
+      level: "HARD",
+      label: "Step 3 - Difficult Passage",
+      title: "Balancing Tourism and Reef Protection",
+      genre: "Expository",
+      text: "Coral reefs support marine life, protect coastlines, and help local communities earn income through tourism. However, popular reef destinations can also suffer damage when too many visitors arrive without proper rules. Anchors may break coral structures, careless swimmers can step on fragile reef areas, and pollution from boats may reduce water quality. For this reason, marine managers often recommend visitor limits, designated mooring areas, trained guides, and environmental fees. These strategies do not aim to stop tourism completely. Instead, they help communities protect reef ecosystems while still allowing responsible tourism to support jobs and local businesses over the long term.",
+      questions: [
+        {
+          difficulty: "DIFFICULT",
+          type: "fill_in_the_blanks",
+          prompt: "Marine managers may set visitor ______ to help protect coral reefs.",
+          answerKeys: ["limits", "visitor limits"]
+        },
+        {
+          difficulty: "DIFFICULT",
+          type: "identification",
+          prompt: "What object mentioned in the passage can break coral structures?",
+          answerKeys: ["anchors", "anchor"]
+        },
+        {
+          difficulty: "DIFFICULT",
+          type: "enumeration",
+          prompt: "Name two reef-protection strategies recommended by marine managers.",
+          answerKeys: ["visitor limits", "designated mooring areas"]
+        }
+      ]
+    }
+  ];
 
-  const pids = ["p1", "p2", "p3"];
-  let step = 0;
-  const scores = [];
+  let activeStudent = null;
+  let assessmentSteps = PRE_ASSESSMENT_STEPS.map(function(step) {
+    return {
+      id: step.id,
+      level: step.level,
+      label: step.label,
+      title: step.title,
+      genre: step.genre,
+      text: step.text,
+      questions: (step.questions || []).map(function(question) {
+        return normalizeAssessmentQuestion(question);
+      })
+    };
+  });
+  let currentStep = 0;
+  let currentPhase = "reading";
+  let scoreRows = [];
 
-  function renderStep() {
-    // Step indicator
-    const ind = document.getElementById("step-indicator");
-    ind.innerHTML = "";
-    pids.forEach((_, i) => {
+  function addTextInput(container, id, placeholder, rows) {
+    let field = null;
+    if (rows && rows > 1) {
+      field = document.createElement("textarea");
+      field.rows = rows;
+    } else {
+      field = document.createElement("input");
+      field.type = "text";
+    }
+    field.className = "form-control";
+    field.id = id;
+    field.placeholder = placeholder;
+    container.appendChild(field);
+    return field;
+  }
+
+  function normalizeText(value) {
+    return String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
+  }
+
+  function parseCommaList(value) {
+    return String(value || "")
+      .split(",")
+      .map(function(entry) { return normalizeText(entry); })
+      .filter(Boolean);
+  }
+
+  function getQuestionInstruction(question) {
+    if (question.type === "multiple_choice" || question.type === "multiple_choice_harder") {
+      return "Choose the one best answer from the four choices.";
+    }
+    if (question.type === "true_false") {
+      return "Read the statement carefully, then choose True or False.";
+    }
+    if (question.type === "true_false_modified") {
+      return "Choose True or False. If you choose False, you must type the corrected answer.";
+    }
+    if (question.type === "sequence") {
+      return "Type the steps in the correct order, separated by commas.";
+    }
+    if (question.type === "fill_in_the_blanks") {
+      return "Type the missing word or phrase from the passage.";
+    }
+    if (question.type === "identification") {
+      return "Type the exact word, term, or phrase asked in the question.";
+    }
+    if (question.type === "enumeration") {
+      return "List the required answers separated by commas.";
+    }
+    return "Read the question carefully and type your answer in the field below.";
+  }
+
+  function getResponse(index, question) {
+    if (question.type === "true_false_modified") {
+      const selected = document.querySelector('input[name="pa_q' + index + '"]:checked');
+      const correction = document.getElementById("pa_tf_correction_" + index);
+      return {
+        choice: selected ? selected.value : "",
+        correction: correction ? correction.value.trim() : ""
+      };
+    }
+    if (question.type === "multiple_choice" || question.type === "multiple_choice_harder" || question.type === "true_false") {
+      const selected = document.querySelector('input[name="pa_q' + index + '"]:checked');
+      return selected ? selected.value : "";
+    }
+    const textInput = document.getElementById("pa_text_" + index);
+    return textInput ? textInput.value.trim() : "";
+  }
+
+  function isResponseProvided(question, response) {
+    if (question.type === "true_false_modified") {
+      if (!response || !response.choice) return false;
+      if (normalizeText(response.choice) === "false") {
+        return Boolean(String(response.correction || "").trim());
+      }
+      return true;
+    }
+    if (question.type === "multiple_choice" || question.type === "multiple_choice_harder" || question.type === "true_false") {
+      return response !== "";
+    }
+    return Boolean(String(response || "").trim());
+  }
+
+  function evaluateResponse(question, response) {
+    if (question.type === "multiple_choice" || question.type === "multiple_choice_harder") {
+      const correct = Number(response) === Number(question.answerIndex);
+      return { earned: correct ? 1 : 0, possible: 1 };
+    }
+
+    if (question.type === "true_false") {
+      const correct = normalizeText(response) === normalizeText(question.answerKey);
+      return { earned: correct ? 1 : 0, possible: 1 };
+    }
+
+    if (question.type === "true_false_modified") {
+      const choice = response && typeof response === "object" ? response.choice : "";
+      const correction = response && typeof response === "object" ? response.correction : "";
+      const choiceCorrect = normalizeText(choice) === normalizeText(question.answerKey);
+      if (!choiceCorrect) return { earned: 0, possible: 1 };
+      if (normalizeText(question.answerKey) === "false") {
+        const accepted = (question.answerKeys || []).map(normalizeText).filter(Boolean);
+        const correctionCorrect = accepted.length
+          ? accepted.includes(normalizeText(correction))
+          : Boolean(normalizeText(correction));
+        return { earned: correctionCorrect ? 1 : 0, possible: 1 };
+      }
+      return { earned: 1, possible: 1 };
+    }
+
+    if (question.type === "sequence") {
+      const expected = (question.answerKeys || []).map(normalizeText).filter(Boolean);
+      const actual = parseCommaList(response);
+      const correct = expected.length > 0 &&
+        expected.length === actual.length &&
+        expected.every(function(item, index) { return item === actual[index]; });
+      return { earned: correct ? 1 : 0, possible: 1 };
+    }
+
+    if (question.type === "enumeration") {
+      const expected = (question.answerKeys || []).map(normalizeText).filter(Boolean);
+      const actual = parseCommaList(response);
+      const matched = expected.filter(function(item) { return actual.includes(item); }).length;
+      return { earned: matched, possible: expected.length || 1 };
+    }
+
+    const accepted = (question.answerKeys || []).map(normalizeText).filter(Boolean);
+    const correct = accepted.includes(normalizeText(response));
+    return { earned: correct ? 1 : 0, possible: 1 };
+  }
+
+  function renderIndicator() {
+    const indicator = document.getElementById("step-indicator");
+    indicator.innerHTML = "";
+    assessmentSteps.forEach(function(_, index) {
       const bar = document.createElement("div");
       bar.style.cssText = "flex:1;height:6px;border-radius:3px;background:" +
-        (i < step ? "var(--primary)" : i === step ? "var(--accent)" : "var(--border)");
-      ind.appendChild(bar);
+        (index < currentStep ? "var(--primary)" : index === currentStep ? "var(--accent)" : "var(--border)");
+      indicator.appendChild(bar);
     });
-    const lbl = document.createElement("span");
-    lbl.style.cssText = "font-size:12px;color:var(--muted);margin-left:8px;white-space:nowrap";
-    lbl.textContent = "Step " + (step + 1) + " of 3";
-    ind.appendChild(lbl);
 
-    if (step >= pids.length) { showFinalResult(); return; }
+    const label = document.createElement("span");
+    label.style.cssText = "font-size:12px;color:var(--muted);margin-left:8px;white-space:nowrap";
+    label.textContent =
+      "Step " + (Math.min(currentStep + 1, assessmentSteps.length)) +
+      " of " + assessmentSteps.length +
+      " - " + (currentPhase === "reading" ? "Reading" : "Questions");
+    indicator.appendChild(label);
+  }
 
-    const pid = pids[step];
-    const p = getPassage(pid);
-    const qs = MOCK.questions[pid];
-    const stepLabels = ["Step 1 - Easy Passage", "Step 2 - Moderate Passage", "Step 3 - Hard Passage"];
-
-    const body = document.getElementById("assessment-body");
-    body.innerHTML = "";
-
-    // Passage card
+  function createPassageCard(stepData) {
     const passageCard = document.createElement("div");
     passageCard.className = "card";
     passageCard.style.marginBottom = "14px";
-
-    const badgeCls = badgeClass(p.label);
-    let passageHTML = '<div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:6px">' + stepLabels[step] + '</div>';
+    let passageHTML = '<div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:6px">' + stepData.label + '</div>';
     passageHTML += '<div style="margin-bottom:8px">';
-    passageHTML += '<span class="badge ' + badgeCls + '">' + p.label + '</span>';
-    passageHTML += '<span class="badge badge-primary" style="margin-left:6px">' + p.genre + '</span>';
+    passageHTML += '<span class="badge ' + badgeClass(stepData.level) + '">' + getClassDisplayName(stepData.level) + '</span>';
+    passageHTML += '<span class="badge badge-primary" style="margin-left:6px">' + stepData.genre + '</span>';
     passageHTML += '</div>';
-    passageHTML += '<h3 style="font-size:17px;font-weight:700;color:var(--secondary);margin-bottom:10px">' + p.title + '</h3>';
+    passageHTML += '<h3 style="font-size:17px;font-weight:700;color:var(--secondary);margin-bottom:10px">' + stepData.title + '</h3>';
     passageHTML += '<div class="reading-area" style="font-size:14px;line-height:1.8;background:#f7fafc;padding:16px;border-radius:8px">';
-    p.text.split('\n').forEach(function(t) {
-      if (t.trim()) passageHTML += '<p style="margin-bottom:1em">' + t.trim() + '</p>';
+    stepData.text.split("\n").forEach(function(textLine) {
+      if (textLine.trim()) passageHTML += '<p style="margin-bottom:1em">' + textLine.trim() + '</p>';
     });
     passageHTML += '</div>';
     passageCard.innerHTML = passageHTML;
-    body.appendChild(passageCard);
+    return passageCard;
+  }
 
-    // Questions card
-    const qCard = document.createElement("div");
-    qCard.className = "card";
+  function renderPassagePhase(stepData, body) {
+    body.innerHTML = "";
+    body.appendChild(createPassageCard(stepData));
 
-    const titleDiv = document.createElement("div");
-    titleDiv.className = "section-title";
-    titleDiv.textContent = "Comprehension Questions";
-    qCard.appendChild(titleDiv);
+    const promptCard = document.createElement("div");
+    promptCard.className = "card";
+    promptCard.innerHTML =
+      '<div class="section-title">Read First, Then Answer</div>' +
+      '<p class="micro-copy" style="margin-bottom:14px">Read the passage carefully before moving on. Once you continue to the questions, this passage will be locked and you cannot go back to it during the pre-assessment.</p>';
 
-    qs.forEach(function(q, i) {
-      const qWrap = document.createElement("div");
-      qWrap.style.marginBottom = "18px";
+    const actions = document.createElement("div");
+    actions.style.cssText = "display:flex;justify-content:flex-end";
+    const button = document.createElement("button");
+    button.className = "btn btn-primary";
+    button.textContent = "Continue to Questions";
+    button.onclick = function() {
+      currentPhase = "questions";
+      renderStep();
+    };
+    actions.appendChild(button);
+    promptCard.appendChild(actions);
+    body.appendChild(promptCard);
+  }
 
-      const qText = document.createElement("div");
-      qText.style.cssText = "font-weight:700;margin-bottom:10px;color:var(--secondary)";
-      qText.textContent = "Q" + (i + 1) + ". " + q.q;
-      qWrap.appendChild(qText);
+  function renderQuestionInstruction(question, wrapper) {
+    const instruction = document.createElement("p");
+    instruction.className = "micro-copy";
+    instruction.style.marginBottom = "10px";
+    instruction.textContent = getQuestionInstruction(question);
+    wrapper.appendChild(instruction);
+  }
 
-      const optWrap = document.createElement("div");
-      optWrap.style.cssText = "display:flex;flex-direction:column;gap:8px";
+  function renderMultipleChoice(question, questionIndex, wrapper) {
+    const optionWrap = document.createElement("div");
+    optionWrap.style.cssText = "display:flex;flex-direction:column;gap:8px";
+    question.options.forEach(function(option, optionIndex) {
+      const label = document.createElement("label");
+      label.style.cssText = "display:flex;align-items:center;gap:10px;cursor:pointer;" +
+        "padding:10px 14px;border:1.5px solid var(--border);border-radius:8px;" +
+        "font-size:14px;transition:.2s;";
+      label.onmouseover = function() { this.style.borderColor = "var(--primary)"; };
+      label.onmouseout = function() { this.style.borderColor = "var(--border)"; };
 
-      q.opts.forEach(function(opt, j) {
-        const lbl = document.createElement("label");
-        lbl.style.cssText = "display:flex;align-items:center;gap:10px;cursor:pointer;" +
-          "padding:10px 14px;border:1.5px solid var(--border);border-radius:8px;" +
-          "font-size:14px;transition:.2s;";
+      const radio = document.createElement("input");
+      radio.type = "radio";
+      radio.name = "pa_q" + questionIndex;
+      radio.value = String(optionIndex);
+      radio.style.accentColor = "var(--primary)";
 
-        lbl.onmouseover = function() { this.style.borderColor = "var(--primary)"; };
-        lbl.onmouseout  = function() { this.style.borderColor = "var(--border)"; };
+      const optionLabel = document.createElement("span");
+      optionLabel.textContent = String.fromCharCode(65 + optionIndex) + ". " + option;
+      label.appendChild(radio);
+      label.appendChild(optionLabel);
+      optionWrap.appendChild(label);
+    });
+    wrapper.appendChild(optionWrap);
+  }
 
-        const radio = document.createElement("input");
-        radio.type  = "radio";
-        radio.name  = "pa_q" + i;
-        radio.value = j;
-        radio.style.accentColor = "var(--primary)";
+  function renderTrueFalse(question, questionIndex, wrapper) {
+    const optionWrap = document.createElement("div");
+    optionWrap.style.cssText = "display:flex;flex-direction:column;gap:8px";
+    ["true", "false"].forEach(function(optionValue) {
+      const label = document.createElement("label");
+      label.style.cssText = "display:flex;align-items:center;gap:10px;cursor:pointer;" +
+        "padding:10px 14px;border:1.5px solid var(--border);border-radius:8px;" +
+        "font-size:14px;transition:.2s;";
+      label.onmouseover = function() { this.style.borderColor = "var(--primary)"; };
+      label.onmouseout = function() { this.style.borderColor = "var(--border)"; };
 
-        const span = document.createElement("span");
-        span.textContent = String.fromCharCode(65 + j) + ". " + opt;
-
-        lbl.appendChild(radio);
-        lbl.appendChild(span);
-        optWrap.appendChild(lbl);
+      const radio = document.createElement("input");
+      radio.type = "radio";
+      radio.name = "pa_q" + questionIndex;
+      radio.value = optionValue;
+      radio.style.accentColor = "var(--primary)";
+      radio.addEventListener("change", function() {
+        const followUp = document.getElementById("pa_tf_follow_" + questionIndex);
+        if (!followUp) return;
+        followUp.style.display = question.type === "true_false_modified" && optionValue === "false" ? "block" : "none";
       });
 
-      qWrap.appendChild(optWrap);
-      qCard.appendChild(qWrap);
+      const optionLabel = document.createElement("span");
+      optionLabel.textContent = optionValue === "true" ? "True" : "False";
+      label.appendChild(radio);
+      label.appendChild(optionLabel);
+      optionWrap.appendChild(label);
+    });
+    wrapper.appendChild(optionWrap);
+
+    if (question.type === "true_false_modified") {
+      const followUp = document.createElement("div");
+      followUp.id = "pa_tf_follow_" + questionIndex;
+      followUp.style.display = "none";
+      followUp.style.marginTop = "12px";
+
+      const followLabel = document.createElement("label");
+      followLabel.className = "form-label";
+      followLabel.setAttribute("for", "pa_tf_correction_" + questionIndex);
+      followLabel.textContent = "Correct Answer If False";
+      followUp.appendChild(followLabel);
+
+      addTextInput(followUp, "pa_tf_correction_" + questionIndex, "Type the corrected answer or statement here.", 2);
+
+      const helper = document.createElement("p");
+      helper.className = "micro-copy";
+      helper.style.marginTop = "6px";
+      helper.textContent = "Only fill this in when you choose False.";
+      followUp.appendChild(helper);
+      wrapper.appendChild(followUp);
+    }
+  }
+
+  function renderQuestionPhase(stepData, body) {
+    body.innerHTML = "";
+
+    const lockCard = document.createElement("div");
+    lockCard.className = "card";
+    lockCard.innerHTML =
+      '<div class="surface-note surface-note-accent">Passage locked. You are now in the question section and cannot go back to the passage for this step.</div>';
+    body.appendChild(lockCard);
+
+    const questionCard = document.createElement("div");
+    questionCard.className = "card";
+    questionCard.innerHTML = '<div class="section-title">Comprehension Questions</div>';
+
+    stepData.questions.forEach(function(question, questionIndex) {
+      const wrap = document.createElement("div");
+      wrap.style.marginBottom = "18px";
+
+      const prompt = document.createElement("div");
+      prompt.style.cssText = "font-weight:700;margin-bottom:10px;color:var(--secondary)";
+      prompt.textContent = "Q" + (questionIndex + 1) + ". " + question.prompt;
+      wrap.appendChild(prompt);
+      renderQuestionInstruction(question, wrap);
+
+      if (question.type === "multiple_choice" || question.type === "multiple_choice_harder") {
+        renderMultipleChoice(question, questionIndex, wrap);
+      } else if (question.type === "true_false" || question.type === "true_false_modified") {
+        renderTrueFalse(question, questionIndex, wrap);
+      } else if (question.type === "sequence") {
+        addTextInput(wrap, "pa_text_" + questionIndex, "Enter the sequence in order, separated by commas.", 2);
+      } else if (question.type === "enumeration") {
+        addTextInput(wrap, "pa_text_" + questionIndex, "List your answers separated by commas.", 3);
+      } else if (question.type === "fill_in_the_blanks") {
+        addTextInput(wrap, "pa_text_" + questionIndex, "Type the missing word or phrase.", 1);
+      } else {
+        addTextInput(wrap, "pa_text_" + questionIndex, "Type your answer here.", 1);
+      }
+
+      questionCard.appendChild(wrap);
     });
 
-    // Next button
-    const btnWrap = document.createElement("div");
-    btnWrap.style.cssText = "text-align:right;margin-top:14px";
-    const btn = document.createElement("button");
-    btn.className = "btn btn-primary";
-    btn.textContent = step < pids.length - 1 ? "Next Passage" : "Submit Assessment";
-    btn.onclick = nextStep;
-    btnWrap.appendChild(btn);
-    qCard.appendChild(btnWrap);
+    const actionRow = document.createElement("div");
+    actionRow.style.cssText = "text-align:right;margin-top:14px";
+    const nextButton = document.createElement("button");
+    nextButton.className = "btn btn-primary";
+    nextButton.textContent = currentStep < assessmentSteps.length - 1 ? "Submit Step and Open Next Passage" : "Finish Pre-Assessment";
+    nextButton.onclick = nextStep;
+    actionRow.appendChild(nextButton);
+    questionCard.appendChild(actionRow);
+    body.appendChild(questionCard);
+  }
 
-    body.appendChild(qCard);
+  function renderStep() {
+    if (currentStep >= assessmentSteps.length) {
+      submitAndShowFinalResult();
+      return;
+    }
+
+    renderIndicator();
+    const stepData = assessmentSteps[currentStep];
+    const body = document.getElementById("assessment-body");
+
+    if (currentPhase === "reading") {
+      renderPassagePhase(stepData, body);
+      return;
+    }
+
+    renderQuestionPhase(stepData, body);
   }
 
   function nextStep() {
-    const pid = pids[step];
-    const qs = MOCK.questions[pid];
-    let correct = 0;
-    qs.forEach(function(q, i) {
-      const sel = document.querySelector('input[name="pa_q' + i + '"]:checked');
-      if (sel && parseInt(sel.value) === q.ans) correct++;
+    const stepData = assessmentSteps[currentStep];
+    const questions = stepData.questions || [];
+    const unanswered = questions.some(function(question, questionIndex) {
+      return !isResponseProvided(question, getResponse(questionIndex, question));
     });
-    scores.push({ pid: pid, correct: correct, total: qs.length, pct: Math.round(correct / qs.length * 100) });
-    step++;
+    if (unanswered) {
+      showToast("Please complete every question before moving on.", "#c0392b");
+      return;
+    }
+
+    let earned = 0;
+    let possible = 0;
+    questions.forEach(function(question, questionIndex) {
+      const response = getResponse(questionIndex, question);
+      const result = evaluateResponse(question, response);
+      earned += result.earned;
+      possible += result.possible;
+    });
+
+    scoreRows = scoreRows.filter(function(row) { return row.id !== stepData.id; });
+    scoreRows.push({ id: stepData.id, earned: earned, possible: possible });
+    currentStep += 1;
+    currentPhase = "reading";
     renderStep();
   }
 
-  function showFinalResult() {
-    const total   = scores.reduce(function(a, b) { return a + b.correct; }, 0);
-    const totalQ  = scores.reduce(function(a, b) { return a + b.total; }, 0);
-    const overall = Math.round(total / totalQ * 100);
-    const level   = overall >= 70 ? "HARD" : overall >= 55 ? "MODERATE" : "EASY";
-    const badgeCls = badgeClass(level);
+  async function submitAndShowFinalResult() {
+    const totalEarned = scoreRows.reduce(function(sum, row) { return sum + row.earned; }, 0);
+    const totalPossible = scoreRows.reduce(function(sum, row) { return sum + row.possible; }, 0);
+    const overall = totalPossible ? Math.round((totalEarned / totalPossible) * 100) : 0;
 
     const body = document.getElementById("assessment-body");
-    body.innerHTML = "";
-
-    const card = document.createElement("div");
-    card.className = "card";
-    card.style.cssText = "text-align:center;padding:40px";
-
-    card.innerHTML =
-      '<div style="font-size:48px;font-weight:900;color:var(--secondary)">' + overall + '%</div>' +
-      '<div style="font-size:16px;margin:8px 0;color:var(--muted)">' + total + ' of ' + totalQ + ' correct</div>' +
-      '<div style="margin:16px 0">' +
-        '<span class="badge ' + badgeCls + '" style="font-size:16px;padding:8px 20px">Recommended Level: ' + level + '</span>' +
-      '</div>' +
-      '<p style="font-size:14px;color:var(--muted);max-width:400px;margin:0 auto 20px">' +
-        'Based on your pre-assessment results, ReadWise recommends placing you in the <strong>' + level + '</strong> reading class. Your teacher will confirm this assignment.' +
-      '</p>' +
-      '<div style="display:flex;gap:10px;justify-content:center">' +
-        '<a href="student-dashboard.html" class="btn btn-primary">Go to Dashboard</a>' +
-        '<a href="student-progress.html" class="btn btn-outline">View Progress</a>' +
+    body.innerHTML =
+      '<div class="card" style="text-align:center;padding:32px">' +
+        '<div class="section-title" style="margin-bottom:8px">Saving pre-assessment...</div>' +
+        '<p class="micro-copy">Please wait while we assign your class level.</p>' +
       '</div>';
 
-    body.appendChild(card);
+    let assignedLevel = classifyPreAssessmentLevel(overall);
+    try {
+      const result = await ReadWiseAPI.submitStudentPreAssessment({
+        score: overall,
+        correct: totalEarned,
+        total: totalPossible
+      });
+      if (result && result.classLevel) assignedLevel = normalizeClassLevel(result.classLevel);
+      if (result && result.user && result.user.student) {
+        activeStudent = result.user.student;
+      }
+    } catch (error) {
+      showToast(error.message || "Unable to save pre-assessment.", "#c0392b");
+      return;
+    }
 
-    const ind = document.getElementById("step-indicator");
-    ind.innerHTML = "";
-    const done = document.createElement("span");
-    done.className = "badge badge-success";
-    done.style.cssText = "font-size:14px;padding:6px 16px";
-    done.textContent = "Pre-Assessment Complete";
-    ind.appendChild(done);
+    const doneIndicator = document.getElementById("step-indicator");
+    doneIndicator.innerHTML = '<span class="badge badge-success" style="font-size:14px;padding:6px 16px">Pre-Assessment Complete</span>';
+
+    body.innerHTML =
+      '<div class="card" style="text-align:center;padding:40px">' +
+        '<div style="font-size:48px;font-weight:900;color:var(--secondary)">' + overall + '%</div>' +
+        '<div style="font-size:16px;margin:8px 0;color:var(--muted)">' + totalEarned + ' of ' + totalPossible + ' correct</div>' +
+        '<div style="margin:16px 0">' +
+          '<span class="badge ' + badgeClass(assignedLevel) + '" style="font-size:16px;padding:8px 20px">Assigned Class: ' + getClassDisplayName(assignedLevel) + '</span>' +
+        '</div>' +
+        '<p style="font-size:14px;color:var(--muted);max-width:420px;margin:0 auto 20px">' +
+          'Your pre-assessment is saved. You can now continue to your weekly dashboard and receive passages based on your assigned class.' +
+        '</p>' +
+        '<div style="display:flex;gap:10px;justify-content:center">' +
+          '<a href="student-dashboard.html" class="btn btn-primary">Go to Dashboard</a>' +
+          '<a href="student-progress.html" class="btn btn-outline">View Progress</a>' +
+        '</div>' +
+      '</div>';
   }
 
-  renderStep();
+  function classifyPreAssessmentLevel(score) {
+    const normalized = Math.max(0, Math.min(100, Number(score || 0)));
+    if (normalized >= 70) return "HARD";
+    if (normalized >= 55) return "MODERATE";
+    return "EASY";
+  }
+
+  async function logout() {
+    try {
+      await ReadWiseAPI.logout();
+    } catch (error) {
+      // ignore logout errors
+    }
+    sessionStorage.clear();
+    window.location.href = "../login.html";
+  }
+
+  async function bootstrapPage() {
+    try {
+      const cachedUser = ReadWiseAPI.getCachedUser();
+      const auth = cachedUser ? { user: cachedUser, cached: true } : await ReadWiseAPI.me();
+      if (!auth || !auth.user || auth.user.role !== "student" || !auth.user.student) {
+        throw new Error("Unauthorized");
+      }
+      activeStudent = auth.user.student;
+      document.getElementById("sb-name").textContent = activeStudent.name || "Student";
+      if (activeStudent.preAssessmentCompleted) {
+        window.location.href = "student-dashboard.html";
+        return;
+      }
+      currentPhase = "reading";
+      renderStep();
+    } catch (error) {
+      if ((error && error.message) === "Unauthorized") {
+        window.location.href = "../login.html";
+        return;
+      }
+      document.getElementById("assessment-body").innerHTML =
+        '<div class="card"><div class="surface-note surface-note-danger">' + (error.message || "Unable to load pre-assessment.") + '</div></div>';
+    }
+  }
+
+  bootstrapPage();
 </script>
 </body>
 </html>
-
-
-

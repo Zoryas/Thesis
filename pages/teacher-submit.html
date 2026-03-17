@@ -62,8 +62,8 @@
 
         <div class="section-title">Assessment Builder</div>
         <div class="helper-note surface-note-accent">
-          Easy: Multiple Choice, True/False | Moderate: MCQ Harder, True/False Modified, Sequence |
-          Difficult: Fill in the Blanks, Identification, Enumeration | Custom: Custom Question
+          Easy: Multiple Choice, True/False | Moderate: Multiple Choice (Harder), True/False (Modified), Sequence |
+          Difficult: Fill in the Blanks, Identification, Enumeration
         </div>
         <div id="assessment-builder" class="stack-sm" style="margin:12px 0 10px"></div>
         <button class="btn btn-outline btn-sm" type="button" onclick="addQuestionField()">+ Add Question</button>
@@ -98,7 +98,7 @@
 <script>
   const PREDICTION_API_URL = ReadWiseAPI.baseUrl + "/predict";
   const pageParams = new URLSearchParams(window.location.search);
-  const LEVELS = ["EASY", "MODERATE", "DIFFICULT", "CUSTOM"];
+  const LEVELS = ["EASY", "MODERATE", "DIFFICULT"];
   const TYPE_CATALOG = getQuestionTypeCatalog();
 
   let currentPassageId = pageParams.get("id");
@@ -206,9 +206,28 @@
         if ((q.answerKey || "true") === entry.v) option.selected = true;
         select.appendChild(option);
       });
-      select.onchange = function() { q.answerKey = select.value; };
+      select.onchange = function() {
+        q.answerKey = select.value;
+        renderAssessmentBuilder();
+      };
       body.appendChild(l);
       body.appendChild(select);
+      if (q.type === "true_false_modified") {
+        addInput(
+          "Correct Statement If False",
+          q.answerKeys.join(" | "),
+          "Required only when the correct answer is False. Use | between accepted answers.",
+          function(next) {
+            q.answerKeys = next.split("|").map(function(x) { return x.trim(); }).filter(Boolean);
+          }
+        );
+        const note = document.createElement("p");
+        note.className = "micro-copy";
+        note.textContent = q.answerKey === "false"
+          ? "Students who choose False must type the corrected statement."
+          : "If the statement is True, students only need to choose True.";
+        body.appendChild(note);
+      }
       return;
     }
 
@@ -362,6 +381,10 @@
         if (q.answerKeys.length < 3) { error = "Question " + (index + 1) + " needs a complete sequence answer."; return; }
       } else if (q.type === "enumeration") {
         if (q.answerKeys.length < 2) { error = "Question " + (index + 1) + " needs at least 2 expected items."; return; }
+      } else if (q.type === "true_false_modified") {
+        if (q.answerKey === "false" && !q.answerKeys.length) {
+          error = "Question " + (index + 1) + " needs the corrected statement because the answer is False."; return;
+        }
       } else if (q.type !== "true_false" && q.type !== "true_false_modified") {
         if (!q.answerKeys.length) { error = "Question " + (index + 1) + " needs an answer key."; return; }
       }
@@ -377,6 +400,10 @@
         shortAnswerPrompt: document.getElementById("short-answer-prompt").value.trim()
       }
     };
+  }
+
+  function getExpectedQuestionDifficultyForLabel(label) {
+    return mapPassageLabelToQuestionDifficulty(label);
   }
 
   function setAssessmentFromData(assessment) {
@@ -401,7 +428,7 @@
 
   function renderResult(data, options) {
     const settings = options || {};
-    const label = escapeHtml(data.label);
+    const label = escapeHtml(getClassDisplayName(data.label));
     const features = data.features || {};
     const confidenceText = typeof data.confidence === "number" ? Number(data.confidence).toFixed(1) + "%" : "Saved";
     const saveLabel = currentPassageId ? "Update Passage" : "Save to Passage Library";
@@ -422,7 +449,7 @@
       '</div>' +
       '</div>' +
       '<div class="form-group"><label class="form-label" for="override-label">Override Label (Optional)</label>' +
-      '<select class="form-control" id="override-label"><option value="">Use ' + (settings.saved ? "Current" : "Predicted") + ': ' + label + '</option><option>EASY</option><option>MODERATE</option><option>HARD</option></select></div>' +
+      '<select class="form-control" id="override-label"><option value="">Use ' + (settings.saved ? "Current" : "Predicted") + ': ' + label + '</option><option value="EASY">EASY</option><option value="MODERATE">MODERATE</option><option value="HARD">DIFFICULT</option></select></div>' +
       '<button class="btn btn-success btn-block" onclick="saveToLibrary()">' + saveLabel + '</button>';
   }
 
@@ -503,6 +530,17 @@
 
     const override = document.getElementById("override-label");
     const finalLabel = override && override.value ? override.value : lastPrediction.label;
+    const expectedDifficulty = getExpectedQuestionDifficultyForLabel(finalLabel);
+    const mismatchedQuestion = (assessmentBuild.assessment.questions || []).find(function(question) {
+      return normalizeQuestionDifficulty(question.difficulty) !== expectedDifficulty;
+    });
+    if (mismatchedQuestion) {
+      return showToast(
+        "All questions for a " + getClassDisplayName(finalLabel) + " passage must use " +
+        getClassDisplayName(expectedDifficulty) + " question types.",
+        "#c0392b"
+      );
+    }
     const isEditing = Boolean(currentPassageId);
     let saved = null;
     try {
@@ -559,6 +597,3 @@
 </script>
 </body>
 </html>
-
-
-

@@ -54,6 +54,24 @@
       <div class="card-grid card-grid-3 assignment-grid" id="assignment-grid"></div>
     </div>
 
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-header">
+        <div class="card-header-copy">
+          <div class="section-title">Library Filters</div>
+          <p class="micro-copy">Filter passages by target difficulty and check if a passage was already used in past weeks.</p>
+        </div>
+        <div style="min-width:220px">
+          <label class="form-label" for="difficulty-filter">Difficulty View</label>
+          <select class="form-control" id="difficulty-filter">
+            <option value="ALL">All Difficulties</option>
+            <option value="EASY">Easy</option>
+            <option value="MODERATE">Moderate</option>
+            <option value="HARD">Difficult</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
     <div id="passage-grid" class="library-list"></div>
   </main>
 </div>
@@ -65,6 +83,7 @@
   const summary = document.getElementById("library-summary");
   const assignmentGrid = document.getElementById("assignment-grid");
   const weekSelector = document.getElementById("week-selector");
+  const difficultyFilter = document.getElementById("difficulty-filter");
 
   let passages = [];
   let weeklyAssignments = { EASY: [], MODERATE: [], HARD: [] };
@@ -101,6 +120,14 @@
   function getAssignmentsFor(level) {
     const normalized = normalizeClassLevel(level);
     return Array.isArray(weeklyAssignments[normalized]) ? weeklyAssignments[normalized] : [];
+  }
+
+  function getFilteredPassages() {
+    const selected = String(difficultyFilter.value || "ALL").toUpperCase();
+    if (selected === "ALL") return passages.slice();
+    return passages.filter(function(passage) {
+      return mapPassageLabelToClassLevel(passage.label) === normalizeClassLevel(selected);
+    });
   }
 
   function renderAssignmentPanels() {
@@ -154,19 +181,22 @@
 
   function renderPassages() {
     const week = getCurrentWeek();
-    summary.textContent = passages.length + " passages in library. Assign exactly 5 per class for Week " + week + ".";
+    const filteredPassages = getFilteredPassages();
+    summary.textContent =
+      filteredPassages.length + " of " + passages.length +
+      " passage(s) shown. Assign exactly 5 per class for Week " + week + ".";
 
-    if (!passages.length) {
+    if (!filteredPassages.length) {
       grid.innerHTML =
         '<div class="card empty-state">' +
-        '<h3>No passages saved yet</h3>' +
-        '<p>Create your first passage, analyze its level, and save it with an assessment so it becomes assignable for the week.</p>' +
+        '<h3>No passages match this filter</h3>' +
+        '<p>Try another difficulty filter or create more passages in this class level.</p>' +
         '<a href="teacher-submit.html" class="btn btn-primary">Create Passage</a>' +
         "</div>";
       return;
     }
 
-    grid.innerHTML = passages.map(function(passage) {
+    grid.innerHTML = filteredPassages.map(function(passage) {
       const preview = passage.text.length > 220 ? passage.text.slice(0, 220).trim() + "..." : passage.text;
       const confidenceText = typeof passage.confidence === "number" && !Number.isNaN(passage.confidence)
         ? "Confidence: " + passage.confidence.toFixed(1) + "%"
@@ -178,6 +208,10 @@
       const classLevel = mapPassageLabelToClassLevel(passage.label);
       const classDisplay = getClassDisplayName(classLevel);
       const isAssigned = getAssignmentsFor(classLevel).includes(passage.id);
+      const usedWeeks = Array.isArray(passage.usedWeeks) ? passage.usedWeeks.map(function(value) { return Number(value); }).filter(Boolean) : [];
+      const usedThisWeek = usedWeeks.includes(week);
+      const usedPastWeeks = usedWeeks.filter(function(usedWeek) { return usedWeek < week; });
+      const usedWeekText = usedPastWeeks.length ? ("Used in Week " + usedPastWeeks.join(", ")) : "Not used in previous weeks";
       const disabled = isAssigned ? "disabled" : "";
       const assignText = isAssigned ? "Assigned to " + classDisplay : "Assign to " + classDisplay + " Class";
 
@@ -196,6 +230,9 @@
               '<span class="library-card-fact">Target class: ' + classDisplay + '</span>' +
             "</div>" +
             '<div class="surface-note">Assessment: <strong>' + escapeHtml(assessmentText) + "</strong></div>" +
+            '<div class="surface-note ' + (usedThisWeek ? "surface-note-warn" : "") + '">' +
+              (usedThisWeek ? ("Already assigned this Week " + week + ".") : escapeHtml(usedWeekText)) +
+            "</div>" +
             '<p class="library-card-preview">' + escapeHtml(preview) + "</p>" +
           "</div>" +
           '<div class="library-card-actions">' +
@@ -350,10 +387,11 @@
     }
   });
 
+  difficultyFilter.addEventListener("change", function() {
+    renderPassages();
+  });
+
   bootstrapPage();
 </script>
 </body>
 </html>
-
-
-

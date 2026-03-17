@@ -24,14 +24,14 @@
     </nav>
     <div class="sidebar-footer">
       <div class="user-info"><strong>Ms. Ana Villanueva</strong>Grade 7 English</div>
-      <button class="logout-btn" onclick="sessionStorage.clear();window.location.href='../login.html'"><span class="icon" data-icon="logout"></span><span class="nav-label">Logout</span></button>
+      <button class="logout-btn" onclick="logout()"><span class="icon" data-icon="logout"></span><span class="nav-label">Logout</span></button>
     </div>
   </aside>
   <main class="main">
     <div class="breadcrumb"><a href="teacher-dashboard.html">Dashboard</a> > Students</div>
     <div class="page-header">
       <h1>Student Roster</h1>
-      <p>Grade 7 | Sampaguita Section | 3 enrolled students</p>
+      <p id="students-summary">Loading live student roster...</p>
     </div>
     <div class="card">
       <div class="table-wrap">
@@ -45,33 +45,98 @@
     </div>
   </main>
 </div>
+<script src="../api.js?v=20260316c"></script>
 <script src="../mockData.js?v=20260316b"></script>
 <script>
-  const tbody = document.getElementById("students-table");
-  MOCK.students.forEach((s, i) => {
-    const prog = MOCK.weeklyProgress[s.id];
-    const latest = prog[prog.length - 1];
-    const recColor = latest.recommendation.includes("UP") ? "var(--easy)" :
-      latest.recommendation.includes("DOWN") ? "var(--hard)" : "var(--accent)";
+  function escapeHtml(value) {
+    return String(value || "").replace(/[&<>"']/g, function(character) {
+      return { "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[character];
+    });
+  }
 
-    tbody.innerHTML += `
-      <tr>
-        <td>${i + 1}</td>
-        <td><strong>${s.name}</strong><br><span style="font-size:12px;color:var(--muted)">Grade ${s.grade} | ${s.section}</span></td>
-        <td><span class="badge ${badgeClass(s.classLevel)}">${getClassDisplayName(s.classLevel)}</span></td>
-        <td>${s.preScore}%
-          <div class="progress" style="width:80px;margin-top:4px">
-            <div class="progress-bar" style="width:${s.preScore}%;background:var(--primary)"></div>
-          </div>
-        </td>
-        <td><strong>${latest.score}%</strong></td>
-        <td><span style="font-weight:700;font-size:13px;color:${recColor}">${latest.recommendation}</span></td>
-        <td><a href="teacher-student-detail.html?id=${s.id}" class="btn btn-outline btn-sm">View Details</a></td>
-      </tr>
-    `;
-  });
+  function recommendationColor(recommendation) {
+    if (!recommendation) return "var(--muted)";
+    if (String(recommendation).toUpperCase().indexOf("UP") !== -1) return "var(--easy)";
+    if (String(recommendation).toUpperCase().indexOf("DOWN") !== -1) return "var(--hard)";
+    return "var(--accent)";
+  }
+
+  function buildSummary(students) {
+    if (!students.length) return "No enrolled students yet.";
+    var sections = {};
+    var grades = {};
+    students.forEach(function(student) {
+      if (student.section) sections[student.section] = true;
+      if (student.grade) grades[student.grade] = true;
+    });
+    var gradeLabel = Object.keys(grades).length ? ("Grade " + Object.keys(grades).join(", ")) : "Mixed grade";
+    var sectionNames = Object.keys(sections);
+    var sectionLabel = sectionNames.length ? sectionNames.join(", ") : "Section pending";
+    return gradeLabel + " | " + sectionLabel + " | " + students.length + " enrolled student" + (students.length === 1 ? "" : "s");
+  }
+
+  async function bootstrapPage() {
+    try {
+      var auth = await ReadWiseAPI.me();
+      if (!auth || !auth.user || auth.user.role !== "teacher") throw new Error("Unauthorized");
+
+      var response = await ReadWiseAPI.getTeacherStudents();
+      var students = (response && response.students) || [];
+      var tbody = document.getElementById("students-table");
+      document.getElementById("students-summary").textContent = buildSummary(students);
+
+      if (!students.length) {
+        tbody.innerHTML = '<tr><td colspan="7">No student records yet.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = students.map(function(student, index) {
+        var preScore = Number(student.preScore || 0);
+        var latestScore = student.latestScore;
+        var latestRecommendation = student.latestRecommendation;
+        var latestScoreMarkup = latestScore === null || latestScore === undefined
+          ? '<span class="muted-copy">No passage submitted yet</span>'
+          : ('<strong>' + escapeHtml(latestScore) + '%</strong>' +
+            (student.latestWeek ? '<div class="micro-copy">Week ' + escapeHtml(student.latestWeek) + '</div>' : ''));
+        var recommendationMarkup = latestRecommendation
+          ? '<span style="font-weight:700;font-size:13px;color:' + recommendationColor(latestRecommendation) + '">' + escapeHtml(formatRecommendationDisplay(latestRecommendation)) + '</span>'
+          : '<span class="muted-copy">Awaiting reading data</span>';
+        var reviewMarkup = student.pendingReviewCount
+          ? '<div class="micro-copy" style="color:var(--hard);margin-top:4px">' + escapeHtml(student.pendingReviewCount) + ' response(s) pending review</div>'
+          : '';
+        var preMarkup = student.preAssessmentCompleted
+          ? (escapeHtml(preScore) + '%' +
+            '<div class="progress" style="width:80px;margin-top:4px">' +
+              '<div class="progress-bar" style="width:' + escapeHtml(preScore) + '%;background:var(--primary)"></div>' +
+            '</div>')
+          : '<span class="muted-copy">Not completed yet</span>';
+
+        return '<tr>' +
+          '<td>' + (index + 1) + '</td>' +
+          '<td><strong>' + escapeHtml(student.name) + '</strong><br><span style="font-size:12px;color:var(--muted)">Grade ' + escapeHtml(student.grade) + ' | ' + escapeHtml(student.section) + '</span>' + reviewMarkup + '</td>' +
+          '<td><span class="badge ' + badgeClass(student.classLevel || "MODERATE") + '">' + escapeHtml(getClassDisplayName(student.classLevel || "MODERATE")) + '</span></td>' +
+          '<td>' + preMarkup + '</td>' +
+          '<td>' + latestScoreMarkup + '</td>' +
+          '<td>' + recommendationMarkup + '</td>' +
+          '<td><a href="teacher-student-detail.html?id=' + encodeURIComponent(student.id) + '" class="btn btn-outline btn-sm">View Details</a></td>' +
+        '</tr>';
+      }).join("");
+    } catch (error) {
+      window.location.href = "../login.html";
+    }
+  }
+
+  async function logout() {
+    try {
+      await ReadWiseAPI.logout();
+    } catch (error) {
+      // ignore logout errors
+    }
+    sessionStorage.clear();
+    window.location.href = "../login.html";
+  }
+
+  bootstrapPage();
 </script>
 </body>
 </html>
-
-

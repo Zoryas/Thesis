@@ -30,36 +30,13 @@
   </aside>
   <main class="main">
     <div class="assessment-shell">
-      <button class="back-btn" onclick="history.back()"><span class="icon" data-icon="back"></span>Back to Passage</button>
+      <button class="back-btn" id="back-lock-btn" type="button" disabled><span class="icon" data-icon="back"></span>Passage Locked After Reading</button>
       <div class="page-header">
         <p class="eyebrow">Comprehension check</p>
         <h1 id="q-title">Comprehension Questions</h1>
         <p id="q-sub"></p>
       </div>
       <div id="questions-wrap"></div>
-
-      <div class="card" style="margin-top:16px">
-        <div class="card-header">
-          <div class="card-header-copy">
-            <div class="section-title">Difficulty Rating</div>
-            <p class="micro-copy">
-          How difficult did you find this passage? (1 = Very Easy, 5 = Very Hard)
-            </p>
-          </div>
-        </div>
-        <div class="slider-panel">
-        <input type="range" min="1" max="5" value="3" id="difficulty-slider">
-        <div class="range-scale">
-          <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span>
-        </div>
-        <div class="range-captions">
-          <span>Very Easy</span><span>Very Hard</span>
-        </div>
-        <div class="difficulty-output">
-          Selected: <span id="slider-val">3</span> / 5
-        </div>
-        </div>
-      </div>
 
       <div class="card" id="sa-card" style="margin-top:16px;display:none">
         <div class="section-title">Short Answer</div>
@@ -86,16 +63,12 @@
   let qs = [];
   let shortAnswerPrompt = "";
 
-  const slider = document.getElementById("difficulty-slider");
-  slider.addEventListener("input", function() {
-    document.getElementById("slider-val").textContent = slider.value;
-  });
-
   const wrap = document.getElementById("questions-wrap");
 
   async function bootstrapPage() {
     try {
-      const auth = await ReadWiseAPI.me();
+      const cachedUser = ReadWiseAPI.getCachedUser();
+      const auth = cachedUser ? { user: cachedUser, cached: true } : await ReadWiseAPI.me();
       if (!auth || !auth.user || auth.user.role !== "student" || !auth.user.student) {
         throw new Error("Unauthorized");
       }
@@ -106,6 +79,10 @@
       const assessment = p.assessment || { questions: [], shortAnswerPrompt: "" };
       qs = (assessment.questions || []).map(function(q) { return normalizeAssessmentQuestion(q); });
       shortAnswerPrompt = assessment.shortAnswerPrompt || "";
+      const backButton = document.getElementById("back-lock-btn");
+      if (backButton) {
+        backButton.title = "Back navigation is disabled once reading is completed.";
+      }
 
       if (!p) {
         document.getElementById("q-title").textContent = "Passage not found";
@@ -117,7 +94,7 @@
       }
 
       document.getElementById("q-title").textContent = "Questions: " + p.title;
-      document.getElementById("q-sub").textContent = p.label + " | " + p.genre + " | " + p.words + " words";
+      document.getElementById("q-sub").textContent = getClassDisplayName(p.label) + " | " + p.genre + " | " + p.words + " words";
 
       if (shortAnswerPrompt) {
         document.getElementById("sa-card").style.display = "block";
@@ -141,27 +118,45 @@
       .filter(function(item) { return item; });
   }
 
+  function getQuestionInstruction(question) {
+    if (question.type === "multiple_choice" || question.type === "multiple_choice_harder") {
+      return "Choose the one best answer from the four choices.";
+    }
+    if (question.type === "true_false") {
+      return "Read the statement carefully, then choose True or False.";
+    }
+    if (question.type === "true_false_modified") {
+      return "Choose True or False. If you choose False, you must type the corrected answer.";
+    }
+    if (question.type === "sequence") {
+      return "Type the steps in the correct order, separated by commas.";
+    }
+    if (question.type === "fill_in_the_blanks") {
+      return "Type the missing word or phrase from the passage.";
+    }
+    if (question.type === "identification") {
+      return "Type the exact word, term, or phrase asked in the question.";
+    }
+    if (question.type === "enumeration") {
+      return "List the required answers separated by commas.";
+    }
+    return "Read the question carefully and type your answer in the field below.";
+  }
+
+  function renderQuestionInstruction(question, card) {
+    const instruction = document.createElement("p");
+    instruction.className = "micro-copy";
+    instruction.style.marginBottom = "12px";
+    instruction.textContent = getQuestionInstruction(question);
+    card.appendChild(instruction);
+  }
+
   function renderNoQuestionsState() {
     wrap.innerHTML =
       '<div class="card">' +
       '<h3 class="passage-list-title" style="margin-bottom:8px">No assessment questions yet</h3>' +
       '<p class="muted-copy">Your teacher has not added questions for this passage yet.</p>' +
       "</div>";
-  }
-
-  function addTypeBadge(container, question) {
-    const row = document.createElement("div");
-    row.className = "question-badges";
-    const levelBadge = document.createElement("span");
-    levelBadge.className = "badge badge-primary";
-    levelBadge.textContent = question.difficulty;
-    row.appendChild(levelBadge);
-
-    const typeBadge = document.createElement("span");
-    typeBadge.className = "badge badge-neutral";
-    typeBadge.textContent = getQuestionTypeLabel(question.type);
-    row.appendChild(typeBadge);
-    container.appendChild(row);
   }
 
   function renderMCQ(question, index, card) {
@@ -185,7 +180,7 @@
     card.appendChild(optWrap);
   }
 
-  function renderTrueFalse(index, card) {
+  function renderTrueFalse(index, question, card) {
     const optWrap = document.createElement("div");
     optWrap.className = "question-options";
     ["true", "false"].forEach(function(value) {
@@ -196,6 +191,11 @@
       radio.name = "q" + index;
       radio.value = value;
       radio.style.accentColor = "var(--primary)";
+      radio.addEventListener("change", function() {
+        const followUp = document.getElementById("q_tf_follow_" + index);
+        if (!followUp) return;
+        followUp.style.display = question.type === "true_false_modified" && value === "false" ? "block" : "none";
+      });
       const span = document.createElement("span");
       span.textContent = value === "true" ? "True" : "False";
       lbl.appendChild(radio);
@@ -203,6 +203,33 @@
       optWrap.appendChild(lbl);
     });
     card.appendChild(optWrap);
+
+    if (question.type === "true_false_modified") {
+      const followUp = document.createElement("div");
+      followUp.id = "q_tf_follow_" + index;
+      followUp.style.display = "none";
+      followUp.style.marginTop = "12px";
+
+      const followLabel = document.createElement("label");
+      followLabel.className = "form-label";
+      followLabel.setAttribute("for", "q_tf_correction_" + index);
+      followLabel.textContent = "Correct Answer If False";
+      followUp.appendChild(followLabel);
+
+      const input = document.createElement("textarea");
+      input.className = "form-control";
+      input.id = "q_tf_correction_" + index;
+      input.rows = 3;
+      input.placeholder = "Type the corrected answer or statement here.";
+      followUp.appendChild(input);
+
+      const helper = document.createElement("p");
+      helper.className = "micro-copy";
+      helper.style.marginTop = "6px";
+      helper.textContent = "This field is required only when you choose False.";
+      followUp.appendChild(helper);
+      card.appendChild(followUp);
+    }
   }
 
   function addTextInput(card, id, placeholder, rows) {
@@ -230,21 +257,28 @@
       return;
     }
 
+    const introCard = document.createElement("div");
+    introCard.className = "card";
+    introCard.innerHTML =
+      '<div class="surface-note surface-note-accent">' +
+      'Passage locked. You are now in the question section and cannot return to the passage while answering.' +
+      "</div>";
+    wrap.appendChild(introCard);
+
     qs.forEach(function(question, index) {
       const card = document.createElement("div");
       card.className = "card question-card";
-
-      addTypeBadge(card, question);
 
       const qText = document.createElement("div");
       qText.className = "question-prompt";
       qText.textContent = "Q" + (index + 1) + ". " + question.prompt;
       card.appendChild(qText);
+      renderQuestionInstruction(question, card);
 
       if (question.type === "multiple_choice" || question.type === "multiple_choice_harder") {
         renderMCQ(question, index, card);
       } else if (question.type === "true_false" || question.type === "true_false_modified") {
-        renderTrueFalse(index, card);
+        renderTrueFalse(index, question, card);
       } else if (question.type === "sequence") {
         addTextInput(card, "q_text_" + index, "Enter the sequence in order, separated by commas.", 2);
       } else if (question.type === "fill_in_the_blanks" || question.type === "identification") {
@@ -260,12 +294,34 @@
   }
 
   function getResponse(index, question) {
-    if (question.type === "multiple_choice" || question.type === "multiple_choice_harder" || question.type === "true_false" || question.type === "true_false_modified") {
+    if (question.type === "true_false_modified") {
+      const selected = document.querySelector('input[name="q' + index + '"]:checked');
+      const correction = document.getElementById("q_tf_correction_" + index);
+      return {
+        choice: selected ? selected.value : "",
+        correction: correction ? correction.value.trim() : ""
+      };
+    }
+    if (question.type === "multiple_choice" || question.type === "multiple_choice_harder" || question.type === "true_false") {
       const selected = document.querySelector('input[name="q' + index + '"]:checked');
       return selected ? selected.value : "";
     }
     const textInput = document.getElementById("q_text_" + index);
     return textInput ? textInput.value.trim() : "";
+  }
+
+  function isResponseProvided(question, response) {
+    if (question.type === "true_false_modified") {
+      if (!response || !response.choice) return false;
+      if (normalizeText(response.choice) === "false") {
+        return Boolean(String(response.correction || "").trim());
+      }
+      return true;
+    }
+    if (question.type === "multiple_choice" || question.type === "multiple_choice_harder" || question.type === "true_false") {
+      return response !== "";
+    }
+    return Boolean(String(response || "").trim());
   }
 
   function evaluateResponse(question, response) {
@@ -274,9 +330,26 @@
       return { earned: ok ? 1 : 0, possible: 1, correct: ok };
     }
 
-    if (question.type === "true_false" || question.type === "true_false_modified") {
+    if (question.type === "true_false") {
       const ok = normalizeText(response) === normalizeText(question.answerKey);
       return { earned: ok ? 1 : 0, possible: 1, correct: ok };
+    }
+
+    if (question.type === "true_false_modified") {
+      const choice = response && typeof response === "object" ? response.choice : "";
+      const correction = response && typeof response === "object" ? response.correction : "";
+      const choiceCorrect = normalizeText(choice) === normalizeText(question.answerKey);
+      if (!choiceCorrect) {
+        return { earned: 0, possible: 1, correct: false };
+      }
+      if (normalizeText(question.answerKey) === "false") {
+        const accepted = (question.answerKeys || []).map(normalizeText).filter(Boolean);
+        const correctionOk = accepted.length
+          ? accepted.includes(normalizeText(correction))
+          : Boolean(normalizeText(correction));
+        return { earned: correctionOk ? 1 : 0, possible: 1, correct: correctionOk };
+      }
+      return { earned: 1, possible: 1, correct: true };
     }
 
     if (question.type === "sequence") {
@@ -317,6 +390,14 @@
     let fullyCorrect = 0;
     const responses = [];
 
+    const unanswered = qs.some(function(question, index) {
+      return !isResponseProvided(question, getResponse(index, question));
+    });
+    if (unanswered) {
+      showToast("Please complete every question before submitting.", "#c0392b");
+      return;
+    }
+
     qs.forEach(function(question, index) {
       const response = getResponse(index, question);
       const result = evaluateResponse(question, response);
@@ -327,18 +408,23 @@
     });
 
     const pct = totalPossible ? Math.round((totalEarned / totalPossible) * 100) : 0;
-    const diff = slider.value;
     const sa = document.getElementById("short-answer");
     const saVal = sa ? sa.value.trim() : "";
+    const underReview = Boolean(shortAnswerPrompt);
+
+    if (underReview && !saVal) {
+      showToast("Please complete the short answer for teacher review.", "#c0392b");
+      return;
+    }
 
     sessionStorage.setItem("result_" + pid, JSON.stringify({
       score: pct,
       correct: fullyCorrect,
       total: qs.length,
-      difficulty: diff,
       week: activeWeek,
       passageId: pid,
       shortAnswer: saVal,
+      underReview: underReview,
       responses: responses,
       readingTime: sessionStorage.getItem("readingTime_" + pid) || "-"
     }));
@@ -350,7 +436,6 @@
         score: pct,
         correct: fullyCorrect,
         total: qs.length,
-        difficulty: diff,
         shortAnswer: saVal,
         responses: responses,
         readingTime: sessionStorage.getItem("readingTime_" + pid) || "-"
@@ -380,6 +465,3 @@
 </script>
 </body>
 </html>
-
-
-

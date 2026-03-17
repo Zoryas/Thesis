@@ -68,6 +68,25 @@ SEED_STUDENTS = [
     {"id": "s1", "email": "juan.delacruz@pnhs.edu", "password": "password123", "name": "Juan Dela Cruz", "grade": "7", "section": "Sampaguita", "class": "HARD", "pre": 58},
     {"id": "s2", "email": "maria.santos@pnhs.edu", "password": "password123", "name": "Maria Santos", "grade": "7", "section": "Sampaguita", "class": "MODERATE", "pre": 72},
     {"id": "s3", "email": "carlo.reyes@pnhs.edu", "password": "password123", "name": "Carlo Reyes", "grade": "7", "section": "Sampaguita", "class": "EASY", "pre": 45},
+    {"id": "s4", "email": "new.student@pnhs.edu", "password": "password123", "name": "New Student", "grade": "7", "section": "Sampaguita", "class": "EASY", "pre": 0},
+    {"id": "s5", "email": "lea.garcia@pnhs.edu", "password": "password123", "name": "Lea Garcia", "grade": "7", "section": "Rosal", "class": "MODERATE", "pre": 64},
+    {"id": "s6", "email": "paolo.mendoza@pnhs.edu", "password": "password123", "name": "Paolo Mendoza", "grade": "7", "section": "Rosal", "class": "HARD", "pre": 81},
+    {"id": "s7", "email": "trisha.navarro@pnhs.edu", "password": "password123", "name": "Trisha Navarro", "grade": "7", "section": "Rosal", "class": "EASY", "pre": 43},
+    {"id": "s8", "email": "adrian.lopez@pnhs.edu", "password": "password123", "name": "Adrian Lopez", "grade": "7", "section": "Makahiya", "class": "MODERATE", "pre": 59},
+    {"id": "s9", "email": "bea.cortez@pnhs.edu", "password": "password123", "name": "Bea Cortez", "grade": "7", "section": "Makahiya", "class": "HARD", "pre": 74},
+    {"id": "s10", "email": "noah.flores@pnhs.edu", "password": "password123", "name": "Noah Flores", "grade": "7", "section": "Makahiya", "class": "EASY", "pre": 0},
+    {"id": "s11", "email": "jamie.ong@pnhs.edu", "password": "password123", "name": "Jamie Ong", "grade": "7", "section": "Sampaguita", "class": "EASY", "pre": 0},
+    {
+    "id": "s12",
+    "email": "alex.cruz@pnhs.edu",
+    "password": "password123",
+    "name": "Alex Cruz",
+    "grade": "7",
+    "section": "Rosal",
+    "class": "EASY",
+    "pre": 0
+}
+
 ]
 
 SEED_PASSAGES = [
@@ -77,15 +96,162 @@ SEED_PASSAGES = [
     {"id": "p4", "title": "The Little Prince Summary", "genre": "Narrative", "label": "EASY", "text": "The Little Prince teaches readers about friendship and love."},
     {"id": "p5", "title": "Philippine Biodiversity", "genre": "Expository", "label": "MODERATE", "text": "The Philippines has many endemic species that need protection."},
     {"id": "p6", "title": "Constitutional Rights of Citizens", "genre": "Expository", "label": "HARD", "text": "The Constitution protects rights like due process and free expression."},
+    {"id": "p7", "title": "The School Garden", "genre": "Narrative", "label": "EASY", "text": "Our class planted tomatoes and pechay in the school garden. We watered them every morning and removed weeds after lunch. After two months, we harvested enough vegetables to share with the canteen."},
+    {"id": "p8", "title": "A Day at the Library", "genre": "Narrative", "label": "EASY", "text": "Maria visited the school library to find books about volcanoes. The librarian helped her choose three books and one magazine. She copied important notes in her notebook and returned the books before going home."},
+    {"id": "p9", "title": "Why We Wash Hands", "genre": "Expository", "label": "EASY", "text": "Washing hands with soap removes dirt and germs. We should wash before eating, after using the restroom, and after playing outside. Clean hands help prevent cough, colds, and stomach sickness."},
+    {"id": "p10", "title": "The Rice Plant", "genre": "Expository", "label": "EASY", "text": "Farmers prepare the field before planting rice seedlings. The plants grow best with enough sunlight and water. After several months, the grains turn golden and are ready to harvest and dry."},
+    {"id": "p11", "title": "Typhoon Preparedness at Home", "genre": "Expository", "label": "MODERATE", "text": "Families can reduce typhoon risks by preparing emergency kits, securing important documents, and identifying safe evacuation routes. Listening to weather bulletins and following local government advisories helps communities respond quickly when storms intensify."},
+    {"id": "p12", "title": "The Story of Lapu-Lapu", "genre": "Narrative", "label": "MODERATE", "text": "Lapu-Lapu, a chieftain of Mactan, became known for resisting foreign forces during the Battle of Mactan in 1521. His leadership is remembered as a symbol of courage, local sovereignty, and early resistance in Philippine history."},
+    {"id": "p13", "title": "Mangrove Forests and Coastal Protection", "genre": "Expository", "label": "MODERATE", "text": "Mangrove forests protect shorelines by reducing wave energy and helping prevent soil erosion. Their roots also serve as breeding grounds for fish and crabs. Conserving mangroves supports both biodiversity and coastal livelihoods."},
+    {"id": "p14", "title": "Digital Citizenship and Online Safety", "genre": "Expository", "label": "HARD", "text": "Responsible digital citizenship involves evaluating online sources, protecting personal data, and communicating respectfully across platforms. Learners should recognize misinformation patterns, report harmful content, and use privacy controls to reduce exposure to cyber threats."},
+    {"id": "p15", "title": "Renewable Energy Choices for Communities", "genre": "Expository", "label": "HARD", "text": "Community energy planning requires balancing environmental benefits, infrastructure costs, and long-term reliability. While solar and wind reduce carbon emissions, policy design, grid modernization, and storage technology influence whether transitions remain equitable and sustainable."},
+    {"id": "p16", "title": "Constitutional Checks and Balances", "genre": "Expository", "label": "HARD", "text": "Checks and balances distribute governmental authority across branches so no institution can dominate decision-making. Judicial review, legislative oversight, and executive veto powers create procedural friction intended to protect constitutional order and civil liberties."},
 ]
 
+def seed_mc(difficulty, prompt, options, answer_index):
+    return {
+        "difficulty": difficulty,
+        "type": "multiple_choice" if difficulty == "EASY" else "multiple_choice_harder",
+        "prompt": prompt,
+        "options": options,
+        "answerIndex": answer_index,
+    }
+
+
+def seed_tf(difficulty, prompt, answer_key):
+    return {
+        "difficulty": difficulty,
+        "type": "true_false" if difficulty == "EASY" else "true_false_modified",
+        "prompt": prompt,
+        "answerKey": answer_key,
+    }
+
+
+def seed_sequence(prompt, answer_keys):
+    return {
+        "difficulty": "MODERATE",
+        "type": "sequence",
+        "prompt": prompt,
+        "options": list(answer_keys),
+        "answerKeys": list(answer_keys),
+    }
+
+
+def seed_identification(prompt, answer_keys):
+    return {
+        "difficulty": "DIFFICULT",
+        "type": "identification",
+        "prompt": prompt,
+        "answerKeys": list(answer_keys),
+    }
+
+
+def seed_fill_blank(prompt, answer_keys):
+    return {
+        "difficulty": "DIFFICULT",
+        "type": "fill_in_the_blanks",
+        "prompt": prompt,
+        "answerKeys": list(answer_keys),
+    }
+
+
+def seed_enumeration(prompt, answer_keys):
+    return {
+        "difficulty": "DIFFICULT",
+        "type": "enumeration",
+        "prompt": prompt,
+        "answerKeys": list(answer_keys),
+    }
+
+
 SEED_ASSESSMENTS = {
-    "p1": {"questions": [{"difficulty": "EASY", "type": "multiple_choice", "prompt": "What causes water to rise into the atmosphere?", "options": ["Condensation", "Evaporation", "Runoff", "Precipitation"], "answerIndex": 1}], "shortAnswerPrompt": ""},
-    "p2": {"questions": [{"difficulty": "MODERATE", "type": "multiple_choice_harder", "prompt": "Where was Jose Rizal born?", "options": ["Manila", "Calamba, Laguna", "Baguio", "Cebu"], "answerIndex": 1}], "shortAnswerPrompt": ""},
-    "p3": {"questions": [{"difficulty": "DIFFICULT", "type": "multiple_choice_harder", "prompt": "Which is an effect of climate change?", "options": ["Sea-level rise", "Colder oceans", "Lower storms", "Stable weather"], "answerIndex": 0}], "shortAnswerPrompt": "In your own words, explain one effect of climate change on the Philippines."},
-    "p4": {"questions": [], "shortAnswerPrompt": ""},
-    "p5": {"questions": [], "shortAnswerPrompt": ""},
-    "p6": {"questions": [], "shortAnswerPrompt": "Explain what due process of law means in your own words."},
+    "p1": {"questions": [
+        seed_mc("EASY", "What process changes liquid water into water vapor?", ["Condensation", "Evaporation", "Runoff", "Precipitation"], 1),
+        seed_tf("EASY", "Clouds form when water vapor cools and condenses.", "true"),
+        seed_mc("EASY", "What do we call water that soaks into the ground?", ["Runoff", "Precipitation", "Groundwater", "Fog"], 2),
+    ], "shortAnswerPrompt": ""},
+    "p2": {"questions": [
+        seed_mc("MODERATE", "Where was Jose Rizal born?", ["Manila", "Calamba, Laguna", "Baguio", "Cebu"], 1),
+        seed_tf("MODERATE", "Rizal continued some of his studies in Spain.", "true"),
+        seed_sequence("Arrange these events from Rizal's life in the order they appear in the passage.", ["Studied at Ateneo Municipal", "Pursued medicine and studies abroad", "Published Noli Me Tangere and El Filibusterismo"]),
+    ], "shortAnswerPrompt": ""},
+    "p3": {"questions": [
+        seed_identification("Which greenhouse gas is specifically named in the passage?", ["carbon dioxide", "co2"]),
+        seed_fill_blank("The greenhouse effect traps heat in the ______.", ["atmosphere"]),
+        seed_enumeration("Name two climate-related risks mentioned in the passage.", ["sea-level rise", "stronger tropical cyclones"]),
+    ], "shortAnswerPrompt": "In your own words, explain one effect of climate change on the Philippines."},
+    "p4": {"questions": [
+        seed_mc("EASY", "What lesson does the fox teach the little prince?", ["Money solves problems", "One sees clearly only with the heart", "Adults are always right", "Travel is better than friendship"], 1),
+        seed_tf("EASY", "The little prince meets the pilot in the desert.", "true"),
+        seed_mc("EASY", "What living thing does the little prince care for on his home planet?", ["A tree", "A fox", "A single rose", "A sheep"], 2),
+    ], "shortAnswerPrompt": ""},
+    "p5": {"questions": [
+        seed_mc("MODERATE", "The Philippines is identified as one of how many megadiverse countries?", ["10", "17", "25", "30"], 1),
+        seed_tf("MODERATE", "The Philippine eagle is an endemic species mentioned in the passage.", "true"),
+        seed_sequence("Arrange these ecosystems in the same order used in the passage.", ["Tropical rainforests", "Mangroves", "Coral reefs"]),
+    ], "shortAnswerPrompt": ""},
+    "p6": {"questions": [
+        seed_identification("Which article of the Constitution contains the Bill of Rights?", ["article iii", "article 3", "iii"]),
+        seed_fill_blank("No person shall be deprived of life, liberty, or property without ______ process of law.", ["due", "due process"]),
+        seed_enumeration("Name two rights mentioned in the passage.", ["freedom of speech", "right to counsel"]),
+    ], "shortAnswerPrompt": "Explain what due process of law means in your own words."},
+    "p7": {"questions": [
+        seed_mc("EASY", "What vegetables did the class plant in the school garden?", ["Tomatoes and pechay", "Eggplant and corn", "Onions and garlic", "Cabbage and carrots"], 0),
+        seed_tf("EASY", "The class harvested the vegetables after two months.", "true"),
+        seed_mc("EASY", "Who received some of the harvested vegetables?", ["The principal", "The librarian", "The canteen", "The barangay captain"], 2),
+    ], "shortAnswerPrompt": ""},
+    "p8": {"questions": [
+        seed_mc("EASY", "Why did Maria visit the school library?", ["To find books about volcanoes", "To play games", "To practice singing", "To buy school supplies"], 0),
+        seed_tf("EASY", "Maria returned the books before going home.", "true"),
+        seed_mc("EASY", "Where did Maria write her important notes?", ["On a poster", "In her notebook", "On the wall", "In a newspaper"], 1),
+    ], "shortAnswerPrompt": ""},
+    "p9": {"questions": [
+        seed_mc("EASY", "What removes dirt and germs from our hands?", ["Soap", "Oil", "Dust", "Paper"], 0),
+        seed_tf("EASY", "Clean hands can help prevent stomach sickness.", "true"),
+        seed_mc("EASY", "When should we wash our hands?", ["Only after sleeping", "Before eating and after using the restroom", "Only on weekends", "Only after class pictures"], 1),
+    ], "shortAnswerPrompt": ""},
+    "p10": {"questions": [
+        seed_mc("EASY", "What do farmers plant in the field?", ["Rice seedlings", "Mango trees", "Corn cobs", "Coconut shells"], 0),
+        seed_tf("EASY", "Rice plants grow best without water.", "false"),
+        seed_mc("EASY", "What happens to the grains before harvest?", ["They turn golden", "They become blue", "They disappear", "They float away"], 0),
+    ], "shortAnswerPrompt": ""},
+    "p11": {"questions": [
+        seed_mc("MODERATE", "Which action helps families prepare for stronger storms?", ["Ignoring local warnings", "Preparing emergency kits", "Leaving documents outside", "Waiting for rumors"], 1),
+        seed_tf("MODERATE", "Listening to weather bulletins can help communities respond quickly.", "true"),
+        seed_sequence("Arrange these preparedness actions in a practical order.", ["Prepare an emergency kit", "Secure important documents", "Review evacuation routes"]),
+    ], "shortAnswerPrompt": ""},
+    "p12": {"questions": [
+        seed_mc("MODERATE", "For what is Lapu-Lapu remembered in the passage?", ["Writing a constitution", "Leading resistance in Mactan", "Serving as governor-general", "Building a Spanish fort"], 1),
+        seed_tf("MODERATE", "The passage presents Lapu-Lapu as a symbol of courage and local sovereignty.", "true"),
+        seed_sequence("Arrange these events in the order described in the passage.", ["Foreign forces arrived in Mactan", "The Battle of Mactan happened in 1521", "Lapu-Lapu was remembered as a symbol of resistance"]),
+    ], "shortAnswerPrompt": ""},
+    "p13": {"questions": [
+        seed_mc("MODERATE", "What do mangrove roots provide for fish and crabs?", ["A place to dry", "Breeding grounds", "More waves", "Less food"], 1),
+        seed_tf("MODERATE", "Mangroves help reduce soil erosion.", "true"),
+        seed_sequence("Arrange these mangrove benefits in the same order used in the passage.", ["Reduce wave energy", "Help prevent soil erosion", "Support fish and crab breeding grounds"]),
+    ], "shortAnswerPrompt": ""},
+    "p14": {"questions": [
+        seed_identification("What should students protect when practicing responsible digital citizenship?", ["personal data", "personal information"]),
+        seed_fill_blank("Students should use privacy ______ to reduce exposure to cyber threats.", ["controls", "settings"]),
+        seed_enumeration("Name two responsible online actions mentioned in the passage.", ["evaluating online sources", "reporting harmful content"]),
+    ], "shortAnswerPrompt": "Give one example of how a student can verify online information before sharing it."},
+    "p15": {"questions": [
+        seed_identification("What kind of technology is named as part of renewable energy transitions?", ["storage technology", "energy storage"]),
+        seed_fill_blank("Solar and wind can reduce ______ emissions.", ["carbon", "carbon emissions"]),
+        seed_enumeration("Name two factors communities should consider in energy planning.", ["infrastructure costs", "long-term reliability"]),
+    ], "shortAnswerPrompt": "Why should communities consider both cost and sustainability when choosing energy sources?"},
+    "p16": {"questions": [
+        seed_identification("Which branch power can stop a bill through a veto?", ["executive", "executive branch"]),
+        seed_fill_blank("Checks and balances are meant to protect constitutional ______.", ["order"]),
+        seed_enumeration("Name two examples of checks and balances mentioned in the passage.", ["judicial review", "legislative oversight"]),
+    ], "shortAnswerPrompt": "Explain one real-life situation where checks and balances can protect citizens."},
+}
+
+QUESTION_TYPES_BY_DIFFICULTY = {
+    "EASY": {"multiple_choice", "true_false"},
+    "MODERATE": {"multiple_choice_harder", "true_false_modified", "sequence"},
+    "DIFFICULT": {"fill_in_the_blanks", "identification", "enumeration"},
+    "CUSTOM": {"custom"},
 }
 
 
@@ -99,9 +265,168 @@ def api_error(message, status=400):
 
 def normalize_class_level(value):
     v = str(value or "").strip().upper()
+    if v == "MEDIUM":
+        return "MODERATE"
     if v == "DIFFICULT":
         return "HARD"
     return v if v in {"EASY", "MODERATE", "HARD"} else "EASY"
+
+
+def classify_pre_assessment_level(score):
+    try:
+        normalized_score = int(score)
+    except (TypeError, ValueError):
+        normalized_score = 0
+    normalized_score = max(0, min(100, normalized_score))
+    if normalized_score >= 70:
+        return "HARD"
+    if normalized_score >= 55:
+        return "MODERATE"
+    return "EASY"
+
+
+def normalize_question_difficulty(value):
+    level = str(value or "").strip().upper()
+    if level == "MEDIUM":
+        return "MODERATE"
+    if level == "HARD":
+        return "DIFFICULT"
+    if level in QUESTION_TYPES_BY_DIFFICULTY:
+        return level
+    return "EASY"
+
+
+def map_passage_label_to_question_difficulty(label):
+    class_level = normalize_class_level(label)
+    return "DIFFICULT" if class_level == "HARD" else class_level
+
+
+def display_question_difficulty(level):
+    normalized = normalize_question_difficulty(level)
+    return "Difficult" if normalized == "DIFFICULT" else normalized.title()
+
+
+def normalize_string_list(values):
+    if not isinstance(values, list):
+        return []
+    return [str(value).strip() for value in values if str(value).strip()]
+
+
+def parse_delimited_answers(value, delimiter):
+    return [item.strip() for item in str(value or "").split(delimiter) if item.strip()]
+
+
+def normalize_assessment_payload(assessment, passage_label):
+    payload = assessment if isinstance(assessment, dict) else {}
+    raw_questions = payload.get("questions") if isinstance(payload.get("questions"), list) else []
+    short_answer = str(payload.get("shortAnswerPrompt") or payload.get("shortAnswer") or "").strip()
+    expected_difficulty = map_passage_label_to_question_difficulty(passage_label)
+    allowed_types = QUESTION_TYPES_BY_DIFFICULTY[expected_difficulty]
+    normalized_questions = []
+
+    for index, raw_question in enumerate(raw_questions, start=1):
+        question = raw_question if isinstance(raw_question, dict) else {}
+        prompt = str(question.get("prompt") or question.get("q") or "").strip()
+        if not prompt:
+            raise ValueError(f"Question {index} is missing a prompt.")
+
+        difficulty = normalize_question_difficulty(question.get("difficulty") or expected_difficulty)
+        if difficulty != expected_difficulty:
+            raise ValueError(
+                f"Question {index} must use {display_question_difficulty(expected_difficulty)} difficulty."
+            )
+
+        question_type = str(question.get("type") or "").strip().lower()
+        if not question_type:
+            if expected_difficulty == "EASY":
+                question_type = "multiple_choice"
+            elif expected_difficulty == "MODERATE":
+                question_type = "multiple_choice_harder"
+            else:
+                question_type = "fill_in_the_blanks"
+
+        if question_type not in allowed_types:
+            allowed_display = ", ".join(sorted(allowed_types))
+            raise ValueError(
+                f"Question {index} uses an invalid type for {display_question_difficulty(expected_difficulty)} passages. "
+                f"Allowed types: {allowed_display}."
+            )
+
+        options = question.get("options") if isinstance(question.get("options"), list) else question.get("opts")
+        options = [str(item).strip() for item in options] if isinstance(options, list) else []
+
+        answer_keys = (
+            normalize_string_list(question.get("answerKeys"))
+            if isinstance(question.get("answerKeys"), list)
+            else normalize_string_list(question.get("answer_keys"))
+        )
+        answer_key = str(question.get("answerKey") or question.get("answer_key") or question.get("answer") or "").strip()
+        answer_index = question.get("answerIndex", question.get("ans", 0))
+        try:
+            answer_index = int(answer_index)
+        except (TypeError, ValueError):
+            answer_index = 0
+
+        normalized_question = {
+            "difficulty": difficulty,
+            "type": question_type,
+            "prompt": prompt,
+            "options": [],
+            "answerIndex": 0,
+            "answerKey": "",
+            "answerKeys": [],
+        }
+
+        if question_type in {"multiple_choice", "multiple_choice_harder"}:
+            cleaned_options = [item for item in options[:4] if item]
+            if len(cleaned_options) != 4:
+                raise ValueError(f"Question {index} needs exactly 4 answer options.")
+            if answer_index < 0 or answer_index > 3:
+                raise ValueError(f"Question {index} must have a valid correct option.")
+            normalized_question["options"] = cleaned_options
+            normalized_question["answerIndex"] = answer_index
+        elif question_type in {"true_false", "true_false_modified"}:
+            normalized_question["answerKey"] = "false" if answer_key.lower() == "false" else "true"
+            if question_type == "true_false_modified":
+                if not answer_keys:
+                    answer_keys = parse_delimited_answers(
+                        question.get("correctionAnswer") or question.get("correction"),
+                        "|",
+                    )
+                if normalized_question["answerKey"] == "false" and not answer_keys:
+                    raise ValueError(
+                        f"Question {index} needs the corrected answer for a false statement."
+                    )
+                normalized_question["answerKeys"] = answer_keys
+        elif question_type == "sequence":
+            cleaned_options = [item for item in options if item]
+            if len(cleaned_options) < 3:
+                raise ValueError(f"Question {index} needs at least 3 sequence items.")
+            if not answer_keys:
+                answer_keys = parse_delimited_answers(answer_key, ",")
+            if len(answer_keys) < 3:
+                raise ValueError(f"Question {index} needs a complete sequence answer.")
+            normalized_question["options"] = cleaned_options
+            normalized_question["answerKeys"] = answer_keys
+        elif question_type == "enumeration":
+            if not answer_keys:
+                answer_keys = parse_delimited_answers(answer_key, ",")
+            if len(answer_keys) < 2:
+                raise ValueError(f"Question {index} needs at least 2 expected answers.")
+            normalized_question["answerKeys"] = answer_keys
+        else:
+            if not answer_keys:
+                answer_keys = parse_delimited_answers(answer_key, "|")
+            if not answer_keys:
+                raise ValueError(f"Question {index} needs at least 1 accepted answer.")
+            normalized_question["answerKeys"] = answer_keys
+
+        normalized_questions.append(normalized_question)
+
+    if not normalized_questions:
+        raise ValueError("Add at least 1 complete assessment question.")
+
+    return {"questions": normalized_questions, "shortAnswerPrompt": short_answer}
 
 
 def normalize_avatar_type(value):
@@ -190,7 +515,7 @@ def fetch_user_by_id(cur, user_id):
     cur.execute(
         """
         SELECT u.id,u.email,u.role,u.is_active,
-               s.id AS student_id,s.full_name,s.grade,s.section,s.class_level,s.pre_score,
+               s.id AS student_id,s.full_name,s.grade,s.section,s.class_level,s.pre_score,s.pre_assessment_completed,
                s.avatar_type,s.avatar_value
         FROM users u LEFT JOIN students s ON s.user_id=u.id
         WHERE u.id=%s
@@ -220,7 +545,7 @@ def current_user():
                 """
                 SELECT u.id,u.email,u.role,u.is_active,
                        s.id AS student_id,s.full_name,s.grade,s.section,
-                       s.class_level,s.pre_score,s.avatar_type,s.avatar_value
+                       s.class_level,s.pre_score,s.pre_assessment_completed,s.avatar_type,s.avatar_value
                 FROM auth_tokens t
                 JOIN users u ON u.id=t.user_id
                 LEFT JOIN students s ON s.user_id=u.id
@@ -269,6 +594,7 @@ def serialize_user(row):
             "section": row.get("section"),
             "classLevel": row.get("class_level"),
             "preScore": row.get("pre_score"),
+            "preAssessmentCompleted": bool(int(row.get("pre_assessment_completed") or 0)),
             "avatarType": row.get("avatar_type") or "initials",
             "avatarValue": row.get("avatar_value") or "",
         }
@@ -335,10 +661,10 @@ def fetch_assessment(cur, passage_id):
     return {"questions": questions, "shortAnswerPrompt": a.get("short_answer_prompt") or ""}
 
 
-def upsert_assessment(cur, passage_id, payload):
-    payload = payload if isinstance(payload, dict) else {}
-    questions = payload.get("questions") if isinstance(payload.get("questions"), list) else []
-    short_answer = str(payload.get("shortAnswerPrompt") or payload.get("shortAnswer") or "").strip()
+def upsert_assessment(cur, passage_id, payload, passage_label):
+    normalized = normalize_assessment_payload(payload, passage_label)
+    questions = normalized["questions"]
+    short_answer = normalized["shortAnswerPrompt"]
 
     cur.execute("SELECT id FROM assessments WHERE passage_id=%s", (passage_id,))
     row = cur.fetchone()
@@ -351,23 +677,6 @@ def upsert_assessment(cur, passage_id, payload):
         aid = cur.lastrowid
 
     for i, q in enumerate(questions):
-        prompt = str(q.get("prompt") or q.get("q") or "").strip()
-        if not prompt:
-            continue
-        options = q.get("options") if isinstance(q.get("options"), list) else q.get("opts")
-        if not isinstance(options, list):
-            options = []
-        options = [str(item).strip() for item in options]
-        answer_keys = q.get("answerKeys") if isinstance(q.get("answerKeys"), list) else q.get("answer_keys")
-        if not isinstance(answer_keys, list):
-            answer_keys = []
-        answer_keys = [str(item).strip() for item in answer_keys if str(item).strip()]
-        answer_index = q.get("answerIndex", q.get("ans", 0))
-        try:
-            answer_index = int(answer_index)
-        except (TypeError, ValueError):
-            answer_index = 0
-
         cur.execute(
             """
             INSERT INTO assessment_questions (
@@ -377,13 +686,13 @@ def upsert_assessment(cur, passage_id, payload):
             (
                 aid,
                 i,
-                str(q.get("difficulty") or "EASY").upper().replace("HARD", "DIFFICULT"),
-                str(q.get("type") or "multiple_choice").strip().lower(),
-                prompt,
-                json.dumps(options, ensure_ascii=False) if options else None,
-                answer_index,
-                str(q.get("answerKey") or q.get("answer_key") or "").strip() or None,
-                json.dumps(answer_keys, ensure_ascii=False) if answer_keys else None,
+                q["difficulty"],
+                q["type"],
+                q["prompt"],
+                json.dumps(q["options"], ensure_ascii=False) if q["options"] else None,
+                q["answerIndex"],
+                q["answerKey"] or None,
+                json.dumps(q["answerKeys"], ensure_ascii=False) if q["answerKeys"] else None,
             ),
         )
 
@@ -396,13 +705,122 @@ def get_weekly_assignments(cur, week):
     return out
 
 
+def get_passage_usage_weeks(cur):
+    usage = {}
+    cur.execute("SELECT passage_id, week_no FROM weekly_assignments ORDER BY week_no, id")
+    for row in cur.fetchall():
+        usage.setdefault(row["passage_id"], []).append(int(row["week_no"]))
+    return usage
+
+
 def student_row(cur, user):
     sid = user.get("student_id")
     if sid:
-        cur.execute("SELECT id, full_name, grade, section, class_level, pre_score FROM students WHERE id=%s", (sid,))
+        cur.execute("SELECT id, full_name, grade, section, class_level, pre_score, pre_assessment_completed FROM students WHERE id=%s", (sid,))
     else:
-        cur.execute("SELECT id, full_name, grade, section, class_level, pre_score FROM students WHERE user_id=%s", (user["id"],))
+        cur.execute("SELECT id, full_name, grade, section, class_level, pre_score, pre_assessment_completed FROM students WHERE user_id=%s", (user["id"],))
     return cur.fetchone()
+
+
+def pre_assessment_completed(student):
+    if not student:
+        return False
+    return bool(int(student.get("pre_assessment_completed") or 0))
+
+
+def recommendation_for_score(score):
+    normalized_score = int(score or 0)
+    if normalized_score >= 75:
+        return "Step UP", "HARD"
+    if normalized_score >= 60:
+        return "Maintain", "MODERATE"
+    return "Step DOWN", "EASY"
+
+
+def fetch_student_progress(cur, student_id):
+    cur.execute(
+        "SELECT week_no, ROUND(AVG(score_pct)) AS score FROM quiz_attempts WHERE student_id=%s GROUP BY week_no ORDER BY week_no",
+        (student_id,),
+    )
+    progress = []
+    for row in cur.fetchall():
+        score = int(row["score"] or 0)
+        recommendation, difficulty = recommendation_for_score(score)
+        progress.append(
+            {
+                "week": int(row["week_no"]),
+                "score": score,
+                "difficulty": difficulty,
+                "recommendation": recommendation,
+            }
+        )
+    return progress
+
+
+def fetch_teacher_student_summaries(cur):
+    cur.execute(
+        """
+        SELECT s.id,s.full_name,s.grade,s.section,s.class_level,s.pre_score,s.pre_assessment_completed,u.email
+        FROM students s
+        JOIN users u ON u.id=s.user_id
+        ORDER BY s.full_name ASC
+        """
+    )
+    students = []
+    for row in cur.fetchall():
+        progress = fetch_student_progress(cur, row["id"])
+        latest = progress[-1] if progress else None
+        cur.execute(
+            "SELECT COUNT(*) AS total FROM quiz_attempts WHERE student_id=%s AND short_answer_text IS NOT NULL",
+            (row["id"],),
+        )
+        pending_reviews = int(cur.fetchone()["total"] or 0)
+        students.append(
+            {
+                "id": row["id"],
+                "name": row["full_name"],
+                "email": row["email"],
+                "grade": row["grade"],
+                "section": row["section"],
+                "classLevel": row["class_level"],
+                "preScore": int(row["pre_score"] or 0),
+                "preAssessmentCompleted": bool(int(row["pre_assessment_completed"] or 0)),
+                "latestScore": latest["score"] if latest else None,
+                "latestWeek": latest["week"] if latest else None,
+                "latestRecommendation": latest["recommendation"] if latest else None,
+                "latestDifficulty": latest["difficulty"] if latest else None,
+                "recentScores": [item["score"] for item in progress[-2:]],
+                "progress": progress,
+                "pendingReviewCount": pending_reviews,
+            }
+        )
+    return students
+
+
+def fetch_pending_short_answer(cur, student_id):
+    cur.execute(
+        """
+        SELECT qa.passage_id,qa.short_answer_text,qa.submitted_at,p.title,p.label,a.short_answer_prompt
+        FROM quiz_attempts qa
+        JOIN passages p ON p.id=qa.passage_id
+        LEFT JOIN assessments a ON a.passage_id=qa.passage_id
+        WHERE qa.student_id=%s AND qa.short_answer_text IS NOT NULL
+        ORDER BY qa.submitted_at DESC
+        LIMIT 1
+        """,
+        (student_id,),
+    )
+    row = cur.fetchone()
+    if not row:
+        return None
+    return {
+        "passageId": row["passage_id"],
+        "passageTitle": row["title"],
+        "label": row["label"],
+        "prompt": row.get("short_answer_prompt") or "",
+        "response": row.get("short_answer_text") or "",
+        "submittedAt": row["submitted_at"].isoformat() if row.get("submitted_at") else None,
+    }
 
 def init_database():
     conn = mysql.connector.connect(**mysql_config(False))
@@ -416,7 +834,7 @@ def init_database():
         schema = [
             """CREATE TABLE IF NOT EXISTS users (id INT AUTO_INCREMENT PRIMARY KEY,email VARCHAR(255) UNIQUE NOT NULL,password_hash VARCHAR(255) NOT NULL,role ENUM('teacher','student') NOT NULL,is_active TINYINT(1) NOT NULL DEFAULT 1,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
             """CREATE TABLE IF NOT EXISTS auth_tokens (id BIGINT AUTO_INCREMENT PRIMARY KEY,user_id INT NOT NULL,token VARCHAR(128) UNIQUE NOT NULL,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,INDEX idx_auth_tokens_user (user_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
-            """CREATE TABLE IF NOT EXISTS students (id VARCHAR(20) PRIMARY KEY,user_id INT UNIQUE NOT NULL,full_name VARCHAR(255) NOT NULL,grade VARCHAR(20) NOT NULL,section VARCHAR(100) NOT NULL,class_level ENUM('EASY','MODERATE','HARD') NOT NULL DEFAULT 'EASY',pre_score INT NOT NULL DEFAULT 0,avatar_type ENUM('initials','preset','upload') NOT NULL DEFAULT 'initials',avatar_value MEDIUMTEXT NULL,FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
+            """CREATE TABLE IF NOT EXISTS students (id VARCHAR(20) PRIMARY KEY,user_id INT UNIQUE NOT NULL,full_name VARCHAR(255) NOT NULL,grade VARCHAR(20) NOT NULL,section VARCHAR(100) NOT NULL,class_level ENUM('EASY','MODERATE','HARD') NOT NULL DEFAULT 'EASY',pre_score INT NOT NULL DEFAULT 0,pre_assessment_completed TINYINT(1) NOT NULL DEFAULT 0,pre_assessment_completed_at TIMESTAMP NULL,avatar_type ENUM('initials','preset','upload') NOT NULL DEFAULT 'initials',avatar_value MEDIUMTEXT NULL,FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
             """CREATE TABLE IF NOT EXISTS passages (id VARCHAR(20) PRIMARY KEY,title VARCHAR(255) NOT NULL,genre VARCHAR(100) NOT NULL,text MEDIUMTEXT NOT NULL,label ENUM('EASY','MODERATE','HARD') NOT NULL,words INT NOT NULL,est_minutes INT NOT NULL,confidence DECIMAL(5,2) NULL,created_by INT NULL,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
             """CREATE TABLE IF NOT EXISTS assessments (id INT AUTO_INCREMENT PRIMARY KEY,passage_id VARCHAR(20) UNIQUE NOT NULL,short_answer_prompt TEXT NULL,FOREIGN KEY (passage_id) REFERENCES passages(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
             """CREATE TABLE IF NOT EXISTS assessment_questions (id INT AUTO_INCREMENT PRIMARY KEY,assessment_id INT NOT NULL,sort_order INT NOT NULL DEFAULT 0,difficulty ENUM('EASY','MODERATE','DIFFICULT','CUSTOM') NOT NULL DEFAULT 'EASY',type VARCHAR(60) NOT NULL,prompt TEXT NOT NULL,options_json JSON NULL,answer_index INT NULL,answer_key VARCHAR(255) NULL,answer_keys_json JSON NULL,FOREIGN KEY (assessment_id) REFERENCES assessments(id) ON DELETE CASCADE,INDEX idx_q_sort (assessment_id, sort_order)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
@@ -439,6 +857,18 @@ def init_database():
                 "ALTER TABLE students ADD COLUMN avatar_value MEDIUMTEXT NULL AFTER avatar_type"
             )
 
+        cur.execute("SHOW COLUMNS FROM students LIKE 'pre_assessment_completed'")
+        if not cur.fetchone():
+            cur.execute(
+                "ALTER TABLE students ADD COLUMN pre_assessment_completed TINYINT(1) NOT NULL DEFAULT 0 AFTER pre_score"
+            )
+
+        cur.execute("SHOW COLUMNS FROM students LIKE 'pre_assessment_completed_at'")
+        if not cur.fetchone():
+            cur.execute(
+                "ALTER TABLE students ADD COLUMN pre_assessment_completed_at TIMESTAMP NULL AFTER pre_assessment_completed"
+            )
+
         def upsert_user(email, password, role):
             cur.execute("SELECT id FROM users WHERE email=%s", (email,))
             row = cur.fetchone()
@@ -454,26 +884,59 @@ def init_database():
 
         for student in SEED_STUDENTS:
             uid = upsert_user(student["email"], student["password"], "student")
+            pre_score = int(student["pre"])
+            pre_completed = 1 if pre_score > 0 else 0
             cur.execute(
                 """
-                INSERT INTO students (id,user_id,full_name,grade,section,class_level,pre_score)
-                VALUES (%s,%s,%s,%s,%s,%s,%s)
-                ON DUPLICATE KEY UPDATE user_id=VALUES(user_id),full_name=VALUES(full_name),grade=VALUES(grade),section=VALUES(section),class_level=VALUES(class_level),pre_score=VALUES(pre_score)
+                INSERT INTO students (id,user_id,full_name,grade,section,class_level,pre_score,pre_assessment_completed)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
+                ON DUPLICATE KEY UPDATE
+                  user_id=VALUES(user_id),
+                  full_name=VALUES(full_name),
+                  grade=VALUES(grade),
+                  section=VALUES(section),
+                  class_level=VALUES(class_level),
+                  pre_score=VALUES(pre_score),
+                  pre_assessment_completed=VALUES(pre_assessment_completed)
                 """,
-                (student["id"], uid, student["name"], student["grade"], student["section"], normalize_class_level(student["class"]), int(student["pre"])),
+                (student["id"], uid, student["name"], student["grade"], student["section"], normalize_class_level(student["class"]), pre_score, pre_completed),
             )
-
-        cur.execute("SELECT COUNT(*) AS total FROM passages")
-        if int(cur.fetchone()["total"]) == 0:
-            cur.execute("SELECT id FROM users WHERE email=%s", ("ms.villanueva@pnhs.edu",))
-            teacher_id = cur.fetchone()["id"]
-            for p in SEED_PASSAGES:
-                words = count_words(p["text"])
+            if pre_completed:
                 cur.execute(
-                    "INSERT INTO passages (id,title,genre,text,label,words,est_minutes,created_by) VALUES (%s,%s,%s,%s,%s,%s,%s,%s)",
-                    (p["id"], p["title"], p["genre"], p["text"], normalize_class_level(p["label"]), words, estimate_minutes(words), teacher_id),
+                    "UPDATE students SET pre_assessment_completed_at=COALESCE(pre_assessment_completed_at, NOW()) WHERE id=%s",
+                    (student["id"],),
                 )
-                upsert_assessment(cur, p["id"], SEED_ASSESSMENTS.get(p["id"], {"questions": []}))
+
+        cur.execute("SELECT id FROM users WHERE email=%s", ("ms.villanueva@pnhs.edu",))
+        teacher_id = cur.fetchone()["id"]
+
+        def should_refresh_seed_assessment(passage_id, seed_assessment):
+            cur.execute("SELECT id, short_answer_prompt FROM assessments WHERE passage_id=%s", (passage_id,))
+            assessment_row = cur.fetchone()
+            if not assessment_row:
+                return True
+
+            cur.execute("SELECT COUNT(*) AS total FROM assessment_questions WHERE assessment_id=%s", (assessment_row["id"],))
+            total_questions = int(cur.fetchone()["total"] or 0)
+            has_seed_short_answer = bool(str(seed_assessment.get("shortAnswerPrompt") or "").strip())
+            current_short_answer = str(assessment_row.get("short_answer_prompt") or "").strip()
+
+            # Upgrade the original sparse demo seeds (0-1 questions) to the richer seeded library.
+            if total_questions <= 1:
+                return True
+            if has_seed_short_answer and total_questions <= 1 and not current_short_answer:
+                return True
+            return False
+
+        for p in SEED_PASSAGES:
+            words = count_words(p["text"])
+            cur.execute(
+                "INSERT IGNORE INTO passages (id,title,genre,text,label,words,est_minutes,created_by) VALUES (%s,%s,%s,%s,%s,%s,%s,%s)",
+                (p["id"], p["title"], p["genre"], p["text"], normalize_class_level(p["label"]), words, estimate_minutes(words), teacher_id),
+            )
+            seed_assessment = SEED_ASSESSMENTS.get(p["id"], {"questions": []})
+            if should_refresh_seed_assessment(p["id"], seed_assessment):
+                upsert_assessment(cur, p["id"], seed_assessment, p["label"])
 
         cur.execute("SELECT COUNT(*) AS total FROM weekly_assignments")
         if int(cur.fetchone()["total"]) == 0:
@@ -591,7 +1054,7 @@ def auth_login():
         cur.execute(
             """
             SELECT u.id,u.email,u.password_hash,u.role,u.is_active,
-                   s.id AS student_id,s.full_name,s.grade,s.section,s.class_level,s.pre_score,
+                   s.id AS student_id,s.full_name,s.grade,s.section,s.class_level,s.pre_score,s.pre_assessment_completed,
                    s.avatar_type,s.avatar_value
             FROM users u LEFT JOIN students s ON s.user_id=u.id
             WHERE u.email=%s
@@ -634,6 +1097,44 @@ def auth_me():
     return api_ok({"user": serialize_user(user)})
 
 
+@app.post("/api/student/pre-assessment")
+def student_pre_assessment_submit():
+    user, err = require_role("student")
+    if err:
+        return err
+
+    payload = request.get_json(silent=True) or {}
+    try:
+        score = int(payload.get("score") or 0)
+    except (TypeError, ValueError):
+        score = 0
+    score = max(0, min(100, score))
+    class_level = classify_pre_assessment_level(score)
+
+    with db_cursor(True) as (_, cur):
+        student = student_row(cur, user)
+        if not student:
+            return api_error("Student profile not found.", 404)
+
+        cur.execute(
+            """
+            UPDATE students
+            SET pre_score=%s, class_level=%s, pre_assessment_completed=1, pre_assessment_completed_at=NOW()
+            WHERE id=%s
+            """,
+            (score, class_level, student["id"]),
+        )
+        refreshed_user = fetch_user_by_id(cur, user["id"])
+
+    return api_ok(
+        {
+            "user": serialize_user(refreshed_user),
+            "preScore": score,
+            "classLevel": class_level,
+        }
+    )
+
+
 @app.put("/api/student/profile/avatar")
 def student_profile_avatar_update():
     user, err = require_role("student")
@@ -673,8 +1174,10 @@ def passages_list():
         cur.execute("SELECT id,title,genre,text,label,words,est_minutes,confidence FROM passages ORDER BY created_at DESC,id DESC")
         rows = cur.fetchall()
         passages = [serialize_passage(row) for row in rows]
+        usage_weeks = get_passage_usage_weeks(cur)
         for passage in passages:
             passage["assessment"] = fetch_assessment(cur, passage["id"])
+            passage["usedWeeks"] = usage_weeks.get(passage["id"], [])
     return api_ok(passages)
 
 
@@ -691,6 +1194,8 @@ def passage_get(passage_id):
             return api_error("Passage not found.", 404)
         passage = serialize_passage(row)
         passage["assessment"] = fetch_assessment(cur, passage_id)
+        cur.execute("SELECT week_no FROM weekly_assignments WHERE passage_id=%s ORDER BY week_no,id", (passage_id,))
+        passage["usedWeeks"] = [int(item["week_no"]) for item in cur.fetchall()]
     return api_ok(passage)
 
 
@@ -715,7 +1220,10 @@ def save_passage(cur, payload, author_id, passage_id=None):
 
     words = count_words(text)
     minutes = estimate_minutes(words)
-    assessment = payload.get("assessment") or {"questions": [], "shortAnswerPrompt": ""}
+    assessment = normalize_assessment_payload(
+        payload.get("assessment") or {"questions": [], "shortAnswerPrompt": ""},
+        label,
+    )
 
     if passage_id:
         cur.execute("SELECT id FROM passages WHERE id=%s", (passage_id,))
@@ -733,7 +1241,7 @@ def save_passage(cur, payload, author_id, passage_id=None):
             (passage_id, title, genre, text, label, words, minutes, confidence, author_id),
         )
 
-    upsert_assessment(cur, passage_id, assessment)
+    upsert_assessment(cur, passage_id, assessment, label)
     cur.execute("SELECT id,title,genre,text,label,words,est_minutes,confidence FROM passages WHERE id=%s", (passage_id,))
     out = serialize_passage(cur.fetchone())
     out["assessment"] = fetch_assessment(cur, passage_id)
@@ -853,6 +1361,8 @@ def student_weekly_passages():
         student = student_row(cur, user)
         if not student:
             return api_error("Student profile not found.", 404)
+        if not pre_assessment_completed(student):
+            return api_error("Complete the pre-assessment first.", 403)
         class_level = normalize_class_level(student["class_level"])
         cur.execute(
             """
@@ -877,6 +1387,8 @@ def student_completions():
         student = student_row(cur, user)
         if not student:
             return api_error("Student profile not found.", 404)
+        if not pre_assessment_completed(student):
+            return api_error("Complete the pre-assessment first.", 403)
         cur.execute("SELECT passage_id FROM passage_completions WHERE student_id=%s AND week_no=%s ORDER BY completed_at", (student["id"], week))
         ids = [row["passage_id"] for row in cur.fetchall()]
     return api_ok({"week": week, "completedPassageIds": ids})
@@ -912,6 +1424,8 @@ def student_attempts():
         student = student_row(cur, user)
         if not student:
             return api_error("Student profile not found.", 404)
+        if not pre_assessment_completed(student):
+            return api_error("Complete the pre-assessment first.", 403)
         class_level = normalize_class_level(student["class_level"])
 
         cur.execute("SELECT 1 FROM weekly_assignments WHERE week_no=%s AND class_level=%s AND passage_id=%s", (week, class_level, passage_id))
@@ -951,6 +1465,119 @@ def student_attempts():
     return api_ok({"attemptId": attempt_id, "week": week, "passageId": passage_id, "completedPassageIds": completed}, 201)
 
 
+@app.get("/api/teacher/dashboard")
+def teacher_dashboard():
+    user, err = require_role("teacher")
+    if err:
+        return err
+    del user
+
+    with db_cursor(True) as (_, cur):
+        students = fetch_teacher_student_summaries(cur)
+        cur.execute(
+            """
+            SELECT qa.student_id,s.full_name,p.id AS passage_id,p.title,qa.score_pct,qa.short_answer_text,qa.submitted_at
+            FROM quiz_attempts qa
+            JOIN students s ON s.id=qa.student_id
+            JOIN passages p ON p.id=qa.passage_id
+            ORDER BY qa.submitted_at DESC, qa.id DESC
+            LIMIT 6
+            """
+        )
+        submissions = []
+        for row in cur.fetchall():
+            submissions.append(
+                {
+                    "studentId": row["student_id"],
+                    "studentName": row["full_name"],
+                    "passageId": row["passage_id"],
+                    "passageTitle": row["title"],
+                    "score": int(row["score_pct"] or 0),
+                    "status": "Pending Review" if row.get("short_answer_text") else "Scored",
+                    "submittedAt": row["submitted_at"].isoformat() if row.get("submitted_at") else None,
+                }
+            )
+
+    level_counts = {"EASY": 0, "MODERATE": 0, "HARD": 0}
+    level_students = {"EASY": [], "MODERATE": [], "HARD": []}
+    pending_reviews = []
+    recommendation_count = 0
+    for student in students:
+        level = normalize_class_level(student["classLevel"])
+        level_counts[level] += 1
+        level_students[level].append(student["name"])
+        if student["pendingReviewCount"]:
+            pending_reviews.append(student)
+        if len(student["progress"]) >= 2:
+            recommendation_count += 1
+
+    return api_ok(
+        {
+            "levelCounts": level_counts,
+            "levelStudents": level_students,
+            "recentSubmissions": submissions,
+            "pendingReviews": pending_reviews[:3],
+            "recommendationCount": recommendation_count,
+            "studentCount": len(students),
+        }
+    )
+
+
+@app.get("/api/teacher/students")
+def teacher_students():
+    user, err = require_role("teacher")
+    if err:
+        return err
+    del user
+
+    with db_cursor(True) as (_, cur):
+        students = fetch_teacher_student_summaries(cur)
+    return api_ok({"students": students})
+
+
+@app.get("/api/teacher/students/<student_id>")
+def teacher_student_detail(student_id):
+    user, err = require_role("teacher")
+    if err:
+        return err
+    del user
+
+    with db_cursor(True) as (_, cur):
+        cur.execute(
+            """
+            SELECT s.id,s.full_name,s.grade,s.section,s.class_level,s.pre_score,s.pre_assessment_completed,u.email
+            FROM students s
+            JOIN users u ON u.id=s.user_id
+            WHERE s.id=%s
+            """,
+            (student_id,),
+        )
+        student = cur.fetchone()
+        if not student:
+            return api_error("Student not found.", 404)
+
+        progress = fetch_student_progress(cur, student_id)
+        pending_short_answer = fetch_pending_short_answer(cur, student_id)
+
+    latest = progress[-1] if progress else None
+    payload = {
+        "student": {
+            "id": student["id"],
+            "name": student["full_name"],
+            "email": student["email"],
+            "grade": student["grade"],
+            "section": student["section"],
+            "classLevel": student["class_level"],
+            "preScore": int(student["pre_score"] or 0),
+            "preAssessmentCompleted": bool(int(student["pre_assessment_completed"] or 0)),
+        },
+        "progress": progress,
+        "latest": latest,
+        "pendingShortAnswer": pending_short_answer,
+    }
+    return api_ok(payload)
+
+
 @app.get("/api/student/progress")
 def student_progress():
     user, err = require_role("student")
@@ -960,22 +1587,9 @@ def student_progress():
         student = student_row(cur, user)
         if not student:
             return api_error("Student profile not found.", 404)
-        cur.execute(
-            "SELECT week_no, ROUND(AVG(score_pct)) AS score FROM quiz_attempts WHERE student_id=%s GROUP BY week_no ORDER BY week_no",
-            (student["id"],),
-        )
-        rows = cur.fetchall()
-
-    progress = []
-    for row in rows:
-        score = int(row["score"] or 0)
-        if score >= 75:
-            recommendation, difficulty = "Step UP", "HARD"
-        elif score >= 60:
-            recommendation, difficulty = "Maintain", "MODERATE"
-        else:
-            recommendation, difficulty = "Step DOWN", "EASY"
-        progress.append({"week": int(row["week_no"]), "score": score, "difficulty": difficulty, "recommendation": recommendation})
+        if not pre_assessment_completed(student):
+            return api_error("Complete the pre-assessment first.", 403)
+        progress = fetch_student_progress(cur, student["id"])
     return api_ok({"progress": progress})
 
 

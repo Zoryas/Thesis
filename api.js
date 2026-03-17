@@ -195,7 +195,12 @@
         throw error;
       });
     },
-    me: function() {
+    me: function(options) {
+      var settings = options || {};
+      var cachedUser = settings.forceRefresh ? null : getCachedUser();
+      if (cachedUser) {
+        return Promise.resolve({ user: cachedUser, cached: true });
+      }
       return request("/api/auth/me").then(function(data) {
         if (data && data.user) cacheUser(data.user);
         return data;
@@ -243,8 +248,23 @@
     submitStudentAttempt: function(payload) {
       return request("/api/student/attempts", { method: "POST", body: payload });
     },
+    submitStudentPreAssessment: function(payload) {
+      return request("/api/student/pre-assessment", { method: "POST", body: payload }).then(function(data) {
+        if (data && data.user) cacheUser(data.user);
+        return data;
+      });
+    },
     getStudentProgress: function() {
       return request("/api/student/progress");
+    },
+    getTeacherDashboard: function() {
+      return request("/api/teacher/dashboard");
+    },
+    getTeacherStudents: function() {
+      return request("/api/teacher/students");
+    },
+    getTeacherStudentDetail: function(studentId) {
+      return request("/api/teacher/students/" + encodeURIComponent(studentId));
     },
     updateStudentAvatar: function(payload) {
       return request("/api/student/profile/avatar", { method: "PUT", body: payload }).then(function(data) {
