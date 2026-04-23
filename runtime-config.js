@@ -1,4 +1,4 @@
-(function(global) {
+﻿(function(global) {
   var pathname = String((global.location && global.location.pathname) || "/");
   var segments = pathname.split("/").filter(Boolean);
   var firstSegment = segments.length ? segments[0] : "";
@@ -29,3 +29,5 @@
   var isLocalHost = hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1" || hostname.endsWith(".local");
   global.READWISE_API_BASE_URL = isLocalHost ? "http://localhost:5000" : "https://read-wise-3tto.onrender.com";
 })(window);
+
+

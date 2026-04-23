@@ -1,4 +1,4 @@
-(function(global) {
+﻿(function(global) {
   // Default to same host as the page (handles localhost:80, localhost:8080, 127.0.0.1, etc.).
   var defaultHost = (global.location && global.location.hostname) ? global.location.hostname : "localhost";
   var RAW_BASE = global.READWISE_API_BASE_URL || ("http://" + defaultHost + ":5000");
@@ -119,7 +119,9 @@
       headers["X-Auth-Token"] = token;
     }
 
-    if (body !== undefined && body !== null && typeof body !== "string") {
+    var isFormData = typeof FormData !== "undefined" && body instanceof FormData;
+
+    if (body !== undefined && body !== null && typeof body !== "string" && !isFormData) {
       headers["Content-Type"] = headers["Content-Type"] || "application/json";
       body = JSON.stringify(body);
     }
@@ -263,8 +265,28 @@
     getTeacherStudents: function() {
       return request("/api/teacher/students");
     },
+    getTeacherReportSummary: function(activeWeek) {
+      var target = normalizeWeek(activeWeek);
+      return request("/api/teacher/reports/summary?activeWeek=" + target);
+    },
     getTeacherStudentDetail: function(studentId) {
       return request("/api/teacher/students/" + encodeURIComponent(studentId));
+    },
+    importPassagesCsv: function(file) {
+      var form = new FormData();
+      form.append("file", file);
+      return request("/api/passages/import-csv", { method: "POST", body: form });
+    },
+    applyTeacherRecommendation: function(studentId) {
+      return request("/api/teacher/students/" + encodeURIComponent(studentId) + "/apply-recommendation", {
+        method: "POST"
+      });
+    },
+    overrideStudentLevel: function(studentId, level, reason) {
+      return request("/api/teacher/students/" + encodeURIComponent(studentId) + "/override-level", {
+        method: "POST",
+        body: { level: level, reason: reason }
+      });
     },
     updateStudentAvatar: function(payload) {
       return request("/api/student/profile/avatar", { method: "PUT", body: payload }).then(function(data) {
@@ -274,3 +296,5 @@
     }
   };
 })(window);
+
+

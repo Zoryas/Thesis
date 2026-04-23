@@ -1,73 +1,19 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Questions - TalaSaAI</title>
+  <title>Questions - ReadWise</title>
   <link rel="stylesheet" href="../stylesheets/shared.css?v=20260316b">
   <script src="../runtime-config.js?v=20260316c"></script>
-  <style>
-    #difficulty-slider {
-      -webkit-appearance: none;
-      appearance: none;
-      width: 100%;
-      height: 8px;
-      border-radius: 999px;
-      background: linear-gradient(to right, var(--primary) 0%, var(--primary) 50%, #dfe6ee 50%, #dfe6ee 100%);
-      outline: none;
-      transition: background 0.2s ease;
-    }
-
-    #difficulty-slider::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      appearance: none;
-      width: 22px;
-      height: 22px;
-      border-radius: 50%;
-      border: 2px solid var(--primary);
-      background: #ffffff;
-      box-shadow: 0 2px 8px rgba(20, 36, 64, 0.2);
-      cursor: pointer;
-    }
-
-    #difficulty-slider::-moz-range-thumb {
-      width: 22px;
-      height: 22px;
-      border-radius: 50%;
-      border: 2px solid var(--primary);
-      background: #ffffff;
-      box-shadow: 0 2px 8px rgba(20, 36, 64, 0.2);
-      cursor: pointer;
-    }
-
-    .difficulty-scale {
-      display: flex;
-      justify-content: space-between;
-      gap: 10px;
-      margin-top: 10px;
-      font-size: 12px;
-      color: var(--muted);
-    }
-
-    .difficulty-tick {
-      flex: 1;
-      text-align: center;
-      transition: color 0.2s ease, font-weight 0.2s ease;
-    }
-
-    .difficulty-tick.active {
-      color: var(--primary);
-      font-weight: 700;
-    }
-  </style>
 </head>
 <body>
-<div class="demo-banner">TalaSaAI System</div>
+<div class="demo-banner">ReadWise System | Pulo National High School</div>
 <div class="layout">
   <aside class="sidebar">
     <div class="sidebar-logo">
-      <div class="logo-mark"><img src="../image/TalaSaAi.png" alt="TalaSaAI logo"></div>
-      <h2>TalaSaAI</h2>
+      <div class="logo-mark">RW</div>
+      <h2>ReadWise</h2>
       <p>Student Portal</p>
     </div>
     <nav>
@@ -97,17 +43,6 @@
         <p id="sa-prompt" class="question-prompt"></p>
         <textarea class="form-control" id="short-answer" rows="5" placeholder="Write your answer here in complete sentences..."></textarea>
         <p class="micro-copy" style="margin-top:6px">This response will be reviewed and scored by your teacher.</p>
-      </div>
-
-      <div class="card" id="difficulty-card" style="margin-top:16px">
-        <div class="section-title">Self-Reported Difficulty Rating</div>
-        <p class="micro-copy" style="margin-bottom:12px">Rate how difficult this assessment felt while answering it.</p>
-        <input type="range" id="difficulty-slider" min="1" max="5" step="2" value="3" aria-label="Self-reported difficulty rating">
-        <div class="difficulty-scale" aria-hidden="true">
-          <span class="difficulty-tick" data-value="1">Easy</span>
-          <span class="difficulty-tick" data-value="3">Moderate</span>
-          <span class="difficulty-tick" data-value="5">Difficult</span>
-        </div>
       </div>
 
       <div class="submission-actions">
@@ -358,19 +293,6 @@
     });
   }
 
-  function updateDifficultySliderVisual() {
-    const slider = document.getElementById("difficulty-slider");
-    if (!slider) return;
-    const min = Number(slider.min || 1);
-    const max = Number(slider.max || 5);
-    const value = Number(slider.value || 3);
-    const percent = ((value - min) / (max - min)) * 100;
-    slider.style.background = "linear-gradient(to right, var(--primary) 0%, var(--primary) " + percent + "%, #dfe6ee " + percent + "%, #dfe6ee 100%)";
-    document.querySelectorAll(".difficulty-tick").forEach(function(tick) {
-      tick.classList.toggle("active", Number(tick.dataset.value) === value);
-    });
-  }
-
   function getResponse(index, question) {
     if (question.type === "true_false_modified") {
       const selected = document.querySelector('input[name="q' + index + '"]:checked');
@@ -488,17 +410,10 @@
     const pct = totalPossible ? Math.round((totalEarned / totalPossible) * 100) : 0;
     const sa = document.getElementById("short-answer");
     const saVal = sa ? sa.value.trim() : "";
-    const difficultySlider = document.getElementById("difficulty-slider");
-    const difficultyValue = difficultySlider ? Number(difficultySlider.value || 3) : null;
     const underReview = Boolean(shortAnswerPrompt);
 
     if (underReview && !saVal) {
       showToast("Please complete the short answer for teacher review.", "#c0392b");
-      return;
-    }
-
-    if (!difficultyValue) {
-      showToast("Please provide your self-reported difficulty rating.", "#c0392b");
       return;
     }
 
@@ -509,7 +424,6 @@
       week: activeWeek,
       passageId: pid,
       shortAnswer: saVal,
-      difficulty: difficultyValue,
       underReview: underReview,
       responses: responses,
       readingTime: sessionStorage.getItem("readingTime_" + pid) || "-"
@@ -522,7 +436,6 @@
         score: pct,
         correct: fullyCorrect,
         total: qs.length,
-        difficulty: difficultyValue,
         shortAnswer: saVal,
         responses: responses,
         readingTime: sessionStorage.getItem("readingTime_" + pid) || "-"
@@ -549,9 +462,6 @@
   }
 
   bootstrapPage();
-  updateDifficultySliderVisual();
-  document.getElementById("difficulty-slider").addEventListener("input", updateDifficultySliderVisual);
 </script>
 </body>
 </html>
-

@@ -1,19 +1,19 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Passage Library - ReadWise</title>
+  <title>Passage Library - TalaSaAI</title>
   <link rel="stylesheet" href="../stylesheets/shared.css?v=20260316b">
   <script src="../runtime-config.js?v=20260316c"></script>
 </head>
 <body>
-<div class="demo-banner">ReadWise System | Pulo National High School</div>
+<div class="demo-banner">TalaSaAI System</div>
 <div class="layout">
   <aside class="sidebar">
     <div class="sidebar-logo">
-      <div class="logo-mark">RW</div>
-      <h2>ReadWise</h2>
+      <div class="logo-mark"><img src="../image/TalaSaAi.png" alt="TalaSaAI logo"></div>
+      <h2>TalaSaAI</h2>
       <p>Teacher Portal</p>
     </div>
     <nav>
@@ -142,7 +142,7 @@
       const color = getClassColor(level);
       const display = getClassDisplayName(level);
       const availablePool = passages.filter(function(passage) {
-        return mapPassageLabelToClassLevel(passage.label) === normalizeClassLevel(level);
+        return mapPassageLabelToClassLevel(passage.label) === normalizeClassLevel(level) && !passage.isDraft;
       }).length;
 
       const card = document.createElement("div");
@@ -155,7 +155,7 @@
         '<div><div class="assignment-panel-subtitle">Class</div><h3 style="color:' + color + '">' + display + '</h3></div>' +
         '<span class="badge badge-primary">' + countText + "</span></div>" +
         (availablePool < MAX_WEEKLY_PASSAGES_PER_CLASS
-          ? '<div class="surface-note surface-note-warn">Only ' + availablePool + ' matching passage(s) available. Add more to reach 5.</div>'
+          ? '<div class="surface-note surface-note-warn">Only ' + availablePool + ' ready passage(s) available. Draft imports are excluded until their assessments are completed.</div>'
           : "") +
         '<div id="class_list_' + level + '" class="assignment-list"></div>' +
         '<div class="action-row">' +
@@ -182,9 +182,10 @@
   function renderPassages() {
     const week = getCurrentWeek();
     const filteredPassages = getFilteredPassages();
+    const draftCount = filteredPassages.filter(function(passage) { return Boolean(passage.isDraft); }).length;
     summary.textContent =
       filteredPassages.length + " of " + passages.length +
-      " passage(s) shown. Assign exactly 5 per class for Week " + week + ".";
+      " passage(s) shown. " + draftCount + " draft passage(s) still need assessments before assignment for Week " + week + ".";
 
     if (!filteredPassages.length) {
       grid.innerHTML =
@@ -203,23 +204,31 @@
         : "Saved without confidence score";
       const assessment = passage.assessment || { questions: [], shortAnswerPrompt: "" };
       const questionCount = Array.isArray(assessment.questions) ? assessment.questions.length : 0;
-      const assessmentText = questionCount + " question" + (questionCount === 1 ? "" : "s") +
-        (assessment.shortAnswerPrompt ? " + short answer" : "");
+      const isDraft = Boolean(passage.isDraft);
+      const assessmentText = isDraft
+        ? "Draft import: complete the assessment before assigning."
+        : (questionCount + " question" + (questionCount === 1 ? "" : "s") +
+          (assessment.shortAnswerPrompt ? " + short answer" : ""));
       const classLevel = mapPassageLabelToClassLevel(passage.label);
       const classDisplay = getClassDisplayName(classLevel);
       const isAssigned = getAssignmentsFor(classLevel).includes(passage.id);
       const usedWeeks = Array.isArray(passage.usedWeeks) ? passage.usedWeeks.map(function(value) { return Number(value); }).filter(Boolean) : [];
       const usedThisWeek = usedWeeks.includes(week);
       const usedPastWeeks = usedWeeks.filter(function(usedWeek) { return usedWeek < week; });
-      const usedWeekText = usedPastWeeks.length ? ("Used in Week " + usedPastWeeks.join(", ")) : "Not used in previous weeks";
-      const disabled = isAssigned ? "disabled" : "";
-      const assignText = isAssigned ? "Assigned to " + classDisplay : "Assign to " + classDisplay + " Class";
+      const usedWeekText = isDraft
+        ? "Draft passages cannot be assigned until published."
+        : (usedPastWeeks.length ? ("Used in Week " + usedPastWeeks.join(", ")) : "Not used in previous weeks");
+      const disabled = (isAssigned || isDraft) ? "disabled" : "";
+      const assignText = isDraft
+        ? "Complete assessment to assign"
+        : (isAssigned ? "Assigned to " + classDisplay : "Assign to " + classDisplay + " Class");
 
       return (
-        '<div class="card library-card">' +
+        '<div class="card library-card ' + (isDraft ? "library-card-draft" : "") + '">' +
           '<div class="library-card-copy">' +
             '<div class="pill-row">' +
               '<span class="badge ' + badgeClass(passage.label) + '">' + escapeHtml(passage.label) + '</span>' +
+              (isDraft ? '<span class="badge badge-draft">Draft</span>' : '') +
               '<span class="badge badge-primary">' + escapeHtml(passage.genre) + "</span>" +
               '<span class="meta-pill">' + escapeHtml(confidenceText) + "</span>" +
             "</div>" +
@@ -230,14 +239,14 @@
               '<span class="library-card-fact">Target class: ' + classDisplay + '</span>' +
             "</div>" +
             '<div class="surface-note">Assessment: <strong>' + escapeHtml(assessmentText) + "</strong></div>" +
-            '<div class="surface-note ' + (usedThisWeek ? "surface-note-warn" : "") + '">' +
+            '<div class="surface-note ' + ((usedThisWeek || isDraft) ? "surface-note-warn" : "") + '">' +
               (usedThisWeek ? ("Already assigned this Week " + week + ".") : escapeHtml(usedWeekText)) +
             "</div>" +
             '<p class="library-card-preview">' + escapeHtml(preview) + "</p>" +
           "</div>" +
           '<div class="library-card-actions">' +
             '<button class="btn btn-outline btn-sm" ' + disabled + ' onclick="assignPassage(\'' + passage.id + '\')">' + escapeHtml(assignText) + "</button>" +
-            '<button class="btn btn-sm btn-secondary" onclick="editPassage(\'' + passage.id + '\')">Edit</button>' +
+            '<button class="btn btn-sm btn-secondary" onclick="editPassage(\'' + passage.id + '\')">' + (isDraft ? "Complete Draft" : "Edit") + '</button>' +
             '<button class="btn btn-danger btn-sm" onclick="removePassage(\'' + passage.id + '\')">Delete</button>' +
           "</div>" +
         "</div>"
@@ -260,6 +269,10 @@
     const passage = passages.find(function(entry) { return entry.id === id; });
     if (!passage) {
       showToast("Passage not found.", "#c0392b");
+      return;
+    }
+    if (passage.isDraft) {
+      showToast("Complete the assessment before assigning this draft passage.", "#c0392b");
       return;
     }
     const targetClass = mapPassageLabelToClassLevel(passage.label);
@@ -288,13 +301,13 @@
     const normalized = normalizeClassLevel(level);
     const assigned = getAssignmentsFor(normalized).slice();
     const available = passages.filter(function(passage) {
-      return mapPassageLabelToClassLevel(passage.label) === normalized && !assigned.includes(passage.id);
+      return mapPassageLabelToClassLevel(passage.label) === normalized && !assigned.includes(passage.id) && !passage.isDraft;
     });
     const slots = Math.max(0, MAX_WEEKLY_PASSAGES_PER_CLASS - assigned.length);
     const candidates = available.slice(0, slots);
 
     if (!candidates.length) {
-      showToast("No available passages to auto-fill.", "#c0392b");
+      showToast("No ready passages are available to auto-fill.", "#c0392b");
       return;
     }
 
@@ -395,3 +408,8 @@
 </script>
 </body>
 </html>
+
+
+
+
+

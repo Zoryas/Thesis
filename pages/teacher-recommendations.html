@@ -1,18 +1,18 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Recommendations - ReadWise</title>
+  <title>Recommendations - TalaSaAI</title>
   <link rel="stylesheet" href="../stylesheets/shared.css?v=20260316b">
   <script src="../runtime-config.js?v=20260316c"></script>
 </head>
 <body>
-<div class="demo-banner">ReadWise System | Pulo National High School</div>
+<div class="demo-banner">TalaSaAI System</div>
 <div class="layout">
   <aside class="sidebar">
     <div class="sidebar-logo">
-      <div class="logo-mark">RW</div><h2>ReadWise</h2><p>Teacher Portal</p>
+      <div class="logo-mark"><img src="../image/TalaSaAi.png" alt="TalaSaAI logo"></div><h2>TalaSaAI</h2><p>Teacher Portal</p>
     </div>
     <nav>
       <a href="teacher-dashboard.html"><span class="icon" data-icon="dashboard"></span><span class="nav-label">Dashboard</span></a>
@@ -41,9 +41,9 @@
             <tr>
               <th>Student</th>
               <th>Current Level</th>
-              <th>Previous Score</th>
               <th>Latest Score</th>
-              <th>2-Session Avg</th>
+              <th>Self-Rating</th>
+              <th>Task Completion</th>
               <th>System Recommendation</th>
               <th>Action</th>
             </tr>
@@ -57,10 +57,11 @@
       <div style="font-size:13px;color:var(--secondary)">
         <strong>How Recommendations Work</strong>
         <div style="color:var(--muted);margin-top:8px;display:grid;gap:6px">
-          <div>Recommendations are generated automatically after every 2 consecutive sessions.</div>
-          <div>Average 75% and above: <strong style="color:var(--easy)">Step Up</strong> to a harder level.</div>
-          <div>Average 55% to 74%: <strong style="color:var(--accent)">Maintain</strong> the current level.</div>
-          <div>Average below 55%: <strong style="color:var(--hard)">Step Down</strong> to an easier level.</div>
+          <div>The engine uses quiz score, task completion, and self-reported difficulty for each session.</div>
+          <div>Two consecutive scores below 60% with <strong>DIFFICULT</strong> self-ratings: <strong style="color:var(--hard)">Step Down</strong> one level.</div>
+          <div>Score above 80% with an <strong>EASY</strong> self-rating: <strong style="color:var(--easy)">Step Up</strong> one level.</div>
+          <div>All other signal combinations: <strong style="color:var(--accent)">Maintain</strong> current level.</div>
+          <div>Teachers can confirm the recommendation or override it before applying.</div>
         </div>
       </div>
     </div>
@@ -114,19 +115,14 @@
     return { color: "var(--accent)", background: "#fff3cd" };
   }
 
-  function getTwoSessionSummary(student) {
+  function getLatestSummary(student) {
     var progress = Array.isArray(student.progress) ? student.progress : [];
-    if (progress.length < 2) return null;
-    var recent = progress.slice(-2);
-    var previous = recent[0];
-    var latest = recent[1];
-    var average = Math.round((Number(previous.score || 0) + Number(latest.score || 0)) / 2);
-    var recommendation = average >= 75 ? "Step Up" : average >= 55 ? "Maintain" : "Step Down";
+    if (!progress.length) return null;
+    var latest = progress[progress.length - 1];
     return {
-      previous: previous,
       latest: latest,
-      average: average,
-      recommendation: recommendation
+      recommendation: latest.recommendation || "Maintain",
+      recommendedLevel: latest.recommendedLevel || latest.difficulty || student.classLevel || "MODERATE"
     };
   }
 
@@ -149,11 +145,11 @@
       }
 
       tbody.innerHTML = students.map(function(student) {
-        var summary = getTwoSessionSummary(student);
+        var summary = getLatestSummary(student);
         var rowId = "row-" + student.id;
         if (!summary) {
           return '<tr id="' + rowId + '">' +
-            '<td><strong>' + escapeHtml(student.name) + '</strong><div class="micro-copy">Waiting for two scored weeks</div></td>' +
+            '<td><strong>' + escapeHtml(student.name) + '</strong><div class="micro-copy">No completed sessions yet</div></td>' +
             '<td><span class="badge ' + badgeClass(student.classLevel || "MODERATE") + '">' + escapeHtml(getClassDisplayName(student.classLevel || "MODERATE")) + '</span></td>' +
             '<td colspan="3"><span class="muted-copy">Not enough student progress yet</span></td>' +
             '<td><span class="badge badge-primary">Pending</span></td>' +
@@ -166,12 +162,12 @@
 
         var styles = recommendationStyle(summary.recommendation);
         return '<tr id="' + rowId + '">' +
-          '<td><strong>' + escapeHtml(student.name) + '</strong><div class="micro-copy">Weeks ' + escapeHtml(summary.previous.week) + ' and ' + escapeHtml(summary.latest.week) + '</div></td>' +
+          '<td><strong>' + escapeHtml(student.name) + '</strong><div class="micro-copy">Latest session: Week ' + escapeHtml(summary.latest.week) + '</div></td>' +
           '<td><span class="badge ' + badgeClass(student.classLevel || "MODERATE") + '">' + escapeHtml(getClassDisplayName(student.classLevel || "MODERATE")) + '</span></td>' +
-          '<td>' + escapeHtml(summary.previous.score) + '%</td>' +
           '<td>' + escapeHtml(summary.latest.score) + '%</td>' +
-          '<td><strong>' + escapeHtml(summary.average) + '%</strong></td>' +
-          '<td><span style="font-weight:800;color:' + styles.color + ';background:' + styles.background + ';padding:4px 12px;border-radius:20px;font-size:13px">' + escapeHtml(summary.recommendation) + '</span></td>' +
+          '<td><strong>' + escapeHtml(getClassDisplayName(summary.latest.selfRating || "MODERATE")) + '</strong></td>' +
+          '<td>' + (summary.latest.taskCompleted ? '<span class="badge badge-easy">Completed</span>' : '<span class="badge badge-hard">Not completed</span>') + '</td>' +
+          '<td><span style="font-weight:800;color:' + styles.color + ';background:' + styles.background + ';padding:4px 12px;border-radius:20px;font-size:13px">' + escapeHtml(summary.recommendation) + '</span><div class="micro-copy">Target: ' + escapeHtml(getClassDisplayName(summary.recommendedLevel)) + '</div></td>' +
           '<td style="display:flex;gap:6px;flex-wrap:wrap">' +
             '<button class="btn btn-success btn-sm" onclick="confirmRec(\'' + escapeHtml(student.id) + '\',\'' + escapeHtml(student.name).replace(/'/g, "\\'") + '\')">Confirm</button>' +
             '<button class="btn btn-outline btn-sm" onclick="openModal(\'' + escapeHtml(student.id) + '\',\'' + escapeHtml(student.name).replace(/'/g, "\\'") + '\')">Override</button>' +
@@ -183,32 +179,54 @@
     }
   }
 
-  function confirmRec(sid, name) {
+  async function confirmRec(sid, name) {
     var btn = document.querySelector("#row-" + sid + " .btn-success");
     if (btn) {
-      btn.textContent = "Confirmed";
       btn.disabled = true;
-      btn.style.opacity = ".6";
+      btn.textContent = "Applying...";
     }
-    showToast("Recommendation confirmed for " + name + ".");
+    try {
+      var response = await ReadWiseAPI.applyTeacherRecommendation(sid);
+      showToast((response && response.message) || ("Recommendation confirmed for " + name + "."));
+      bootstrapPage();
+    } catch (error) {
+      showToast(error.message || "Unable to apply recommendation.", "#c0392b");
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = "Confirm";
+      }
+    }
   }
 
   function openModal(sid, name) {
     overrideSid = sid;
     document.getElementById("modal-student-name").textContent = name;
+    document.getElementById("modal-reason").value = "";
     document.getElementById("override-modal").classList.add("active");
   }
 
   function closeModal() {
     document.getElementById("override-modal").classList.remove("active");
+    document.getElementById("modal-reason").value = "";
     overrideSid = null;
   }
 
-  function confirmOverride() {
+  async function confirmOverride() {
+    if (!overrideSid) {
+      showToast("No student selected for override.", "#c0392b");
+      return;
+    }
     var level = document.getElementById("modal-level-select").value;
+    var reason = document.getElementById("modal-reason").value;
     var studentName = document.getElementById("modal-student-name").textContent || "the selected student";
-    showToast("Level overridden to " + level + " for " + studentName + ".");
-    closeModal();
+    try {
+      var response = await ReadWiseAPI.overrideStudentLevel(overrideSid, level, reason);
+      showToast((response && response.message) || ("Level overridden to " + level + " for " + studentName + "."));
+      closeModal();
+      bootstrapPage();
+    } catch (error) {
+      showToast(error.message || "Unable to save override.", "#c0392b");
+    }
   }
 
   async function logout() {
@@ -225,4 +243,9 @@
 </script>
 </body>
 </html>
+
+
+
+
+
 

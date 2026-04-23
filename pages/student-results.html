@@ -1,18 +1,18 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Results - ReadWise</title>
+  <title>Results - TalaSaAI</title>
   <link rel="stylesheet" href="../stylesheets/shared.css?v=20260316b">
   <script src="../runtime-config.js?v=20260316c"></script>
 </head>
 <body>
-<div class="demo-banner">ReadWise System | Pulo National High School</div>
+<div class="demo-banner">TalaSaAI System</div>
 <div class="layout">
   <aside class="sidebar">
     <div class="sidebar-logo">
-      <div class="logo-mark">RW</div><h2>ReadWise</h2><p>Student Portal</p>
+      <div class="logo-mark"><img src="../image/TalaSaAi.png" alt="TalaSaAI logo"></div><h2>TalaSaAI</h2><p>Student Portal</p>
     </div>
     <nav>
       <a href="student-profile.html"><span class="icon" data-icon="profile"></span><span class="nav-label">My Profile</span></a>
@@ -54,6 +54,11 @@
           <div class="stat-label">System Recommendation</div>
           <div id="rec-badge" style="margin-top:10px"></div>
         </div>
+      </div>
+
+      <div class="card" style="margin-bottom:16px">
+        <div class="section-title">Your Difficulty Rating</div>
+        <div id="self-rating" class="surface-note">Not provided</div>
       </div>
 
       <div class="card" style="margin-bottom:16px">
@@ -105,6 +110,7 @@
     const result = raw ? JSON.parse(raw) : fallback;
     const resultWeek = Number(result.week || activeWeek);
     const underReview = !!result.underReview;
+    const selfRating = String(result.selfRating || "").trim().toUpperCase();
     const reviewStatusEl = document.getElementById("review-status");
     const reviewNoteEl = document.getElementById("review-note");
 
@@ -131,17 +137,33 @@
       ? "Short answer submitted. Waiting for teacher scoring."
       : "Auto-scored result is finalized.";
 
-    let recommendation = "", recColor = "";
-    let recommendationHint = "Based on your score";
+    let recommendation = "Maintain", recColor = "var(--accent)";
+    let recommendationHint = "Based on score, completion, and your self-rating";
     if (underReview) {
       recommendation = "Pending Review";
       recColor = "var(--moderate)";
       recommendationHint = "Waiting for teacher scoring";
-    } else if (result.score >= 75) { recommendation = "Step Up"; recColor = "var(--easy)"; }
-    else if (result.score >= 60) { recommendation = "Maintain"; recColor = "var(--accent)"; }
-    else { recommendation = "Step Down"; recColor = "var(--hard)"; }
+    } else {
+      try {
+        const progressResponse = await ReadWiseAPI.getStudentProgress();
+        const progress = (progressResponse && progressResponse.progress) || [];
+        const latest = progress.length ? progress[progress.length - 1] : null;
+        if (latest && latest.recommendation) {
+          recommendation = latest.recommendation;
+          recommendationHint = latest.reason || recommendationHint;
+        }
+      } catch (error) {
+        // fallback uses default recommendation when progress cannot be loaded
+      }
+      if (String(recommendation).toUpperCase().indexOf("UP") !== -1) recColor = "var(--easy)";
+      else if (String(recommendation).toUpperCase().indexOf("DOWN") !== -1) recColor = "var(--hard)";
+    }
     document.getElementById("rec-badge").innerHTML =
       '<div class="result-recommendation"><strong style="color:' + recColor + '">' + recommendation + '</strong><div class="micro-copy">' + recommendationHint + '</div></div>';
+
+    document.getElementById("self-rating").textContent = selfRating
+      ? getClassDisplayName(selfRating)
+      : "Not provided";
 
     if (result.shortAnswer) {
       document.getElementById("sa-section").style.display = "block";
@@ -177,3 +199,8 @@
 </script>
 </body>
 </html>
+
+
+
+
+

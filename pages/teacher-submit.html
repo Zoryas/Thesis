@@ -1,19 +1,19 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Submit Passage - ReadWise</title>
-  <link rel="stylesheet" href="../stylesheets/shared.css?v=20260316b">
-  <script src="../runtime-config.js?v=20260316c"></script>  
+  <title>Submit Passage - TalaSaAI</title>
+  <link rel="stylesheet" href="../stylesheets/shared.css?v=20260423f">
+  <script src="../runtime-config.js?v=20260423f"></script>  
 </head>
 <body>
-<div class="demo-banner">ReadWise System | Pulo National High School</div>
+<div class="demo-banner">TalaSaAI System</div>
 <div class="layout">
   <aside class="sidebar">
     <div class="sidebar-logo">
-      <div class="logo-mark">RW</div>
-      <h2>ReadWise</h2>
+      <div class="logo-mark"><img src="../image/TalaSaAi.png" alt="TalaSaAI logo"></div>
+      <h2>TalaSaAI</h2>
       <p>Teacher Portal</p>
     </div>
     <nav>
@@ -35,6 +35,65 @@
       <p class="eyebrow">Analysis and authoring</p>
       <h1 id="page-title">Submit New Passage</h1>
       <p id="page-subtitle">Paste a reading passage, build its assessment, and let the SVM classifier recommend the reading level before saving.</p>
+    </div>
+    <div class="card csv-toggle-shell" style="margin-bottom:16px">
+      <button
+        class="csv-toggle-button"
+        id="csv-import-toggle"
+        type="button"
+        aria-expanded="false"
+        aria-controls="csv-import-panel"
+        onclick="toggleCsvImport()"
+      >
+        <span class="csv-toggle-icon" aria-hidden="true">CSV</span>
+        <span class="csv-toggle-copy">
+          <span class="csv-toggle-title">Import CSV</span>
+          <span class="micro-copy">Quick draft passage upload with title and text only.</span>
+        </span>
+        <span class="csv-toggle-indicator" id="csv-toggle-indicator">Closed</span>
+        <span class="csv-toggle-chevron" aria-hidden="true"></span>
+      </button>
+      <div class="csv-import-panel" id="csv-import-panel" hidden>
+        <div class="import-hero">
+          <div class="import-title-row">
+            <div>
+              <div class="section-title" style="margin-bottom:6px">CSV Import</div>
+              <div class="micro-copy">Upload a simple CSV to create draft passages in one step.</div>
+            </div>
+            <div class="csv-panel-actions">
+              <span
+                class="info-icon"
+                title="Required headers: title and text. Optional headers: genre and short_answer_prompt. Imported passages are saved as drafts until you complete the assessment."
+                aria-label="CSV import information"
+              >i</span>
+              <button class="csv-close-btn" type="button" onclick="toggleCsvImport(false)">Close</button>
+            </div>
+          </div>
+          <div class="import-fact-row">
+            <div class="import-fact-pill"><strong>Required</strong> title, text</div>
+            <div class="import-fact-pill"><strong>Optional</strong> genre, short_answer_prompt</div>
+            <div class="import-fact-pill"><strong>Result</strong> saved as draft passages</div>
+          </div>
+          <div class="import-panel-grid">
+            <div class="import-panel-copy">
+              <div class="form-group" style="margin-bottom:0">
+                <label class="form-label" for="passage-import-file">Choose CSV File</label>
+                <input class="form-control" id="passage-import-file" type="file" accept=".csv,text/csv">
+              </div>
+              <div class="action-row">
+                <button class="btn btn-primary" id="import-csv-btn" type="button" onclick="importPassageCsv()">Import CSV</button>
+                <button class="btn btn-outline" type="button" onclick="downloadImportTemplate()">Download Template</button>
+              </div>
+            </div>
+            <div class="import-help-card">
+              <strong>Quick note</strong>
+              <div class="micro-copy">Each row becomes one passage. Keep long text inside CSV quotes if it contains commas or line breaks.</div>
+              <div class="micro-copy">After import, open the draft and add the assessment before assigning it to a class.</div>
+            </div>
+          </div>
+        </div>
+        <div id="import-results" class="import-result-list" style="display:none"></div>
+      </div>
     </div>
     <div class="card-grid card-grid-2">
       <div class="card">
@@ -93,8 +152,8 @@
   </main>
 </div>
 <div class="toast" id="toast"></div>
-<script src="../api.js?v=20260316c"></script>
-<script src="../mockData.js?v=20260316b"></script>
+<script src="../api.js?v=20260423f"></script>
+<script src="../mockData.js?v=20260423f"></script>
 <script>
   const PREDICTION_API_URL = ReadWiseAPI.baseUrl + "/predict";
   const pageParams = new URLSearchParams(window.location.search);
@@ -105,6 +164,26 @@
   let lastPrediction = null;
   let lastAnalyzedText = "";
   let assessmentDraft = [];
+  let isDraftPassage = false;
+
+  function setCsvImportOpen(nextOpen) {
+    const toggle = document.getElementById("csv-import-toggle");
+    const panel = document.getElementById("csv-import-panel");
+    const indicator = document.getElementById("csv-toggle-indicator");
+    const isOpen = Boolean(nextOpen);
+    if (!toggle || !panel) return;
+    toggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
+    toggle.classList.toggle("is-open", isOpen);
+    panel.hidden = !isOpen;
+    if (indicator) indicator.textContent = isOpen ? "Open" : "Closed";
+  }
+
+  function toggleCsvImport(forceValue) {
+    const toggle = document.getElementById("csv-import-toggle");
+    const current = toggle && toggle.getAttribute("aria-expanded") === "true";
+    const next = typeof forceValue === "boolean" ? forceValue : !current;
+    setCsvImportOpen(next);
+  }
 
   function escapeHtml(value) {
     return String(value).replace(/[&<>"']/g, function(ch) {
@@ -126,6 +205,121 @@
       type_token_ratio: Number((wordCount ? uniqueWords / wordCount : 0).toFixed(3)),
       passage_length: wordCount
     };
+  }
+
+  function setPassageGenreValue(value) {
+    const select = document.getElementById("passage-genre");
+    const nextValue = String(value || "").trim() || "Expository";
+    const hasOption = Array.prototype.some.call(select.options, function(option) {
+      return option.value === nextValue;
+    });
+    if (!hasOption) {
+      const option = document.createElement("option");
+      option.value = nextValue;
+      option.textContent = nextValue;
+      select.appendChild(option);
+    }
+    select.value = nextValue;
+  }
+
+  function csvCell(value) {
+    const text = String(value === null || value === undefined ? "" : value);
+    if (/[",\n]/.test(text)) {
+      return '"' + text.replace(/"/g, '""') + '"';
+    }
+    return text;
+  }
+
+  function downloadImportTemplate() {
+    const lines = [
+      ["title", "genre", "text", "short_answer_prompt"],
+      [
+        "Sample Passage Title",
+        "Expository",
+        "This sample passage should be replaced with your own reading text. Keep the text long enough to reach the minimum word count required by the SVM classifier before importing it.",
+        "What is one idea the student should explain after reading?"
+      ]
+    ].map(function(row) {
+      return row.map(csvCell).join(",");
+    });
+    const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "tala-saai-passage-import-template.csv";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(function() { URL.revokeObjectURL(url); }, 0);
+  }
+
+  function renderImportResults(payload) {
+    const resultList = document.getElementById("import-results");
+    const importedCount = Number((payload && payload.importedCount) || 0);
+    const failedCount = Number((payload && payload.failedCount) || 0);
+    const results = (payload && payload.results) || [];
+
+    if (!results.length) {
+      resultList.style.display = "none";
+      resultList.innerHTML = "";
+      return;
+    }
+
+    setCsvImportOpen(true);
+    resultList.style.display = "grid";
+    resultList.innerHTML =
+      '<div class="surface-note surface-note-accent"><strong>Import summary:</strong> ' +
+      importedCount + ' imported, ' + failedCount + ' failed.' +
+      '</div>' +
+      results.map(function(item) {
+        const success = item.status === "imported";
+        const meta = success
+          ? ('Saved as draft ' + escapeHtml(item.id) + ' | Recommended level: ' + escapeHtml(getClassDisplayName(item.label || "MODERATE")))
+          : (escapeHtml(item.error || "Import failed."));
+        const action = success
+          ? ('<a class="btn btn-outline btn-sm" href="teacher-submit.html?id=' + encodeURIComponent(item.id) + '">Open Draft</a>')
+          : '<span class="badge badge-hard">Needs fix</span>';
+        return (
+          '<div class="import-result-item ' + (success ? "is-success" : "is-error") + '">' +
+            '<div class="import-result-copy">' +
+              '<p><strong>Row ' + escapeHtml(item.rowNumber) + '</strong>' +
+              (item.title ? (': ' + escapeHtml(item.title)) : '') + '</p>' +
+              '<div class="import-result-meta">' + meta + '</div>' +
+            '</div>' +
+            action +
+          '</div>'
+        );
+      }).join("");
+  }
+
+  async function importPassageCsv() {
+    const fileInput = document.getElementById("passage-import-file");
+    const button = document.getElementById("import-csv-btn");
+    const file = fileInput && fileInput.files ? fileInput.files[0] : null;
+
+    if (!file) {
+      setCsvImportOpen(true);
+      showToast("Choose a CSV file to import.", "#c0392b");
+      return;
+    }
+
+    button.disabled = true;
+    button.classList.add("is-loading");
+    button.textContent = "Importing...";
+
+    try {
+      const payload = await ReadWiseAPI.importPassagesCsv(file);
+      renderImportResults(payload || {});
+      showToast(
+        ((payload && payload.importedCount) || 0) + " draft passage(s) imported."
+      );
+    } catch (error) {
+      showToast(error.message || "CSV import failed.", "#c0392b");
+    } finally {
+      button.disabled = false;
+      button.classList.remove("is-loading");
+      button.textContent = "Import CSV";
+    }
   }
 
   function createQuestionTemplate(level, type) {
@@ -406,6 +600,31 @@
     return mapPassageLabelToQuestionDifficulty(label);
   }
 
+  function alignAssessmentToPassageLabel(label) {
+    const expectedDifficulty = getExpectedQuestionDifficultyForLabel(label);
+    const allowedTypes = getQuestionTypesForDifficulty(expectedDifficulty).map(function(entry) { return entry.value; });
+
+    assessmentDraft = assessmentDraft.map(function(raw) {
+      const existing = cloneQuestion(raw);
+      const preferredType = allowedTypes.includes(existing.type) ? existing.type : allowedTypes[0];
+      const updated = createQuestionTemplate(expectedDifficulty, preferredType);
+      updated.prompt = existing.prompt;
+      return updated;
+    });
+
+    renderAssessmentBuilder();
+  }
+
+  function bindOverrideLabelSync(defaultLabel) {
+    const override = document.getElementById("override-label");
+    if (!override) return;
+
+    override.onchange = function() {
+      const selectedLabel = override.value || defaultLabel;
+      alignAssessmentToPassageLabel(selectedLabel);
+    };
+  }
+
   function setAssessmentFromData(assessment) {
     const source = assessment || {};
     const questions = Array.isArray(source.questions) ? source.questions.map(cloneQuestion) : [];
@@ -431,14 +650,21 @@
     const label = escapeHtml(getClassDisplayName(data.label));
     const features = data.features || {};
     const confidenceText = typeof data.confidence === "number" ? Number(data.confidence).toFixed(1) + "%" : "Saved";
-    const saveLabel = currentPassageId ? "Update Passage" : "Save to Passage Library";
-    const heading = settings.saved ? "CURRENT SAVED LABEL" : "PREDICTED LABEL";
+    const saveLabel = currentPassageId
+      ? (isDraftPassage ? "Publish Passage" : "Update Passage")
+      : "Save to Passage Library";
+    const heading = settings.saved
+      ? (isDraftPassage ? "CURRENT DRAFT LABEL" : "CURRENT SAVED LABEL")
+      : "PREDICTED LABEL";
     document.getElementById("result-content").innerHTML =
       '<div class="prediction-placeholder">' +
       '<div class="section-title">' + heading + '</div>' +
       '<span class="badge prediction-hero-badge ' + badgeClass(data.label) + '">' + label + '</span>' +
       '<div class="micro-copy">Confidence: ' + confidenceText + '</div>' +
       '</div>' +
+      (isDraftPassage
+        ? '<div class="surface-note surface-note-warn" style="margin-bottom:16px">This passage is still a draft. Complete the assessment and save to publish it to the ready library.</div>'
+        : '') +
       '<div class="feature-panel" style="margin-bottom:16px">' +
       '<div class="section-title">Feature Breakdown</div>' +
       '<div class="feature-list">' +
@@ -451,6 +677,9 @@
       '<div class="form-group"><label class="form-label" for="override-label">Override Label (Optional)</label>' +
       '<select class="form-control" id="override-label"><option value="">Use ' + (settings.saved ? "Current" : "Predicted") + ': ' + label + '</option><option value="EASY">EASY</option><option value="MODERATE">MODERATE</option><option value="HARD">DIFFICULT</option></select></div>' +
       '<button class="btn btn-success btn-block" onclick="saveToLibrary()">' + saveLabel + '</button>';
+
+    alignAssessmentToPassageLabel(data.label);
+    bindOverrideLabelSync(data.label);
   }
 
   async function loadPassageForEditing() {
@@ -464,11 +693,14 @@
       return;
     }
 
-    document.getElementById("page-title").textContent = "Edit Passage";
-    document.getElementById("page-subtitle").textContent = "Update passage text and assessment, then save.";
-    document.getElementById("crumb-mode").textContent = "Edit Passage";
+    isDraftPassage = Boolean(existingPassage.isDraft);
+    document.getElementById("page-title").textContent = isDraftPassage ? "Complete Imported Draft" : "Edit Passage";
+    document.getElementById("page-subtitle").textContent = isDraftPassage
+      ? "Finish the assessment for this imported draft, then publish it to the ready passage library."
+      : "Update passage text and assessment, then save.";
+    document.getElementById("crumb-mode").textContent = isDraftPassage ? "Complete Draft" : "Edit Passage";
     document.getElementById("passage-title").value = existingPassage.title;
-    document.getElementById("passage-genre").value = existingPassage.genre;
+    setPassageGenreValue(existingPassage.genre);
     document.getElementById("passage-text").value = existingPassage.text;
     setAssessmentFromData(existingPassage.assessment || { questions: [], shortAnswerPrompt: "" });
 
@@ -542,6 +774,7 @@
       );
     }
     const isEditing = Boolean(currentPassageId);
+    const wasDraft = isDraftPassage;
     let saved = null;
     try {
       const payload = {
@@ -561,6 +794,7 @@
     }
 
     currentPassageId = saved.id;
+    isDraftPassage = Boolean(saved.isDraft);
     lastPrediction = {
       label: saved.label,
       confidence: typeof saved.confidence === "number" ? saved.confidence : null,
@@ -568,11 +802,17 @@
     };
     lastAnalyzedText = saved.text;
 
-    showToast(isEditing ? "Passage and assessment updated." : "Passage and assessment saved.");
+    showToast(
+      isEditing
+        ? (wasDraft ? "Draft passage published." : "Passage and assessment updated.")
+        : "Passage and assessment saved."
+    );
     setTimeout(function() { window.location.href = "teacher-passages.html"; }, 1000);
   }
 
   async function bootstrapPage() {
+    isDraftPassage = false;
+    setCsvImportOpen(false);
     setAssessmentFromData({ questions: [createQuestionTemplate("EASY")], shortAnswerPrompt: "" });
     try {
       const auth = await ReadWiseAPI.me();
@@ -597,3 +837,8 @@
 </script>
 </body>
 </html>
+
+
+
+
+

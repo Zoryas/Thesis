@@ -1,5 +1,8 @@
 
+import csv
 from contextlib import contextmanager
+from datetime import datetime, timezone
+from io import StringIO
 from pathlib import Path
 import json
 import os
@@ -316,7 +319,7 @@ def parse_delimited_answers(value, delimiter):
     return [item.strip() for item in str(value or "").split(delimiter) if item.strip()]
 
 
-def normalize_assessment_payload(assessment, passage_label):
+def normalize_assessment_payload(assessment, passage_label, allow_empty=False):
     payload = assessment if isinstance(assessment, dict) else {}
     raw_questions = payload.get("questions") if isinstance(payload.get("questions"), list) else []
     short_answer = str(payload.get("shortAnswerPrompt") or payload.get("shortAnswer") or "").strip()
@@ -423,7 +426,7 @@ def normalize_assessment_payload(assessment, passage_label):
 
         normalized_questions.append(normalized_question)
 
-    if not normalized_questions:
+    if not normalized_questions and not allow_empty:
         raise ValueError("Add at least 1 complete assessment question.")
 
     return {"questions": normalized_questions, "shortAnswerPrompt": short_answer}
@@ -471,6 +474,69 @@ def count_words(text):
 
 def estimate_minutes(words):
     return max(1, int(np.ceil((words or 0) / 80.0)))
+
+
+def average_numbers(values):
+    cleaned = []
+    for value in values:
+        if value is None:
+            continue
+        try:
+            cleaned.append(float(value))
+        except (TypeError, ValueError):
+            continue
+    if not cleaned:
+        return None
+    return int(round(sum(cleaned) / len(cleaned)))
+
+
+def build_prediction_response(text):
+    raw_text = str(text or "").strip()
+    if not raw_text:
+        raise ValueError("No text provided.")
+
+    word_count = count_words(raw_text)
+    if word_count < MIN_WORDS:
+        raise ValueError("Passage too short. Minimum 30 words.")
+
+    cleaned = re.sub(r"\s+", " ", raw_text.replace("\n", " ").replace("\t", " ")).strip().lower()
+    words = re.findall(r"[A-Za-z]+(?:'[A-Za-z]+)?", raw_text)
+    sentences = [part.strip() for part in re.split(r"[.!?]+", raw_text) if part.strip()]
+    sentence_count = max(len(sentences), 1)
+    avg_sentence_length = word_count / sentence_count
+    avg_word_length = sum(len(word) for word in words) / max(word_count, 1)
+    type_token_ratio = len({word.lower() for word in words}) / max(word_count, 1)
+
+    surface = csr_matrix(
+        np.asarray([[avg_sentence_length, avg_word_length, type_token_ratio, float(word_count)]], dtype=float)
+    )
+    word_features = ARTIFACTS["word_vectorizer"].transform([cleaned])
+    char_features = ARTIFACTS["char_vectorizer"].transform([cleaned])
+    feature_matrix = hstack([word_features, char_features, surface], format="csr")
+
+    prediction_code = ARTIFACTS["svm_model"].predict(feature_matrix)[0]
+    predicted = ARTIFACTS["label_encoder"].inverse_transform([prediction_code])[0]
+    predicted = normalize_class_level(predicted)
+
+    scores = ARTIFACTS["svm_model"].decision_function(feature_matrix)
+    values = np.asarray(scores[0] if np.ndim(scores) > 1 else scores, dtype=float)
+    if values.ndim == 0:
+        values = np.array([-float(values), float(values)])
+    shifted = values - np.max(values)
+    probs = np.exp(shifted)
+    probs /= probs.sum()
+    confidence = float(np.max(probs) * 100.0)
+
+    return {
+        "label": predicted,
+        "confidence": round(confidence, 1),
+        "features": {
+            "avg_sentence_length": round(avg_sentence_length, 2),
+            "avg_word_length": round(avg_word_length, 2),
+            "type_token_ratio": round(type_token_ratio, 3),
+            "passage_length": int(word_count),
+        },
+    }
 
 
 def mysql_config(include_db=True):
@@ -630,6 +696,7 @@ def serialize_passage(row):
         "words": int(row["words"]),
         "time": int(row["est_minutes"]),
         "confidence": confidence,
+        "isDraft": bool(int(row.get("is_draft") or 0)),
     }
 
 
@@ -661,8 +728,8 @@ def fetch_assessment(cur, passage_id):
     return {"questions": questions, "shortAnswerPrompt": a.get("short_answer_prompt") or ""}
 
 
-def upsert_assessment(cur, passage_id, payload, passage_label):
-    normalized = normalize_assessment_payload(payload, passage_label)
+def upsert_assessment(cur, passage_id, payload, passage_label, allow_empty=False):
+    normalized = normalize_assessment_payload(payload, passage_label, allow_empty=allow_empty)
     questions = normalized["questions"]
     short_answer = normalized["shortAnswerPrompt"]
 
@@ -797,6 +864,88 @@ def fetch_teacher_student_summaries(cur):
     return students
 
 
+def get_stagnation_details(progress):
+    if len(progress) < 2:
+        return False, ""
+
+    previous = progress[-2]
+    latest = progress[-1]
+    if int(latest["score"]) > int(previous["score"]):
+        return False, ""
+
+    return (
+        True,
+        f"No improvement from Week {previous['week']} ({previous['score']}%) "
+        f"to Week {latest['week']} ({latest['score']}%)."
+    )
+
+
+def build_report_status(student, is_stagnant):
+    if not student["preAssessmentCompleted"]:
+        return "Pre-Assessment Pending", "hard"
+    if student["latestScore"] is None:
+        return "Awaiting Weekly Submission", "primary"
+    if int(student["latestWeek"] or 0) >= TOTAL_PROGRAM_WEEKS:
+        return f"Week {TOTAL_PROGRAM_WEEKS} Recorded", "success"
+    if is_stagnant:
+        return "Stagnant", "hard"
+    return "Improving", "easy"
+
+
+def build_teacher_report_summary(cur, active_week):
+    students = fetch_teacher_student_summaries(cur)
+    report_rows = []
+    for student in students:
+        is_stagnant, stagnant_reason = get_stagnation_details(student["progress"])
+        pre_score = int(student["preScore"] or 0) if student["preAssessmentCompleted"] else None
+        latest_score = student["latestScore"]
+        improvement = None
+        if pre_score is not None and latest_score is not None:
+            improvement = int(latest_score) - int(pre_score)
+        status_label, status_tone = build_report_status(student, is_stagnant)
+        report_rows.append(
+            {
+                "id": student["id"],
+                "name": student["name"],
+                "email": student["email"],
+                "grade": student["grade"],
+                "section": student["section"],
+                "classLevel": student["classLevel"],
+                "preScore": pre_score,
+                "preAssessmentCompleted": student["preAssessmentCompleted"],
+                "latestScore": latest_score,
+                "latestWeek": student["latestWeek"],
+                "latestRecommendation": student["latestRecommendation"],
+                "latestDifficulty": student["latestDifficulty"],
+                "improvement": improvement,
+                "statusLabel": status_label,
+                "statusTone": status_tone,
+                "isStagnant": is_stagnant,
+                "stagnantReason": stagnant_reason,
+                "progress": student["progress"],
+            }
+        )
+
+    completion_base = max(1, len(report_rows) * TOTAL_PROGRAM_WEEKS)
+    completion_value = sum(min(TOTAL_PROGRAM_WEEKS, int(student["latestWeek"] or 0)) for student in report_rows)
+    completion_percent = int(round((completion_value / completion_base) * 100)) if report_rows else 0
+    stagnant_students = [student for student in report_rows if student["isStagnant"]]
+
+    return {
+        "generatedAt": datetime.now(timezone.utc).isoformat(),
+        "activeWeek": normalize_week(active_week),
+        "studentCount": len(report_rows),
+        "preAverage": average_numbers(
+            student["preScore"] for student in report_rows if student["preAssessmentCompleted"]
+        ),
+        "currentAverage": average_numbers(student["latestScore"] for student in report_rows),
+        "completionPercent": completion_percent,
+        "stagnantCount": len(stagnant_students),
+        "stagnantStudents": stagnant_students,
+        "students": report_rows,
+    }
+
+
 def fetch_pending_short_answer(cur, student_id):
     cur.execute(
         """
@@ -835,7 +984,7 @@ def init_database():
             """CREATE TABLE IF NOT EXISTS users (id INT AUTO_INCREMENT PRIMARY KEY,email VARCHAR(255) UNIQUE NOT NULL,password_hash VARCHAR(255) NOT NULL,role ENUM('teacher','student') NOT NULL,is_active TINYINT(1) NOT NULL DEFAULT 1,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
             """CREATE TABLE IF NOT EXISTS auth_tokens (id BIGINT AUTO_INCREMENT PRIMARY KEY,user_id INT NOT NULL,token VARCHAR(128) UNIQUE NOT NULL,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,INDEX idx_auth_tokens_user (user_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
             """CREATE TABLE IF NOT EXISTS students (id VARCHAR(20) PRIMARY KEY,user_id INT UNIQUE NOT NULL,full_name VARCHAR(255) NOT NULL,grade VARCHAR(20) NOT NULL,section VARCHAR(100) NOT NULL,class_level ENUM('EASY','MODERATE','HARD') NOT NULL DEFAULT 'EASY',pre_score INT NOT NULL DEFAULT 0,pre_assessment_completed TINYINT(1) NOT NULL DEFAULT 0,pre_assessment_completed_at TIMESTAMP NULL,avatar_type ENUM('initials','preset','upload') NOT NULL DEFAULT 'initials',avatar_value MEDIUMTEXT NULL,FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
-            """CREATE TABLE IF NOT EXISTS passages (id VARCHAR(20) PRIMARY KEY,title VARCHAR(255) NOT NULL,genre VARCHAR(100) NOT NULL,text MEDIUMTEXT NOT NULL,label ENUM('EASY','MODERATE','HARD') NOT NULL,words INT NOT NULL,est_minutes INT NOT NULL,confidence DECIMAL(5,2) NULL,created_by INT NULL,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
+            """CREATE TABLE IF NOT EXISTS passages (id VARCHAR(20) PRIMARY KEY,title VARCHAR(255) NOT NULL,genre VARCHAR(100) NOT NULL,text MEDIUMTEXT NOT NULL,label ENUM('EASY','MODERATE','HARD') NOT NULL,words INT NOT NULL,est_minutes INT NOT NULL,confidence DECIMAL(5,2) NULL,is_draft TINYINT(1) NOT NULL DEFAULT 0,created_by INT NULL,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
             """CREATE TABLE IF NOT EXISTS assessments (id INT AUTO_INCREMENT PRIMARY KEY,passage_id VARCHAR(20) UNIQUE NOT NULL,short_answer_prompt TEXT NULL,FOREIGN KEY (passage_id) REFERENCES passages(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
             """CREATE TABLE IF NOT EXISTS assessment_questions (id INT AUTO_INCREMENT PRIMARY KEY,assessment_id INT NOT NULL,sort_order INT NOT NULL DEFAULT 0,difficulty ENUM('EASY','MODERATE','DIFFICULT','CUSTOM') NOT NULL DEFAULT 'EASY',type VARCHAR(60) NOT NULL,prompt TEXT NOT NULL,options_json JSON NULL,answer_index INT NULL,answer_key VARCHAR(255) NULL,answer_keys_json JSON NULL,FOREIGN KEY (assessment_id) REFERENCES assessments(id) ON DELETE CASCADE,INDEX idx_q_sort (assessment_id, sort_order)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
             """CREATE TABLE IF NOT EXISTS weekly_assignments (id INT AUTO_INCREMENT PRIMARY KEY,week_no TINYINT NOT NULL,class_level ENUM('EASY','MODERATE','HARD') NOT NULL,passage_id VARCHAR(20) NOT NULL,UNIQUE KEY uniq_assign (week_no,class_level,passage_id),FOREIGN KEY (passage_id) REFERENCES passages(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
@@ -867,6 +1016,12 @@ def init_database():
         if not cur.fetchone():
             cur.execute(
                 "ALTER TABLE students ADD COLUMN pre_assessment_completed_at TIMESTAMP NULL AFTER pre_assessment_completed"
+            )
+
+        cur.execute("SHOW COLUMNS FROM passages LIKE 'is_draft'")
+        if not cur.fetchone():
+            cur.execute(
+                "ALTER TABLE passages ADD COLUMN is_draft TINYINT(1) NOT NULL DEFAULT 0 AFTER confidence"
             )
 
         def upsert_user(email, password, role):
@@ -994,51 +1149,10 @@ def api_debug_session():
 @app.post("/predict")
 def predict():
     payload = request.get_json(silent=True) or {}
-    text = str(payload.get("text", "")).strip()
-    if not text:
-        return jsonify({"error": "No text provided."}), 400
-    if len(re.findall(r"[A-Za-z]+(?:'[A-Za-z]+)?", text)) < MIN_WORDS:
-        return jsonify({"error": "Passage too short. Minimum 30 words."}), 400
-
-    cleaned = re.sub(r"\s+", " ", text.replace("\n", " ").replace("\t", " ")).strip().lower()
-    words = re.findall(r"[A-Za-z]+(?:'[A-Za-z]+)?", text)
-    sentences = [p.strip() for p in re.split(r"[.!?]+", text) if p.strip()]
-    sentence_count = max(len(sentences), 1)
-    word_count = len(words)
-    avg_sentence_length = word_count / sentence_count
-    avg_word_length = sum(len(w) for w in words) / max(word_count, 1)
-    type_token_ratio = len({w.lower() for w in words}) / max(word_count, 1)
-
-    surface = csr_matrix(np.asarray([[avg_sentence_length, avg_word_length, type_token_ratio, float(word_count)]], dtype=float))
-    word_features = ARTIFACTS["word_vectorizer"].transform([cleaned])
-    char_features = ARTIFACTS["char_vectorizer"].transform([cleaned])
-    feature_matrix = hstack([word_features, char_features, surface], format="csr")
-
-    prediction_code = ARTIFACTS["svm_model"].predict(feature_matrix)[0]
-    predicted = ARTIFACTS["label_encoder"].inverse_transform([prediction_code])[0]
-    predicted = normalize_class_level(predicted)
-
-    scores = ARTIFACTS["svm_model"].decision_function(feature_matrix)
-    values = np.asarray(scores[0] if np.ndim(scores) > 1 else scores, dtype=float)
-    if values.ndim == 0:
-        values = np.array([-float(values), float(values)])
-    shifted = values - np.max(values)
-    probs = np.exp(shifted)
-    probs /= probs.sum()
-    confidence = float(np.max(probs) * 100.0)
-
-    return jsonify(
-        {
-            "label": predicted,
-            "confidence": round(confidence, 1),
-            "features": {
-                "avg_sentence_length": round(avg_sentence_length, 2),
-                "avg_word_length": round(avg_word_length, 2),
-                "type_token_ratio": round(type_token_ratio, 3),
-                "passage_length": int(word_count),
-            },
-        }
-    )
+    try:
+        return jsonify(build_prediction_response(payload.get("text", "")))
+    except ValueError as error:
+        return jsonify({"error": str(error)}), 400
 
 
 @app.post("/api/auth/login")
@@ -1171,7 +1285,9 @@ def passages_list():
         return err
     del user
     with db_cursor(True) as (_, cur):
-        cur.execute("SELECT id,title,genre,text,label,words,est_minutes,confidence FROM passages ORDER BY created_at DESC,id DESC")
+        cur.execute(
+            "SELECT id,title,genre,text,label,words,est_minutes,confidence,is_draft FROM passages ORDER BY created_at DESC,id DESC"
+        )
         rows = cur.fetchall()
         passages = [serialize_passage(row) for row in rows]
         usage_weeks = get_passage_usage_weeks(cur)
@@ -1188,7 +1304,10 @@ def passage_get(passage_id):
         return err
     del user
     with db_cursor(True) as (_, cur):
-        cur.execute("SELECT id,title,genre,text,label,words,est_minutes,confidence FROM passages WHERE id=%s", (passage_id,))
+        cur.execute(
+            "SELECT id,title,genre,text,label,words,est_minutes,confidence,is_draft FROM passages WHERE id=%s",
+            (passage_id,),
+        )
         row = cur.fetchone()
         if not row:
             return api_error("Passage not found.", 404)
@@ -1199,11 +1318,12 @@ def passage_get(passage_id):
     return api_ok(passage)
 
 
-def save_passage(cur, payload, author_id, passage_id=None):
+def save_passage(cur, payload, author_id, passage_id=None, allow_empty_assessment=False, is_draft=False):
     title = str(payload.get("title") or "").strip()
     genre = str(payload.get("genre") or "Expository").strip() or "Expository"
     text = str(payload.get("text") or "").strip()
     label = normalize_class_level(payload.get("label") or "MODERATE")
+    draft_value = 1 if is_draft else 0
     confidence = payload.get("confidence")
     if confidence in (None, ""):
         confidence = None
@@ -1223,6 +1343,7 @@ def save_passage(cur, payload, author_id, passage_id=None):
     assessment = normalize_assessment_payload(
         payload.get("assessment") or {"questions": [], "shortAnswerPrompt": ""},
         label,
+        allow_empty=allow_empty_assessment,
     )
 
     if passage_id:
@@ -1230,19 +1351,22 @@ def save_passage(cur, payload, author_id, passage_id=None):
         if not cur.fetchone():
             raise LookupError("Passage not found.")
         cur.execute(
-            "UPDATE passages SET title=%s,genre=%s,text=%s,label=%s,words=%s,est_minutes=%s,confidence=%s WHERE id=%s",
-            (title, genre, text, label, words, minutes, confidence, passage_id),
+            "UPDATE passages SET title=%s,genre=%s,text=%s,label=%s,words=%s,est_minutes=%s,confidence=%s,is_draft=%s WHERE id=%s",
+            (title, genre, text, label, words, minutes, confidence, draft_value, passage_id),
         )
     else:
         cur.execute("SELECT COALESCE(MAX(CAST(SUBSTRING(id,2) AS UNSIGNED)),0) AS max_id FROM passages WHERE id REGEXP '^p[0-9]+$'")
         passage_id = f"p{int(cur.fetchone()['max_id']) + 1}"
         cur.execute(
-            "INSERT INTO passages (id,title,genre,text,label,words,est_minutes,confidence,created_by) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)",
-            (passage_id, title, genre, text, label, words, minutes, confidence, author_id),
+            "INSERT INTO passages (id,title,genre,text,label,words,est_minutes,confidence,is_draft,created_by) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+            (passage_id, title, genre, text, label, words, minutes, confidence, draft_value, author_id),
         )
 
-    upsert_assessment(cur, passage_id, assessment, label)
-    cur.execute("SELECT id,title,genre,text,label,words,est_minutes,confidence FROM passages WHERE id=%s", (passage_id,))
+    upsert_assessment(cur, passage_id, assessment, label, allow_empty=allow_empty_assessment)
+    cur.execute(
+        "SELECT id,title,genre,text,label,words,est_minutes,confidence,is_draft FROM passages WHERE id=%s",
+        (passage_id,),
+    )
     out = serialize_passage(cur.fetchone())
     out["assessment"] = fetch_assessment(cur, passage_id)
     return out
@@ -1256,7 +1380,7 @@ def passage_create():
     payload = request.get_json(silent=True) or {}
     with db_cursor(True) as (_, cur):
         try:
-            saved = save_passage(cur, payload, user["id"], None)
+            saved = save_passage(cur, payload, user["id"], None, allow_empty_assessment=False, is_draft=False)
         except ValueError as e:
             return api_error(str(e), 400)
     return api_ok(saved, 201)
@@ -1270,7 +1394,7 @@ def passage_update(passage_id):
     payload = request.get_json(silent=True) or {}
     with db_cursor(True) as (_, cur):
         try:
-            saved = save_passage(cur, payload, user["id"], passage_id)
+            saved = save_passage(cur, payload, user["id"], passage_id, allow_empty_assessment=False, is_draft=False)
         except LookupError:
             return api_error("Passage not found.", 404)
         except ValueError as e:
@@ -1278,6 +1402,112 @@ def passage_update(passage_id):
     return api_ok(saved)
 
 
+@app.post("/api/passages/import-csv")
+def passage_import_csv():
+    user, err = require_role("teacher")
+    if err:
+        return err
+
+    upload = request.files.get("file")
+    if not upload or not upload.filename:
+        return api_error("CSV file is required.", 400)
+
+    try:
+        csv_text = upload.read().decode("utf-8-sig")
+    except UnicodeDecodeError:
+        return api_error("CSV must be UTF-8 encoded.", 400)
+
+    reader = csv.DictReader(StringIO(csv_text))
+    if not reader.fieldnames:
+        return api_error("CSV header row is required.", 400)
+
+    normalized_headers = [str(name or "").strip().lower() for name in reader.fieldnames]
+    missing_headers = [header for header in ("title", "text") if header not in normalized_headers]
+    if missing_headers:
+        return api_error("Missing required CSV header(s): " + ", ".join(missing_headers), 400)
+
+    imported_count = 0
+    failed_count = 0
+    results = []
+
+    with db_cursor(True) as (_, cur):
+        for row_number, raw_row in enumerate(reader, start=2):
+            normalized_row = {}
+            for key, value in (raw_row or {}).items():
+                normalized_key = str(key or "").strip().lower()
+                normalized_row[normalized_key] = str(value or "").strip()
+
+            if not any(normalized_row.values()):
+                continue
+
+            title = normalized_row.get("title", "")
+            text = normalized_row.get("text", "")
+            genre = normalized_row.get("genre", "") or "Expository"
+            short_answer_prompt = normalized_row.get("short_answer_prompt", "")
+
+            if not title:
+                failed_count += 1
+                results.append({"rowNumber": row_number, "status": "error", "error": "Passage title is required."})
+                continue
+
+            if not text:
+                failed_count += 1
+                results.append({"rowNumber": row_number, "title": title, "status": "error", "error": "Passage text is required."})
+                continue
+
+            try:
+                prediction = build_prediction_response(text)
+                saved = save_passage(
+                    cur,
+                    {
+                        "title": title,
+                        "genre": genre,
+                        "text": text,
+                        "label": prediction["label"],
+                        "confidence": prediction["confidence"],
+                        "assessment": {
+                            "questions": [],
+                            "shortAnswerPrompt": short_answer_prompt,
+                        },
+                    },
+                    user["id"],
+                    None,
+                    allow_empty_assessment=True,
+                    is_draft=True,
+                )
+                imported_count += 1
+                results.append(
+                    {
+                        "rowNumber": row_number,
+                        "status": "imported",
+                        "id": saved["id"],
+                        "title": saved["title"],
+                        "label": saved["label"],
+                        "confidence": saved["confidence"],
+                        "isDraft": saved["isDraft"],
+                    }
+                )
+            except ValueError as error:
+                failed_count += 1
+                results.append(
+                    {
+                        "rowNumber": row_number,
+                        "title": title,
+                        "status": "error",
+                        "error": str(error),
+                    }
+                )
+
+    if not results:
+        return api_error("CSV file has no importable rows.", 400)
+
+    return api_ok(
+        {
+            "importedCount": imported_count,
+            "failedCount": failed_count,
+            "results": results,
+        }
+    )
 @app.delete("/api/passages/<passage_id>")
 def passage_delete(passage_id):
     user, err = require_role("teacher")
@@ -1315,10 +1545,12 @@ def assignments_post():
         return api_error("passageId is required.", 400)
 
     with db_cursor(True) as (_, cur):
-        cur.execute("SELECT label FROM passages WHERE id=%s", (passage_id,))
+        cur.execute("SELECT label,is_draft FROM passages WHERE id=%s", (passage_id,))
         row = cur.fetchone()
         if not row:
             return api_error("Passage not found.", 404)
+        if bool(int(row.get("is_draft") or 0)):
+            return api_error("Complete the assessment before assigning this passage.", 400)
         if normalize_class_level(row["label"]) != class_level:
             return api_error("Passage label does not match class level.", 400)
 
@@ -1366,7 +1598,7 @@ def student_weekly_passages():
         class_level = normalize_class_level(student["class_level"])
         cur.execute(
             """
-            SELECT p.id,p.title,p.genre,p.text,p.label,p.words,p.est_minutes,p.confidence
+            SELECT p.id,p.title,p.genre,p.text,p.label,p.words,p.est_minutes,p.confidence,p.is_draft
             FROM weekly_assignments wa JOIN passages p ON p.id=wa.passage_id
             WHERE wa.week_no=%s AND wa.class_level=%s
             ORDER BY wa.id
@@ -1533,6 +1765,19 @@ def teacher_students():
     with db_cursor(True) as (_, cur):
         students = fetch_teacher_student_summaries(cur)
     return api_ok({"students": students})
+
+
+@app.get("/api/teacher/reports/summary")
+def teacher_reports_summary():
+    user, err = require_role("teacher")
+    if err:
+        return err
+    del user
+
+    active_week = normalize_week(request.args.get("activeWeek"))
+    with db_cursor(True) as (_, cur):
+        summary = build_teacher_report_summary(cur, active_week)
+    return api_ok(summary)
 
 
 @app.get("/api/teacher/students/<student_id>")

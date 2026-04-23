@@ -1,4 +1,4 @@
-let role = "student";
+﻿let role = "student";
 
 const studentBtn = document.getElementById("studentBtn");
 const teacherBtn = document.getElementById("teacherBtn");
@@ -89,3 +89,5 @@ passwordInput.addEventListener("input", () => {
 });
 
 syncRoleButtons();
+
+
