@@ -713,6 +713,13 @@ def get_request_token():
 
 
 def current_user():
+    uid = session.get("user_id")
+    if uid:
+        with db_cursor(True) as (_, cur):
+            row = fetch_user_by_id(cur, uid)
+            if row and row.get("is_active"):
+                return row
+
     token = get_request_token()
     if token:
         with db_cursor(True) as (_, cur):
@@ -731,16 +738,8 @@ def current_user():
             row = cur.fetchone()
             if row and row.get("is_active"):
                 return row
-            return None
 
-    uid = session.get("user_id")
-    if not uid:
-        return None
-    with db_cursor(True) as (_, cur):
-        row = fetch_user_by_id(cur, uid)
-        if not row or not row.get("is_active"):
-            return None
-        return row
+    return None
 
 
 def require_auth():
