@@ -1,7 +1,12 @@
-# TODO - Program Week Settings UI (Step 1)
+# TODO - Step 2 Migration (`readwise_user_v1` cache strategy)
 
-- [ ] Add Program Week Settings card to `pages/teacher-dashboard.html`
-- [ ] Wire dashboard script to load/save/clear settings via API
-- [ ] Add minimal styles in `stylesheets/shared.css`
-- [ ] Run critical-path UI/API tests for settings behavior
-- [ ] Finalize and summarize simple explanation
+- [ ] Confirm existing `api.js` user cache/auth flow points to update
+- [ ] Update `api.js` so cached user is fast fallback only
+- [ ] Ensure server re-hydration (`/api/auth/me`) is always attempted when authenticated
+- [ ] Ensure login/profile mutation paths refresh cache from server-authoritative data
+- [ ] Ensure logout clears token + cached user consistently
+- [ ] Run critical-path validation:
+  - [ ] Login flow (cached paint + server refresh)
+  - [ ] Profile update flow refreshes cache/UI
+  - [ ] Logout clears cache and token
+- [ ] Summarize Step 2 result in simple terms

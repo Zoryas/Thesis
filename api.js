@@ -196,6 +196,11 @@
       var settings = options || {};
       var cachedUser = settings.forceRefresh ? null : getCachedUser();
       if (cachedUser) {
+        request("/api/auth/me").then(function(data) {
+          if (data && data.user) cacheUser(data.user);
+        }).catch(function() {
+          // keep cached user as temporary fallback if refresh fails
+        });
         return Promise.resolve({ user: cachedUser, cached: true });
       }
       return request("/api/auth/me").then(function(data) {
