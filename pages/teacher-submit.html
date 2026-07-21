@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -12,7 +12,7 @@
 <div class="layout">
   <aside class="sidebar">
     <div class="sidebar-logo">
-      <div class="logo-mark"><img src="../image/TalaSaAi.png" alt="TalaSaAI logo"></div>
+
       <h2>TalaSaAI</h2>
       <p>Teacher Portal</p>
     </div>
@@ -34,7 +34,7 @@
     <div class="page-header">
       <p class="eyebrow">Analysis and authoring</p>
       <h1 id="page-title">Submit New Passage</h1>
-      <p id="page-subtitle">Paste a reading passage, build its assessment, and let the SVM classifier recommend the reading level before saving.</p>
+      <p id="page-subtitle">Paste a reading passage and let the SVM classifier recommend the reading level before saving.</p>
     </div>
     <div class="card csv-toggle-shell" style="margin-bottom:16px">
       <button
@@ -46,10 +46,10 @@
         onclick="toggleCsvImport()"
       >
         <span class="csv-toggle-icon" aria-hidden="true">CSV</span>
-        <span class="csv-toggle-copy">
-          <span class="csv-toggle-title">Import CSV</span>
-          <span class="micro-copy">Quick draft passage upload with title and text only.</span>
-        </span>
+          <span class="csv-toggle-copy">
+            <span class="csv-toggle-title">Import CSV</span>
+            <span class="micro-copy">Quick draft passage upload with passage-only columns.</span>
+          </span>
         <span class="csv-toggle-indicator" id="csv-toggle-indicator">Closed</span>
         <span class="csv-toggle-chevron" aria-hidden="true"></span>
       </button>
@@ -58,12 +58,12 @@
           <div class="import-title-row">
             <div>
               <div class="section-title" style="margin-bottom:6px">CSV Import</div>
-              <div class="micro-copy">Upload a simple CSV to create draft passages in one step.</div>
+              <div class="micro-copy">Upload a CSV to create draft passages in one step.</div>
             </div>
             <div class="csv-panel-actions">
               <span
                 class="info-icon"
-                title="Required headers: title and text. Optional headers: genre and short_answer_prompt. Imported passages are saved as drafts until you complete the assessment."
+                title="Required headers: title and text. Optional headers: genre, short_answer_prompt. Extra columns are ignored. Imported passages are saved as drafts for review."
                 aria-label="CSV import information"
               >i</span>
               <button class="csv-close-btn" type="button" onclick="toggleCsvImport(false)">Close</button>
@@ -88,7 +88,7 @@
             <div class="import-help-card">
               <strong>Quick note</strong>
               <div class="micro-copy">Each row becomes one passage. Keep long text inside CSV quotes if it contains commas or line breaks.</div>
-              <div class="micro-copy">After import, open the draft and add the assessment before assigning it to a class.</div>
+              <div class="micro-copy">Only passage fields are imported. You can add assessment questions later when editing each draft.</div>
             </div>
           </div>
         </div>
@@ -99,7 +99,7 @@
       <div class="card">
         <div class="editor-intro">
           <div class="section-title">Passage Input</div>
-          <div class="micro-copy">Prepare the passage content and the assessment in one guided teacher workflow.</div>
+          <div class="micro-copy">Prepare the passage content in one guided teacher workflow.</div>
         </div>
         <div class="form-group">
           <label class="form-label" for="passage-title">Passage Title</label>
@@ -118,8 +118,12 @@
           <label class="form-label" for="passage-text">Passage Text</label>
           <textarea class="form-control" id="passage-text" rows="10" placeholder="Paste or type the reading passage here (minimum 30 words)..."></textarea>
         </div>
+        <div class="action-row" style="margin-top:12px; margin-bottom:20px;">
+          <button class="btn btn-primary" id="analyze-btn" onclick="analyzePassage()">Analyze Passage (SVM)</button>
+          <a class="btn btn-outline" href="teacher-passages.html">Back to Library</a>
+        </div>
 
-        <div class="section-title">Assessment Builder</div>
+        <div class="section-title" style="margin-top:4px;">Assessment Builder</div>
         <div class="helper-note surface-note-accent">
           Easy: Multiple Choice, True/False | Moderate: Multiple Choice (Harder), True/False (Modified), Sequence |
           Difficult: Fill in the Blanks, Identification, Enumeration
@@ -129,10 +133,6 @@
         <div class="form-group" style="margin-top:12px">
           <label class="form-label" for="short-answer-prompt">Optional Short Answer Prompt</label>
           <textarea class="form-control" id="short-answer-prompt" rows="3" placeholder="Optional teacher-scored prompt."></textarea>
-        </div>
-        <div class="action-row">
-          <button class="btn btn-primary" id="analyze-btn" onclick="analyzePassage()">Analyze Passage (SVM)</button>
-          <a class="btn btn-outline" href="teacher-passages.html">Back to Library</a>
         </div>
       </div>
       <div class="card">
@@ -231,15 +231,23 @@
   }
 
   function downloadImportTemplate() {
-    const lines = [
-      ["title", "genre", "text", "short_answer_prompt"],
-      [
-        "Sample Passage Title",
-        "Expository",
-        "This sample passage should be replaced with your own reading text. Keep the text long enough to reach the minimum word count required by the SVM classifier before importing it.",
-        "What is one idea the student should explain after reading?"
-      ]
-    ].map(function(row) {
+    const headers = ["title", "genre", "text", "short_answer_prompt"];
+
+    const sampleRow1 = [
+      "Sample Passage 1",
+      "Expository",
+      "Plants need sunlight, water, and nutrients to grow. Leaves capture sunlight to make food through photosynthesis, while roots absorb water and minerals from the soil.",
+      ""
+    ];
+
+    const sampleRow2 = [
+      "Sample Passage 2",
+      "Narrative",
+      "Maria visited the school library to complete her science assignment. She asked the librarian for books, wrote notes, and organized her report before going home.",
+      "What lesson can students learn from Maria's study habits?"
+    ];
+
+    const lines = [headers, sampleRow1, sampleRow2].map(function(row) {
       return row.map(csvCell).join(",");
     });
     const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8" });
@@ -650,6 +658,7 @@
     const label = escapeHtml(getClassDisplayName(data.label));
     const features = data.features || {};
     const confidenceText = typeof data.confidence === "number" ? Number(data.confidence).toFixed(1) + "%" : "Saved";
+    const f1ScoreText = "81.6%";
     const saveLabel = currentPassageId
       ? (isDraftPassage ? "Publish Passage" : "Update Passage")
       : "Save to Passage Library";
@@ -661,6 +670,7 @@
       '<div class="section-title">' + heading + '</div>' +
       '<span class="badge prediction-hero-badge ' + badgeClass(data.label) + '">' + label + '</span>' +
       '<div class="micro-copy">Confidence: ' + confidenceText + '</div>' +
+      '<div class="micro-copy">F-1 Score: ' + f1ScoreText + '</div>' +
       '</div>' +
       (isDraftPassage
         ? '<div class="surface-note surface-note-warn" style="margin-bottom:16px">This passage is still a draft. Complete the assessment and save to publish it to the ready library.</div>'

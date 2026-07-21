@@ -11,9 +11,10 @@
 <div class="demo-banner">TalaSaAI System</div>
 <div class="layout">
   <aside class="sidebar">
-    <div class="sidebar-logo">
-      <div class="logo-mark"><img src="../image/TalaSaAi.png" alt="TalaSaAI logo"></div><h2>TalaSaAI</h2><p>Student Portal</p>
-    </div>
+    <a class="sidebar-logo sidebar-logo-link" href="student-profile.html" title="Open my profile" aria-label="Open my profile">
+      <h2>TalaSaAI</h2>
+      <p>Student Portal</p>
+    </a>
     <nav>
       <a href="student-profile.html"><span class="icon" data-icon="profile"></span><span class="nav-label">My Profile</span></a>
       <a href="student-dashboard.html"><span class="icon" data-icon="dashboard"></span><span class="nav-label">Dashboard</span></a>
@@ -44,6 +45,9 @@
           <button class="btn btn-primary" id="next-btn" onclick="goToQuestions()">
             Done Reading - Answer Questions
           </button>
+          <div class="surface-note surface-note-warn" style="margin-top:12px; text-align:left;">
+            Warning: Once you proceed to answer the assessment, you will not be able to return to this reading passage.
+          </div>
         </div>
       </div>
     </div>
@@ -56,6 +60,8 @@
   const pid = params.get("id") || "p3";
   const week = ReadWiseAPI.getActiveWeek();
   const readingLockKey = "readingLocked_" + week + "_" + pid;
+  const readingSecsKey = "readingSecs_" + week + "_" + pid;
+  const readingQueueKey = "readingTimeQueue_v1";
 
   async function bootstrapPage() {
     let auth = null;
@@ -116,25 +122,122 @@
     document.getElementById("passage-text").innerHTML = paraText;
   }
 
-  let secs = 0;
-  let timerInterval = setInterval(tick, 1000);
-  function tick() {
-    secs++;
+  function renderTimer() {
     const minutes = Math.floor(secs / 60);
     const seconds = secs % 60;
     document.getElementById("timer").textContent = minutes + ":" + (seconds < 10 ? "0" : "") + seconds;
   }
 
-  function goToQuestions() {
+  function persistReadingProgress() {
+    sessionStorage.setItem(readingSecsKey, String(secs));
+  }
+
+  let secs = parseInt(sessionStorage.getItem(readingSecsKey) || "0", 10);
+  if (!Number.isFinite(secs) || secs < 0) secs = 0;
+  renderTimer();
+
+  let timerInterval = setInterval(tick, 1000);
+  function tick() {
+    secs++;
+    renderTimer();
+    persistReadingProgress();
+  }
+
+  document.addEventListener("visibilitychange", function() {
+    if (document.visibilityState === "hidden") {
+      persistReadingProgress();
+    }
+  });
+  window.addEventListener("beforeunload", persistReadingProgress);
+
+  function readQueue() {
+    try {
+      const raw = localStorage.getItem(readingQueueKey);
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (error) {
+      return [];
+    }
+  }
+
+  function writeQueue(items) {
+    try {
+      localStorage.setItem(readingQueueKey, JSON.stringify(items));
+    } catch (error) {
+      // ignore storage errors
+    }
+  }
+
+  function enqueueReadingPayload(payload) {
+    const queue = readQueue();
+    queue.push(payload);
+    writeQueue(queue);
+  }
+
+  async function flushQueuedReadingTimes() {
+    const queue = readQueue();
+    if (!queue.length) return;
+
+    const remaining = [];
+    for (const item of queue) {
+      try {
+        await ReadWiseAPI.saveReadingTime(item);
+      } catch (error) {
+        remaining.push(item);
+      }
+    }
+    writeQueue(remaining);
+  }
+
+  async function saveReadingTimeBestEffort(payload) {
+    try {
+      await ReadWiseAPI.saveReadingTime(payload);
+      return true;
+    } catch (error) {
+      enqueueReadingPayload(payload);
+      return false;
+    }
+  }
+
+  function buildReadingPayload(timeStr) {
+    const eventId = "rt_" + pid + "_" + week + "_" + Date.now() + "_" + Math.random().toString(36).slice(2, 10);
+    return {
+      eventId: eventId,
+      passageId: pid,
+      week: week,
+      readingSeconds: secs,
+      formattedTime: timeStr
+    };
+  }
+
+  async function goToQuestions() {
+    const confirmed = window.confirm(
+      "Warning: If you continue, you will no longer be able to go back and read this assessment passage again.\n\nDo you want to proceed?"
+    );
+    if (!confirmed) {
+      return;
+    }
+
     clearInterval(timerInterval);
     const minutes = Math.floor(secs / 60);
     const seconds = secs % 60;
     const timeStr = minutes + ":" + (seconds < 10 ? "0" : "") + seconds;
+
     document.getElementById("timer-status").textContent = "Reading Time: " + timeStr;
     document.getElementById("next-btn").disabled = true;
     document.getElementById("next-btn").textContent = "Proceeding...";
+
+    const savePayload = buildReadingPayload(timeStr);
+    const saved = await saveReadingTimeBestEffort(savePayload);
+    if (!saved) {
+      document.getElementById("timer-status").textContent =
+        "Reading Time: " + timeStr + " (saved for retry)";
+    }
+
     sessionStorage.setItem(readingLockKey, "1");
     sessionStorage.setItem("readingTime_" + pid, timeStr);
+    sessionStorage.removeItem(readingSecsKey);
+
     setTimeout(function() {
       window.location.href = "student-questions.html?id=" + pid;
     }, 600);
@@ -150,6 +253,8 @@
     window.location.href = "../login.html";
   }
 
+  flushQueuedReadingTimes();
+  window.addEventListener("online", flushQueuedReadingTimes);
   bootstrapPage();
 </script>
 </body>

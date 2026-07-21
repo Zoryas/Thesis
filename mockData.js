@@ -13,7 +13,11 @@ const MOCK = {
     { id:"s8", name:"Adrian Lopez",    grade:"7", section:"Makahiya",   classLevel:"MODERATE", preScore:59 },
     { id:"s9", name:"Bea Cortez",      grade:"7", section:"Makahiya",   classLevel:"HARD",     preScore:74 },
     { id:"s10", name:"Noah Flores",    grade:"7", section:"Makahiya",   classLevel:"EASY",     preScore:0 },
-    { id:"s11", name:"Jamie Ong",      grade:"7", section:"Sampaguita", classLevel:"EASY",     preScore:0 }
+    { id:"s11", name:"Jamie Ong",      grade:"7", section:"Sampaguita", classLevel:"EASY",     preScore:0 },
+    { id:"s12", name:"Ella Mendoza",   grade:"7", section:"Jasmin",     classLevel:"EASY",     preScore:86 },
+    { id:"s13", name:"Miguel Ramos",   grade:"7", section:"Jasmin",     classLevel:"MODERATE", preScore:67 },
+    { id:"s14", name:"Sofia Bautista", grade:"7", section:"Jasmin",     classLevel:"HARD",     preScore:51 },
+    { id:"s15", name:"Nico Villareal", grade:"7", section:"Jasmin",     classLevel:"",         preScore:0, preAssessmentCompleted:false }
   ],
   teacher: { name:"Ms. Ana Villanueva", subject:"Grade 7 English", school:"Pulo National High School" },
   passages: [
@@ -28,7 +32,13 @@ const MOCK = {
     { id:"p5", title:"Philippine Biodiversity",              label:"MODERATE", genre:"Expository", words:195, time:3,
       text:`The Philippines is one of the world's 17 megadiverse countries, harboring extraordinary variety of plant and animal species. Its unique geographic position in Southeast Asia, combined with thousands of islands and diverse ecosystems â€” tropical rainforests, mangroves, coral reefs, and mountain ranges â€” has made it a global hotspot for biodiversity. Scientists estimate the country is home to more than 52,000 species of plants and animals, many of which are endemic â€” found nowhere else on Earth. The Philippine eagle, the tamaraw, and the tarsier are iconic endemic species. The Tubbataha Reef Natural Park is a UNESCO World Heritage Site and one of the world's finest coral reef ecosystems. Despite this, Philippine biodiversity faces serious threats: deforestation, illegal wildlife trade, coral reef destruction, and climate change. Conservation programs and environmental education in schools play key roles in protecting these natural treasures.` },
     { id:"p6", title:"Constitutional Rights of Citizens",    label:"HARD",     genre:"Expository", words:350, time:5,
-      text:`The Constitution of the Philippines, ratified in 1987 following the People Power Revolution, is the supreme law of the land. It establishes the framework of the Philippine government and enumerates fundamental rights every Filipino citizen is entitled to. These rights â€” the Bill of Rights â€” are enshrined in Article III and protect individuals from state abuses.\n\nAmong the most fundamental rights is the right to life, liberty, and property. No person shall be deprived of these without due process of law â€” which has two dimensions: substantive due process (laws must be fair and reasonable) and procedural due process (legal procedures must be just). The equal protection clause mandates no person shall be discriminated against by law.\n\nThe Constitution guarantees freedom of speech, expression, and the press. Citizens may voice opinions, criticize policies, and engage in peaceful assembly. These freedoms are essential to democracy, allowing citizens to hold leaders accountable. However, they are not absolute â€” they are limited when they infringe on others' rights or pose clear and present danger.\n\nThe right against unreasonable searches and seizures protects citizens' privacy. Law enforcement must obtain a valid warrant before searching or arresting. Evidence gathered illegally is inadmissible under the exclusionary rule. Arrested citizens must be informed of their Miranda rights â€” the right to remain silent and the right to counsel.\n\nUnderstanding constitutional rights is a civic responsibility. An informed citizenry is the cornerstone of democracy.` }
+      text:`The Constitution of the Philippines, ratified in 1987 following the People Power Revolution, is the supreme law of the land. It establishes the framework of the Philippine government and enumerates fundamental rights every Filipino citizen is entitled to. These rights â€” the Bill of Rights â€” are enshrined in Article III and protect individuals from state abuses.\n\nAmong the most fundamental rights is the right to life, liberty, and property. No person shall be deprived of these without due process of law â€” which has two dimensions: substantive due process (laws must be fair and reasonable) and procedural due process (legal procedures must be just). The equal protection clause mandates no person shall be discriminated against by law.\n\nThe Constitution guarantees freedom of speech, expression, and the press. Citizens may voice opinions, criticize policies, and engage in peaceful assembly. These freedoms are essential to democracy, allowing citizens to hold leaders accountable. However, they are not absolute â€” they are limited when they infringe on others' rights or pose clear and present danger.\n\nThe right against unreasonable searches and seizures protects citizens' privacy. Law enforcement must obtain a valid warrant before searching or arresting. Evidence gathered illegally is inadmissible under the exclusionary rule. Arrested citizens must be informed of their Miranda rights â€” the right to remain silent and the right to counsel.\n\nUnderstanding constitutional rights is a civic responsibility. An informed citizenry is the cornerstone of democracy.` },
+    { id:"p7", title:"Planting a School Garden",             label:"EASY",     genre:"Procedural", words:168, time:3,
+      text:`Our class started a small school garden behind the library. First, we cleaned the area and removed plastic wrappers and dry leaves. Next, we loosened the soil using hand trowels and mixed in compost to make the soil rich. We made three garden rows so each group could manage one row. In the first row, we planted pechay seeds. In the second row, we planted tomato seedlings. In the third row, we planted spring onions. We watered the plants every morning before class and checked for insects every afternoon. After two weeks, tiny green shoots appeared. By the fourth week, the pechay leaves were ready to harvest. The project taught us teamwork, patience, and responsibility. We also learned that growing food takes care and planning. Our teacher reminded us that even a small garden can help the school and the environment.` },
+    { id:"p8", title:"Jeepney Modernization Debate",         label:"MODERATE", genre:"Argumentative", words:244, time:4,
+      text:`Jeepney modernization is one of the most discussed transport issues in the Philippines. Supporters say modernization will improve road safety and reduce air pollution. New units have cleaner engines, better brakes, and CCTV cameras. These features can protect both drivers and passengers. Supporters also argue that commuters deserve safer, more reliable public transportation.\n\nHowever, many traditional jeepney drivers and operators are worried about the high cost of replacing old units. Some say that without enough government support, small operators may lose their livelihood. They fear that large transport companies will dominate routes, while independent drivers are left behind. For many families, jeepney driving is their main source of income.\n\nBecause of this, several groups suggest a balanced solution. They recommend phased implementation, lower-interest loans, and stronger subsidy programs. They also ask for route planning that includes existing drivers in transport cooperatives. In this way, modernization can move forward without ignoring social and economic realities. The debate shows that good public policy must consider both long-term national benefits and the daily struggles of workers.` },
+    { id:"p9", title:"How Vaccines Build Community Protection", label:"HARD", genre:"Expository", words:336, time:5,
+      text:`Vaccination is one of the most effective public-health interventions in modern history. A vaccine introduces a weakened, inactivated, or partial form of a pathogen so the immune system can recognize it without causing severe disease. In response, the body produces antibodies and memory cells. If the real pathogen enters later, the immune system reacts faster and more effectively, often preventing serious illness.\n\nBeyond individual protection, vaccination contributes to community-level defense through herd immunity. Herd immunity occurs when a high proportion of the population is immune, reducing the probability of transmission. This protects vulnerable groups who cannot be vaccinated, such as some infants, people with severe allergies, and immunocompromised patients. However, herd immunity depends on sustained high coverage; when vaccination rates fall, outbreaks can reappear.\n\nPublic trust, access, and accurate information are critical. Misinformation can increase vaccine hesitancy, leading to delayed or refused immunization. Health systems must therefore combine scientific guidance with clear communication and equitable service delivery. Mobile clinics, school-based immunization, and community health campaigns can improve uptake, especially in underserved areas.\n\nIn evaluating vaccination programs, policymakers consider safety monitoring, cost-effectiveness, and disease-burden data. While no medical intervention is entirely risk-free, the benefits of vaccines in preventing hospitalizations, long-term complications, and deaths are strongly supported by decades of evidence. Strengthening immunization is not only a medical priority but also a social responsibility that protects entire communities.` }
   ],
   questions: {
     p1:[
@@ -60,64 +70,121 @@ const MOCK = {
       { q:"In which article are the Bill of Rights found?",            opts:["Article I","Article II","Article III","Article IV"], ans:2 },
       { q:"What rule makes evidence from illegal searches inadmissible?",opts:["Miranda rule","Exclusionary rule","Due process rule","Equal protection rule"], ans:1 },
       { q:"What are the two dimensions of due process?",               opts:["Civil and criminal","Procedural and substantive","Formal and informal","Written and oral"], ans:1 }
+    ],
+    p7:[
+      { q:"What did the class do first in the garden project?",        opts:["Planted tomato seedlings","Removed trash and dry leaves","Harvested pechay","Built a fence"], ans:1 },
+      { q:"Which crop was planted in the second row?",                 opts:["Spring onions","Pechay","Tomato seedlings","Eggplant"], ans:2 },
+      { q:"What value did students learn from the activity?",          opts:["Competition","Responsibility","Speed","Silence"], ans:1 }
+    ],
+    p8:[
+      { q:"What is one benefit of jeepney modernization mentioned?",   opts:["Lower school tuition","Safer public transport","Cheaper fuel prices","Fewer passengers"], ans:1 },
+      { q:"Why are some drivers worried about modernization?",         opts:["New routes are shorter","Units are too expensive","Buses will be removed","Roads will close"], ans:1 },
+      { q:"What balanced solution is suggested in the passage?",       opts:["Immediate full replacement","Ban cooperatives","Phased implementation with support","No policy changes"], ans:2 }
+    ],
+    p9:[
+      { q:"What is herd immunity?",                                    opts:["Immunity for one person only","Protection from exercise","Community protection when many are immune","A hospital treatment"], ans:2 },
+      { q:"Which group may rely on herd immunity for protection?",     opts:["Only athletes","People who cannot be vaccinated","Only travelers","People with no symptoms"], ans:1 },
+      { q:"What can increase vaccine hesitancy?",                      opts:["Clear communication","Misinformation","School-based clinics","Safety monitoring"], ans:1 }
     ]
   },
   shortAnswer: {
     p3:"In your own words, explain one effect of climate change on the Philippines.",
-    p6:"Explain what 'due process of law' means in your own words."
+    p6:"Explain what 'due process of law' means in your own words.",
+    p9:"How does herd immunity help protect people who cannot be vaccinated?"
   },
   weeklyProgress: {
     s1:[
       { week:1, score:55, difficulty:"HARD",     recommendation:"Maintain" },
       { week:2, score:48, difficulty:"HARD",     recommendation:"Step DOWN to MODERATE" },
       { week:3, score:65, difficulty:"MODERATE", recommendation:"Maintain" },
-      { week:4, score:71, difficulty:"MODERATE", recommendation:"Maintain" }
+      { week:4, score:71, difficulty:"MODERATE", recommendation:"Maintain" },
+      { week:5, score:74, difficulty:"MODERATE", recommendation:"Maintain" },
+      { week:6, score:78, difficulty:"MODERATE", recommendation:"Step UP to HARD" }
     ],
     s2:[
       { week:1, score:70, difficulty:"MODERATE", recommendation:"Maintain" },
       { week:2, score:75, difficulty:"MODERATE", recommendation:"Step UP to HARD" },
       { week:3, score:68, difficulty:"HARD",     recommendation:"Maintain" },
-      { week:4, score:72, difficulty:"HARD",     recommendation:"Maintain" }
+      { week:4, score:72, difficulty:"HARD",     recommendation:"Maintain" },
+      { week:5, score:76, difficulty:"HARD",     recommendation:"Maintain" },
+      { week:6, score:79, difficulty:"HARD",     recommendation:"Maintain" }
     ],
     s3:[
       { week:1, score:42, difficulty:"EASY",     recommendation:"Maintain" },
       { week:2, score:50, difficulty:"EASY",     recommendation:"Maintain" },
       { week:3, score:55, difficulty:"EASY",     recommendation:"Step UP to MODERATE" },
-      { week:4, score:48, difficulty:"MODERATE", recommendation:"Step DOWN to EASY" }
+      { week:4, score:48, difficulty:"MODERATE", recommendation:"Step DOWN to EASY" },
+      { week:5, score:57, difficulty:"EASY",     recommendation:"Maintain" },
+      { week:6, score:62, difficulty:"EASY",     recommendation:"Step UP to MODERATE" }
     ],
     s4:[],
     s5:[
       { week:1, score:63, difficulty:"MODERATE", recommendation:"Maintain" },
       { week:2, score:67, difficulty:"MODERATE", recommendation:"Maintain" },
       { week:3, score:72, difficulty:"MODERATE", recommendation:"Maintain" },
-      { week:4, score:78, difficulty:"MODERATE", recommendation:"Step UP to HARD" }
+      { week:4, score:78, difficulty:"MODERATE", recommendation:"Step UP to HARD" },
+      { week:5, score:70, difficulty:"HARD",     recommendation:"Maintain" },
+      { week:6, score:74, difficulty:"HARD",     recommendation:"Maintain" }
     ],
     s6:[
       { week:1, score:76, difficulty:"HARD",     recommendation:"Maintain" },
       { week:2, score:82, difficulty:"HARD",     recommendation:"Maintain" },
       { week:3, score:79, difficulty:"HARD",     recommendation:"Maintain" },
-      { week:4, score:85, difficulty:"HARD",     recommendation:"Maintain" }
+      { week:4, score:85, difficulty:"HARD",     recommendation:"Maintain" },
+      { week:5, score:83, difficulty:"HARD",     recommendation:"Maintain" },
+      { week:6, score:87, difficulty:"HARD",     recommendation:"Maintain" }
     ],
     s7:[
       { week:1, score:40, difficulty:"EASY",     recommendation:"Maintain" },
       { week:2, score:47, difficulty:"EASY",     recommendation:"Maintain" },
       { week:3, score:53, difficulty:"EASY",     recommendation:"Maintain" },
-      { week:4, score:58, difficulty:"EASY",     recommendation:"Step UP to MODERATE" }
+      { week:4, score:58, difficulty:"EASY",     recommendation:"Step UP to MODERATE" },
+      { week:5, score:52, difficulty:"MODERATE", recommendation:"Step DOWN to EASY" },
+      { week:6, score:60, difficulty:"EASY",     recommendation:"Step UP to MODERATE" }
     ],
     s8:[
       { week:1, score:57, difficulty:"MODERATE", recommendation:"Maintain" },
       { week:2, score:61, difficulty:"MODERATE", recommendation:"Maintain" },
       { week:3, score:66, difficulty:"MODERATE", recommendation:"Maintain" },
-      { week:4, score:70, difficulty:"MODERATE", recommendation:"Maintain" }
+      { week:4, score:70, difficulty:"MODERATE", recommendation:"Maintain" },
+      { week:5, score:73, difficulty:"MODERATE", recommendation:"Maintain" },
+      { week:6, score:77, difficulty:"MODERATE", recommendation:"Step UP to HARD" }
     ],
     s9:[
       { week:1, score:71, difficulty:"HARD",     recommendation:"Maintain" },
       { week:2, score:75, difficulty:"HARD",     recommendation:"Maintain" },
       { week:3, score:80, difficulty:"HARD",     recommendation:"Maintain" },
-      { week:4, score:77, difficulty:"HARD",     recommendation:"Maintain" }
+      { week:4, score:77, difficulty:"HARD",     recommendation:"Maintain" },
+      { week:5, score:82, difficulty:"HARD",     recommendation:"Maintain" },
+      { week:6, score:84, difficulty:"HARD",     recommendation:"Maintain" }
     ],
     s10:[],
-    s11:[]
+    s11:[],
+    s12:[
+      { week:1, score:82, difficulty:"EASY",     recommendation:"Maintain" },
+      { week:2, score:85, difficulty:"EASY",     recommendation:"Maintain" },
+      { week:3, score:88, difficulty:"EASY",     recommendation:"Step UP to MODERATE" },
+      { week:4, score:80, difficulty:"MODERATE", recommendation:"Maintain" },
+      { week:5, score:83, difficulty:"MODERATE", recommendation:"Maintain" },
+      { week:6, score:86, difficulty:"MODERATE", recommendation:"Step UP to HARD" }
+    ],
+    s13:[
+      { week:1, score:66, difficulty:"MODERATE", recommendation:"Maintain" },
+      { week:2, score:69, difficulty:"MODERATE", recommendation:"Maintain" },
+      { week:3, score:73, difficulty:"MODERATE", recommendation:"Step UP to HARD" },
+      { week:4, score:70, difficulty:"HARD",     recommendation:"Maintain" },
+      { week:5, score:68, difficulty:"HARD",     recommendation:"Maintain" },
+      { week:6, score:74, difficulty:"HARD",     recommendation:"Maintain" }
+    ],
+    s14:[
+      { week:1, score:52, difficulty:"HARD",     recommendation:"Maintain" },
+      { week:2, score:49, difficulty:"HARD",     recommendation:"Step DOWN to MODERATE" },
+      { week:3, score:63, difficulty:"MODERATE", recommendation:"Maintain" },
+      { week:4, score:58, difficulty:"MODERATE", recommendation:"Maintain" },
+      { week:5, score:61, difficulty:"MODERATE", recommendation:"Maintain" },
+      { week:6, score:65, difficulty:"MODERATE", recommendation:"Step UP to HARD" }
+    ],
+    s15:[]
   }
 };
 

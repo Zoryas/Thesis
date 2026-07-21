@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -13,7 +13,7 @@
 <div class="layout">
   <aside class="sidebar">
     <div class="sidebar-logo">
-      <div class="logo-mark"><img src="../image/TalaSaAi.png" alt="TalaSaAI logo"></div>
+
       <h2>TalaSaAI</h2>
       <p>Teacher Portal</p>
     </div>
@@ -102,6 +102,30 @@
       </div>
     </div>
 
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-header">
+        <div class="card-header-copy">
+          <div class="section-title">Program Week Settings</div>
+          <div class="micro-copy">Set the Week 1 start date or temporary manual override for the whole school.</div>
+        </div>
+      </div>
+      <div class="week-settings-grid">
+        <div class="form-group">
+          <label class="form-label" for="program-start-date">Program Start Date (Week 1 starts here)</label>
+          <input id="program-start-date" type="date" class="form-control">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="manual-override-week">Manual Override Week (optional 1-8)</label>
+          <input id="manual-override-week" type="number" min="1" max="8" step="1" class="form-control" placeholder="Leave blank to use automatic week">
+        </div>
+      </div>
+      <div class="week-settings-actions">
+        <button id="save-week-settings-btn" class="btn btn-primary" type="button">Save Settings</button>
+        <button id="clear-week-override-btn" class="btn btn-outline" type="button">Clear Override</button>
+      </div>
+      <div id="week-settings-status" class="week-settings-status" aria-live="polite"></div>
+    </div>
+
     <div class="card">
       <div class="card-header">
         <div class="card-header-copy">
@@ -158,12 +182,80 @@
     });
   }
 
+  async function loadWeekSettingsPanel() {
+    const statusEl = document.getElementById("week-settings-status");
+    statusEl.textContent = "";
+    statusEl.className = "week-settings-status";
+
+    const settings = await ReadWiseAPI.getProgramWeekSettings();
+    const startDateInput = document.getElementById("program-start-date");
+    const overrideInput = document.getElementById("manual-override-week");
+
+    startDateInput.value = (settings && settings.programStartDate) ? settings.programStartDate : "";
+    overrideInput.value = (settings && settings.manualOverrideWeek != null) ? String(settings.manualOverrideWeek) : "";
+
+    if (settings && settings.manualOverrideWeek != null) {
+      statusEl.textContent = "Manual override is active: Week " + settings.manualOverrideWeek;
+      statusEl.className = "week-settings-status is-warning";
+    }
+  }
+
+  async function saveWeekSettings() {
+    const statusEl = document.getElementById("week-settings-status");
+    const saveBtn = document.getElementById("save-week-settings-btn");
+    const startDateInput = document.getElementById("program-start-date");
+    const overrideInput = document.getElementById("manual-override-week");
+
+    const payload = {};
+    payload.programStartDate = startDateInput.value ? startDateInput.value : null;
+    payload.manualOverrideWeek = overrideInput.value ? Number(overrideInput.value) : null;
+
+    saveBtn.disabled = true;
+    statusEl.textContent = "Saving settings...";
+    statusEl.className = "week-settings-status";
+
+    try {
+      const result = await ReadWiseAPI.updateProgramWeekSettings(payload);
+      document.getElementById("dashboard-week-label").textContent = "Week " + result.activeWeek;
+      statusEl.textContent = "Settings saved successfully.";
+      statusEl.className = "week-settings-status is-success";
+      await loadWeekSettingsPanel();
+    } catch (error) {
+      statusEl.textContent = (error && error.message) ? error.message : "Failed to save settings.";
+      statusEl.className = "week-settings-status is-error";
+    } finally {
+      saveBtn.disabled = false;
+    }
+  }
+
+  async function clearWeekOverride() {
+    const statusEl = document.getElementById("week-settings-status");
+    const clearBtn = document.getElementById("clear-week-override-btn");
+    clearBtn.disabled = true;
+    statusEl.textContent = "Clearing override...";
+    statusEl.className = "week-settings-status";
+
+    try {
+      const result = await ReadWiseAPI.updateProgramWeekSettings({ manualOverrideWeek: null });
+      document.getElementById("manual-override-week").value = "";
+      document.getElementById("dashboard-week-label").textContent = "Week " + result.activeWeek;
+      statusEl.textContent = "Manual override cleared.";
+      statusEl.className = "week-settings-status is-success";
+      await loadWeekSettingsPanel();
+    } catch (error) {
+      statusEl.textContent = (error && error.message) ? error.message : "Failed to clear override.";
+      statusEl.className = "week-settings-status is-error";
+    } finally {
+      clearBtn.disabled = false;
+    }
+  }
+
   async function bootstrapPage() {
     try {
       const auth = await ReadWiseAPI.me();
       if (!auth || !auth.user || auth.user.role !== "teacher") throw new Error("Unauthorized");
       const dashboard = await ReadWiseAPI.getTeacherDashboard();
-      const activeWeek = ReadWiseAPI.getActiveWeek();
+      const activeWeek = await ReadWiseAPI.getActiveWeek();
       const levelCounts = (dashboard && dashboard.levelCounts) || { EASY: 0, MODERATE: 0, HARD: 0 };
       const levelStudents = (dashboard && dashboard.levelStudents) || { EASY: [], MODERATE: [], HARD: [] };
       const recentSubmissions = (dashboard && dashboard.recentSubmissions) || [];
@@ -215,6 +307,9 @@
         '</div>'
       );
       document.getElementById("pending-actions-list").innerHTML = actions.join("");
+      await loadWeekSettingsPanel();
+      document.getElementById("save-week-settings-btn").addEventListener("click", saveWeekSettings);
+      document.getElementById("clear-week-override-btn").addEventListener("click", clearWeekOverride);
     } catch (error) {
       window.location.href = "../login.html";
     }

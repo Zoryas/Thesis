@@ -11,9 +11,10 @@
 <div class="demo-banner">TalaSaAI System</div>
 <div class="layout">
   <aside class="sidebar">
-    <div class="sidebar-logo">
-      <div class="logo-mark"><img src="../image/TalaSaAi.png" alt="TalaSaAI logo"></div><h2>TalaSaAI</h2><p>Student Portal</p>
-    </div>
+    <a class="sidebar-logo sidebar-logo-link" href="student-profile.html" title="Open my profile" aria-label="Open my profile">
+      <h2>TalaSaAI</h2>
+      <p>Student Portal</p>
+    </a>
     <nav>
       <a href="student-profile.html"><span class="icon" data-icon="profile"></span><span class="nav-label">My Profile</span></a>
       <a href="student-dashboard.html"><span class="icon" data-icon="dashboard"></span><span class="nav-label">Dashboard</span></a>
@@ -604,7 +605,25 @@
       activeStudent = auth.user.student;
       document.getElementById("sb-name").textContent = activeStudent.name || "Student";
       if (activeStudent.preAssessmentCompleted) {
-        window.location.href = "student-dashboard.html";
+        const doneIndicator = document.getElementById("step-indicator");
+        doneIndicator.innerHTML = '<span class="badge badge-success" style="font-size:14px;padding:6px 16px">Pre-Assessment Complete</span>';
+        const preScore = Number(activeStudent.preScore || 0);
+        const assignedLevel = normalizeClassLevel(activeStudent.classLevel || classifyPreAssessmentLevel(preScore));
+        document.getElementById("assessment-body").innerHTML =
+          '<div class="card" style="text-align:center;padding:40px">' +
+            '<div class="section-title" style="margin-bottom:8px">Your Pre-Assessment Result</div>' +
+            '<div style="font-size:48px;font-weight:900;color:var(--secondary)">' + preScore + '%</div>' +
+            '<div style="margin:16px 0">' +
+              '<span class="badge ' + badgeClass(assignedLevel) + '" style="font-size:16px;padding:8px 20px">Assigned Class: ' + getClassDisplayName(assignedLevel) + '</span>' +
+            '</div>' +
+            '<p style="font-size:14px;color:var(--muted);max-width:460px;margin:0 auto 20px">' +
+              'You already completed the pre-assessment. This page now shows your saved result and assigned reading class.' +
+            '</p>' +
+            '<div style="display:flex;gap:10px;justify-content:center">' +
+              '<a href="student-dashboard.html" class="btn btn-primary">Go to Dashboard</a>' +
+              '<a href="student-progress.html" class="btn btn-outline">View Progress</a>' +
+            '</div>' +
+          '</div>';
         return;
       }
       currentPhase = "reading";

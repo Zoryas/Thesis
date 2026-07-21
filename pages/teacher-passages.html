@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -12,7 +12,7 @@
 <div class="layout">
   <aside class="sidebar">
     <div class="sidebar-logo">
-      <div class="logo-mark"><img src="../image/TalaSaAi.png" alt="TalaSaAI logo"></div>
+
       <h2>TalaSaAI</h2>
       <p>Teacher Portal</p>
     </div>
@@ -46,9 +46,14 @@
           <div class="section-title">Weekly Class Assignments</div>
           <p class="micro-copy">Assign 5 passages per class for each week. Label matching is enforced automatically.</p>
         </div>
-        <div style="min-width:180px">
-          <label class="form-label" for="week-selector">Active Week</label>
-          <select class="form-control" id="week-selector"></select>
+        <div style="min-width:220px">
+          <label class="form-label" id="active-week-label" for="week-selector-trigger">Active Week</label>
+          <div class="custom-week-select" id="custom-week-select">
+            <button type="button" class="custom-week-trigger" id="week-selector-trigger" aria-haspopup="listbox" aria-expanded="false">
+              <span id="week-selector-label" class="active-week-current">Week 1</span>
+            </button>
+            <div class="custom-week-options" id="week-selector-options" role="listbox" aria-label="Active Week"></div>
+          </div>
         </div>
       </div>
       <div class="card-grid card-grid-3 assignment-grid" id="assignment-grid"></div>
@@ -82,11 +87,16 @@
   const grid = document.getElementById("passage-grid");
   const summary = document.getElementById("library-summary");
   const assignmentGrid = document.getElementById("assignment-grid");
-  const weekSelector = document.getElementById("week-selector");
   const difficultyFilter = document.getElementById("difficulty-filter");
+  const customWeekSelect = document.getElementById("custom-week-select");
+  const weekSelectorTrigger = document.getElementById("week-selector-trigger");
+  const weekSelectorLabel = document.getElementById("week-selector-label");
+  const weekSelectorOptions = document.getElementById("week-selector-options");
 
   let passages = [];
   let weeklyAssignments = { EASY: [], MODERATE: [], HARD: [] };
+  let currentActiveWeek = 1; // true program week from dashboard/server
+  let selectedAssignmentWeek = 1; // local week context for assignment planning
 
   function escapeHtml(value) {
     return String(value).replace(/[&<>"']/g, function(character) {
@@ -95,18 +105,58 @@
   }
 
   function getCurrentWeek() {
-    return Number(weekSelector.value || ReadWiseAPI.getActiveWeek());
+    return Number(selectedAssignmentWeek || currentActiveWeek || 1);
   }
 
-  function renderWeekSelector() {
-    const active = ReadWiseAPI.getActiveWeek();
-    weekSelector.innerHTML = "";
+  function closeWeekOptions() {
+    customWeekSelect.classList.remove("is-open");
+    weekSelectorTrigger.setAttribute("aria-expanded", "false");
+  }
+
+  function openWeekOptions() {
+    customWeekSelect.classList.add("is-open");
+    weekSelectorTrigger.setAttribute("aria-expanded", "true");
+  }
+
+  function renderWeekSelector(selectedWeekValue) {
+    const selectedWeek = Number(selectedWeekValue || selectedAssignmentWeek || currentActiveWeek || 1);
+    const programWeek = Number(currentActiveWeek || 1);
+    const activeWeekLabel = document.getElementById("active-week-label");
+
+    weekSelectorLabel.textContent = "Week " + selectedWeek;
+    weekSelectorTrigger.classList.remove("is-current-week", "is-selected-week");
+    if (selectedWeek === programWeek) {
+      weekSelectorTrigger.classList.add("is-current-week");
+    } else {
+      weekSelectorTrigger.classList.add("is-selected-week");
+    }
+    if (activeWeekLabel) {
+      activeWeekLabel.classList.toggle("active-week-label", selectedWeek === programWeek);
+    }
+    weekSelectorOptions.innerHTML = "";
+
     for (let week = 1; week <= TOTAL_PROGRAM_WEEKS; week++) {
-      const option = document.createElement("option");
-      option.value = String(week);
-      option.textContent = "Week " + week;
-      if (week === active) option.selected = true;
-      weekSelector.appendChild(option);
+      const option = document.createElement("button");
+      option.type = "button";
+      let optionClass = "custom-week-option";
+      if (week === programWeek) optionClass += " is-active";
+      if (week === selectedWeek) optionClass += " is-selected";
+      option.className = optionClass;
+      option.setAttribute("role", "option");
+      option.setAttribute("aria-selected", week === selectedWeek ? "true" : "false");
+      option.textContent = "Week " + week + (week === programWeek ? " (Current)" : "");
+      option.addEventListener("click", async function() {
+        try {
+          selectedAssignmentWeek = Number(week);
+          renderWeekSelector(selectedAssignmentWeek);
+          closeWeekOptions();
+          await loadAssignments();
+          renderAll();
+        } catch (error) {
+          showToast(error.message || "Unable to load assignments.", "#c0392b");
+        }
+      });
+      weekSelectorOptions.appendChild(option);
     }
   }
 
@@ -246,7 +296,7 @@
           "</div>" +
           '<div class="library-card-actions">' +
             '<button class="btn btn-outline btn-sm" ' + disabled + ' onclick="assignPassage(\'' + passage.id + '\')">' + escapeHtml(assignText) + "</button>" +
-            '<button class="btn btn-sm btn-secondary" onclick="editPassage(\'' + passage.id + '\')">' + (isDraft ? "Complete Draft" : "Edit") + '</button>' +
+            '<button class="btn btn-sm btn-secondary" onclick="editPassage(\'' + passage.id + '\')">' + (isDraft ? "Complete Draft / Edit" : "Edit") + '</button>' +
             '<button class="btn btn-danger btn-sm" onclick="removePassage(\'' + passage.id + '\')">Delete</button>' +
           "</div>" +
         "</div>"
@@ -374,7 +424,9 @@
       return;
     }
 
-    renderWeekSelector();
+    currentActiveWeek = await ReadWiseAPI.getActiveWeek();
+    selectedAssignmentWeek = Number(currentActiveWeek || 1);
+    renderWeekSelector(selectedAssignmentWeek);
     await Promise.all([loadPassages(), loadAssignments()]);
     renderAll();
   }
@@ -389,14 +441,17 @@
     window.location.href = "../login.html";
   }
 
-  weekSelector.addEventListener("change", async function() {
-    const week = ReadWiseAPI.setActiveWeek(weekSelector.value);
-    weekSelector.value = String(week);
-    try {
-      await loadAssignments();
-      renderAll();
-    } catch (error) {
-      showToast(error.message || "Unable to load assignments.", "#c0392b");
+  weekSelectorTrigger.addEventListener("click", function() {
+    if (customWeekSelect.classList.contains("is-open")) {
+      closeWeekOptions();
+    } else {
+      openWeekOptions();
+    }
+  });
+
+  document.addEventListener("click", function(event) {
+    if (!customWeekSelect.contains(event.target)) {
+      closeWeekOptions();
     }
   });
 

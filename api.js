@@ -3,7 +3,6 @@
   var defaultHost = (global.location && global.location.hostname) ? global.location.hostname : "localhost";
   var RAW_BASE = global.READWISE_API_BASE_URL || ("http://" + defaultHost + ":5000");
   var BASE_URL = String(RAW_BASE).replace(/\/+$/, "");
-  var ACTIVE_WEEK_KEY = "readwise_active_week_v1";
   var USER_CACHE_KEY = "readwise_user_v1";
   var TOKEN_KEY = "readwise_token";
   var TOTAL_WEEKS = 8;
@@ -15,22 +14,18 @@
     return parsed;
   }
 
-  function getActiveWeek() {
-    try {
-      return normalizeWeek(localStorage.getItem(ACTIVE_WEEK_KEY) || 1);
-    } catch (error) {
-      return 1;
-    }
+  async function getActiveWeek() {
+    var data = await request("/api/program/week");
+    return normalizeWeek(data && data.activeWeek);
   }
 
-  function setActiveWeek(week) {
+  async function setActiveWeek(week) {
     var normalized = normalizeWeek(week);
-    try {
-      localStorage.setItem(ACTIVE_WEEK_KEY, String(normalized));
-    } catch (error) {
-      // ignore storage errors
-    }
-    return normalized;
+    var data = await request("/api/program/week/settings", {
+      method: "PUT",
+      body: { manualOverrideWeek: normalized }
+    });
+    return normalizeWeek(data && data.activeWeek);
   }
 
   function buildUrl(path) {
@@ -250,6 +245,9 @@
     submitStudentAttempt: function(payload) {
       return request("/api/student/attempts", { method: "POST", body: payload });
     },
+    saveReadingTime: function(payload) {
+      return request("/api/student/reading-time", { method: "POST", body: payload });
+    },
     submitStudentPreAssessment: function(payload) {
       return request("/api/student/pre-assessment", { method: "POST", body: payload }).then(function(data) {
         if (data && data.user) cacheUser(data.user);
@@ -266,8 +264,20 @@
       return request("/api/teacher/students");
     },
     getTeacherReportSummary: function(activeWeek) {
+      if (activeWeek === undefined || activeWeek === null || activeWeek === "") {
+        return request("/api/teacher/reports/summary");
+      }
       var target = normalizeWeek(activeWeek);
       return request("/api/teacher/reports/summary?activeWeek=" + target);
+    },
+    getProgramWeek: function() {
+      return request("/api/program/week");
+    },
+    getProgramWeekSettings: function() {
+      return request("/api/program/week/settings");
+    },
+    updateProgramWeekSettings: function(payload) {
+      return request("/api/program/week/settings", { method: "PUT", body: payload || {} });
     },
     getTeacherStudentDetail: function(studentId) {
       return request("/api/teacher/students/" + encodeURIComponent(studentId));

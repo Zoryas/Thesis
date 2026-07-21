@@ -11,9 +11,10 @@
 <div class="demo-banner">TalaSaAI System</div>
 <div class="layout">
   <aside class="sidebar">
-    <div class="sidebar-logo">
-      <div class="logo-mark"><img src="../image/TalaSaAi.png" alt="TalaSaAI logo"></div><h2>TalaSaAI</h2><p>Student Portal</p>
-    </div>
+    <a class="sidebar-logo sidebar-logo-link" href="student-profile.html" title="Open my profile" aria-label="Open my profile">
+      <h2>TalaSaAI</h2>
+      <p>Student Portal</p>
+    </a>
     <nav>
       <a href="student-profile.html"><span class="icon" data-icon="profile"></span><span class="nav-label">My Profile</span></a>
       <a href="student-dashboard.html"><span class="icon" data-icon="dashboard"></span><span class="nav-label">Dashboard</span></a>
@@ -110,7 +111,17 @@
     const result = raw ? JSON.parse(raw) : fallback;
     const resultWeek = Number(result.week || activeWeek);
     const underReview = !!result.underReview;
-    const selfRating = String(result.selfRating || "").trim().toUpperCase();
+    const rawDifficulty = result.difficulty;
+    const legacySelfRating = String(result.selfRating || "").trim().toUpperCase();
+    const numericDifficulty = Number(rawDifficulty);
+    function mapDifficultyLabel(value) {
+      if (value === 1) return "Easy";
+      if (value === 3) return "Moderate";
+      if (value === 5) return "Difficult";
+      return "";
+    }
+    const mappedDifficultyLabel = Number.isFinite(numericDifficulty) ? mapDifficultyLabel(numericDifficulty) : "";
+    const selfRating = mappedDifficultyLabel || legacySelfRating;
     const reviewStatusEl = document.getElementById("review-status");
     const reviewNoteEl = document.getElementById("review-note");
 
@@ -138,7 +149,7 @@
       : "Auto-scored result is finalized.";
 
     let recommendation = "Maintain", recColor = "var(--accent)";
-    let recommendationHint = "Based on score, completion, and your self-rating";
+    let recommendationHint = "Based on your latest recorded progress trend.";
     if (underReview) {
       recommendation = "Pending Review";
       recColor = "var(--moderate)";
@@ -161,9 +172,7 @@
     document.getElementById("rec-badge").innerHTML =
       '<div class="result-recommendation"><strong style="color:' + recColor + '">' + recommendation + '</strong><div class="micro-copy">' + recommendationHint + '</div></div>';
 
-    document.getElementById("self-rating").textContent = selfRating
-      ? getClassDisplayName(selfRating)
-      : "Not provided";
+    document.getElementById("self-rating").textContent = selfRating || "Not provided";
 
     if (result.shortAnswer) {
       document.getElementById("sa-section").style.display = "block";

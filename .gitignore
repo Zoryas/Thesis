@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Logs
+*.log
+flask.err.log
+flask.out.log
+
+# Local editor/OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Local config/secrets (keep templates/examples only)
+.env
+.env.*
+!.env.example
+
+# Runtime / cache
+*.tmp
+*.cache
+
+# Dataset / generated data files (not needed to push)
+imports/*.csv
+test/*.csv
+*.csv
+
+# Optional: model artifacts can be large; keep if needed
+# ml_model/*.pkl

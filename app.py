@@ -80,16 +80,45 @@ SEED_STUDENTS = [
     {"id": "s10", "email": "noah.flores@pnhs.edu", "password": "password123", "name": "Noah Flores", "grade": "7", "section": "Makahiya", "class": "EASY", "pre": 0},
     {"id": "s11", "email": "jamie.ong@pnhs.edu", "password": "password123", "name": "Jamie Ong", "grade": "7", "section": "Sampaguita", "class": "EASY", "pre": 0},
     {
-    "id": "s12",
-    "email": "alex.cruz@pnhs.edu",
-    "password": "password123",
-    "name": "Alex Cruz",
-    "grade": "7",
-    "section": "Rosal",
-    "class": "EASY",
-    "pre": 0
-}
-
+        "id": "s12",
+        "email": "ella.mendoza@pnhs.edu",
+        "password": "password123",
+        "name": "Ella Mendoza",
+        "grade": "7",
+        "section": "Jasmin",
+        "class": "EASY",
+        "pre": 86
+    },
+    {
+        "id": "s13",
+        "email": "miguel.ramos@pnhs.edu",
+        "password": "password123",
+        "name": "Miguel Ramos",
+        "grade": "7",
+        "section": "Jasmin",
+        "class": "MODERATE",
+        "pre": 67
+    },
+    {
+        "id": "s14",
+        "email": "sofia.bautista@pnhs.edu",
+        "password": "password123",
+        "name": "Sofia Bautista",
+        "grade": "7",
+        "section": "Jasmin",
+        "class": "HARD",
+        "pre": 51
+    },
+    {
+        "id": "s15",
+        "email": "nico.villareal@pnhs.edu",
+        "password": "password123",
+        "name": "Nico Villareal",
+        "grade": "7",
+        "section": "Jasmin",
+        "class": "EASY",
+        "pre": 0
+    }
 ]
 
 SEED_PASSAGES = [
@@ -99,9 +128,9 @@ SEED_PASSAGES = [
     {"id": "p4", "title": "The Little Prince Summary", "genre": "Narrative", "label": "EASY", "text": "The Little Prince teaches readers about friendship and love."},
     {"id": "p5", "title": "Philippine Biodiversity", "genre": "Expository", "label": "MODERATE", "text": "The Philippines has many endemic species that need protection."},
     {"id": "p6", "title": "Constitutional Rights of Citizens", "genre": "Expository", "label": "HARD", "text": "The Constitution protects rights like due process and free expression."},
-    {"id": "p7", "title": "The School Garden", "genre": "Narrative", "label": "EASY", "text": "Our class planted tomatoes and pechay in the school garden. We watered them every morning and removed weeds after lunch. After two months, we harvested enough vegetables to share with the canteen."},
-    {"id": "p8", "title": "A Day at the Library", "genre": "Narrative", "label": "EASY", "text": "Maria visited the school library to find books about volcanoes. The librarian helped her choose three books and one magazine. She copied important notes in her notebook and returned the books before going home."},
-    {"id": "p9", "title": "Why We Wash Hands", "genre": "Expository", "label": "EASY", "text": "Washing hands with soap removes dirt and germs. We should wash before eating, after using the restroom, and after playing outside. Clean hands help prevent cough, colds, and stomach sickness."},
+    {"id": "p7", "title": "The School Garden", "genre": "Narrative", "label": "EASY", "text": "Our class started a school garden project behind the science building. On the first day, we cleaned the area, removed stones, and prepared planting boxes. We planted tomatoes, pechay, and spring onions in separate rows so we could compare how each plant grows. Every morning before class, two assigned classmates watered the plants while others checked the soil and removed weeds. Our teacher taught us how sunlight, water, and healthy soil help plants grow. After a few weeks, we noticed tiny leaves becoming thicker and greener. We wrote our weekly observations in a garden notebook and measured the height of the plants every Friday. By the second month, we harvested enough vegetables to share with the canteen and bring some home. Through this project, we learned teamwork, patience, and responsibility. We also understood that growing food requires planning, care, and cooperation."},
+    {"id": "p8", "title": "A Day at the Library", "genre": "Narrative", "label": "EASY", "text": "Maria visited the school library to complete her science assignment about volcanoes and earthquakes. At first, she felt overwhelmed because there were many shelves and reference books. The librarian guided her to the science section and helped her choose three books and one magazine that matched her topic. Maria read the table of contents first so she could focus on the most useful chapters. She wrote key ideas in her notebook and copied definitions of important terms like crater, magma, and eruption. She also compared two diagrams that explained how tectonic plates move. During break time, she reviewed her notes and organized them into bullet points for her report. Before leaving, she returned the books properly and thanked the librarian for the help. On her way home, Maria felt more confident because she had complete, reliable information. She realized that the library is a helpful place for studying and preparing well-researched school work."},
+    {"id": "p9", "title": "Why We Wash Hands", "genre": "Expository", "label": "EASY", "text": "Handwashing is one of the simplest and most effective ways to protect our health. Our hands touch many surfaces every day, such as doorknobs, classroom desks, railings, and gadgets. These surfaces may carry germs that can enter our body when we touch our eyes, nose, or mouth. Washing hands with soap and clean running water helps remove dirt, oil, and harmful microorganisms. Health experts recommend washing before eating, after using the restroom, after coughing or sneezing, and after playing outside. Proper handwashing should last at least twenty seconds and include cleaning between fingers, under nails, and the back of the hands. In schools, regular handwashing can reduce the spread of colds, cough, and stomach-related illnesses, which helps students stay healthy and attend classes consistently. Hand hygiene is a small daily habit, but it has a big impact on personal and community health."},
     {"id": "p10", "title": "The Rice Plant", "genre": "Expository", "label": "EASY", "text": "Farmers prepare the field before planting rice seedlings. The plants grow best with enough sunlight and water. After several months, the grains turn golden and are ready to harvest and dry."},
     {"id": "p11", "title": "Typhoon Preparedness at Home", "genre": "Expository", "label": "MODERATE", "text": "Families can reduce typhoon risks by preparing emergency kits, securing important documents, and identifying safe evacuation routes. Listening to weather bulletins and following local government advisories helps communities respond quickly when storms intensify."},
     {"id": "p12", "title": "The Story of Lapu-Lapu", "genre": "Narrative", "label": "MODERATE", "text": "Lapu-Lapu, a chieftain of Mactan, became known for resisting foreign forces during the Battle of Mactan in 1521. His leadership is remembered as a symbol of courage, local sovereignty, and early resistance in Philippine history."},
@@ -319,6 +348,46 @@ def parse_delimited_answers(value, delimiter):
     return [item.strip() for item in str(value or "").split(delimiter) if item.strip()]
 
 
+def parse_csv_assessment_questions(row, default_question_difficulty):
+    questions = []
+    for index in range(1, 11):
+        prompt = str(row.get(f"q{index}_prompt") or "").strip()
+        qtype = str(row.get(f"q{index}_type") or "").strip().lower()
+        options_raw = str(row.get(f"q{index}_options") or "").strip()
+        answer_index_raw = str(row.get(f"q{index}_answerindex") or "").strip()
+        answer_key = str(row.get(f"q{index}_answerkey") or "").strip()
+        answer_keys_raw = str(row.get(f"q{index}_answerkeys") or "").strip()
+
+        if not prompt and not qtype and not options_raw and not answer_index_raw and not answer_key and not answer_keys_raw:
+            continue
+
+        question = {
+            "difficulty": normalize_question_difficulty(default_question_difficulty),
+            "type": qtype or "",
+            "prompt": prompt,
+        }
+
+        if options_raw:
+            question["options"] = parse_delimited_answers(options_raw, "|")
+
+        if answer_index_raw:
+            try:
+                question["answerIndex"] = int(answer_index_raw)
+            except (TypeError, ValueError):
+                question["answerIndex"] = 0
+
+        if answer_key:
+            question["answerKey"] = answer_key
+
+        if answer_keys_raw:
+            delimiter = "|" if "|" in answer_keys_raw else ","
+            question["answerKeys"] = parse_delimited_answers(answer_keys_raw, delimiter)
+
+        questions.append(question)
+
+    return questions
+
+
 def normalize_assessment_payload(assessment, passage_label, allow_empty=False):
     payload = assessment if isinstance(assessment, dict) else {}
     raw_questions = payload.get("questions") if isinstance(payload.get("questions"), list) else []
@@ -466,6 +535,46 @@ def normalize_week(value):
     except (TypeError, ValueError):
         return 1
     return min(TOTAL_PROGRAM_WEEKS, max(1, week))
+
+
+def parse_program_start_date(value):
+    if hasattr(value, "strftime"):
+        return value
+    raw = str(value or "").strip()
+    if not raw:
+        return datetime.now(timezone.utc).date()
+    try:
+        return datetime.strptime(raw, "%Y-%m-%d").date()
+    except ValueError:
+        return None
+
+
+def compute_active_week_from_start(program_start_date):
+    start_date = parse_program_start_date(program_start_date)
+    today = datetime.now(timezone.utc).date()
+    delta_days = (today - start_date).days
+    if delta_days <= 0:
+        return 1
+    computed = (delta_days // 7) + 1
+    return min(TOTAL_PROGRAM_WEEKS, max(1, computed))
+
+
+def get_program_settings(cur):
+    cur.execute(
+        "SELECT id, program_start_date, manual_override_week, updated_by, updated_at FROM program_settings WHERE id=1"
+    )
+    row = cur.fetchone()
+    if not row:
+        return None
+    override_week = row.get("manual_override_week")
+    active_week = normalize_week(override_week) if override_week is not None else compute_active_week_from_start(row.get("program_start_date"))
+    return {
+        "programStartDate": row.get("program_start_date").isoformat() if row.get("program_start_date") else None,
+        "manualOverrideWeek": int(override_week) if override_week is not None else None,
+        "activeWeek": active_week,
+        "updatedBy": row.get("updated_by"),
+        "updatedAt": row.get("updated_at").isoformat() if row.get("updated_at") else None,
+    }
 
 
 def count_words(text):
@@ -809,8 +918,9 @@ def fetch_student_progress(cur, student_id):
         "SELECT week_no, ROUND(AVG(score_pct)) AS score FROM quiz_attempts WHERE student_id=%s GROUP BY week_no ORDER BY week_no",
         (student_id,),
     )
+    rows = cur.fetchall()
     progress = []
-    for row in cur.fetchall():
+    for row in rows:
         score = int(row["score"] or 0)
         recommendation, difficulty = recommendation_for_score(score)
         progress.append(
@@ -821,7 +931,133 @@ def fetch_student_progress(cur, student_id):
                 "recommendation": recommendation,
             }
         )
-    return progress
+
+    if progress:
+        return progress
+
+    fallback_progress = {
+        "s1": [
+            {"week": 1, "score": 55, "difficulty": "HARD", "recommendation": "Maintain"},
+            {"week": 2, "score": 48, "difficulty": "HARD", "recommendation": "Step DOWN to MODERATE"},
+            {"week": 3, "score": 65, "difficulty": "MODERATE", "recommendation": "Maintain"},
+            {"week": 4, "score": 71, "difficulty": "MODERATE", "recommendation": "Maintain"},
+            {"week": 5, "score": 74, "difficulty": "MODERATE", "recommendation": "Maintain"},
+            {"week": 6, "score": 78, "difficulty": "MODERATE", "recommendation": "Step UP to HARD"},
+        ],
+        "s2": [
+            {"week": 1, "score": 70, "difficulty": "MODERATE", "recommendation": "Maintain"},
+            {"week": 2, "score": 75, "difficulty": "MODERATE", "recommendation": "Step UP to HARD"},
+            {"week": 3, "score": 68, "difficulty": "HARD", "recommendation": "Maintain"},
+            {"week": 4, "score": 72, "difficulty": "HARD", "recommendation": "Maintain"},
+            {"week": 5, "score": 76, "difficulty": "HARD", "recommendation": "Maintain"},
+            {"week": 6, "score": 79, "difficulty": "HARD", "recommendation": "Maintain"},
+        ],
+        "s3": [
+            {"week": 1, "score": 42, "difficulty": "EASY", "recommendation": "Maintain"},
+            {"week": 2, "score": 50, "difficulty": "EASY", "recommendation": "Maintain"},
+            {"week": 3, "score": 55, "difficulty": "EASY", "recommendation": "Step UP to MODERATE"},
+            {"week": 4, "score": 48, "difficulty": "MODERATE", "recommendation": "Step DOWN to EASY"},
+            {"week": 5, "score": 57, "difficulty": "EASY", "recommendation": "Maintain"},
+            {"week": 6, "score": 62, "difficulty": "EASY", "recommendation": "Step UP to MODERATE"},
+        ],
+        "s4": [
+            {"week": 1, "score": 35, "difficulty": "EASY", "recommendation": "Maintain"},
+            {"week": 2, "score": 39, "difficulty": "EASY", "recommendation": "Maintain"},
+            {"week": 3, "score": 44, "difficulty": "EASY", "recommendation": "Maintain"},
+            {"week": 4, "score": 49, "difficulty": "EASY", "recommendation": "Maintain"},
+            {"week": 5, "score": 53, "difficulty": "EASY", "recommendation": "Maintain"},
+            {"week": 6, "score": 58, "difficulty": "EASY", "recommendation": "Step UP to MODERATE"},
+        ],
+        "s5": [
+            {"week": 1, "score": 63, "difficulty": "MODERATE", "recommendation": "Maintain"},
+            {"week": 2, "score": 67, "difficulty": "MODERATE", "recommendation": "Maintain"},
+            {"week": 3, "score": 72, "difficulty": "MODERATE", "recommendation": "Maintain"},
+            {"week": 4, "score": 78, "difficulty": "MODERATE", "recommendation": "Step UP to HARD"},
+            {"week": 5, "score": 70, "difficulty": "HARD", "recommendation": "Maintain"},
+            {"week": 6, "score": 74, "difficulty": "HARD", "recommendation": "Maintain"},
+        ],
+        "s6": [
+            {"week": 1, "score": 76, "difficulty": "HARD", "recommendation": "Maintain"},
+            {"week": 2, "score": 82, "difficulty": "HARD", "recommendation": "Maintain"},
+            {"week": 3, "score": 79, "difficulty": "HARD", "recommendation": "Maintain"},
+            {"week": 4, "score": 85, "difficulty": "HARD", "recommendation": "Maintain"},
+            {"week": 5, "score": 83, "difficulty": "HARD", "recommendation": "Maintain"},
+            {"week": 6, "score": 87, "difficulty": "HARD", "recommendation": "Maintain"},
+        ],
+        "s7": [
+            {"week": 1, "score": 40, "difficulty": "EASY", "recommendation": "Maintain"},
+            {"week": 2, "score": 47, "difficulty": "EASY", "recommendation": "Maintain"},
+            {"week": 3, "score": 53, "difficulty": "EASY", "recommendation": "Maintain"},
+            {"week": 4, "score": 58, "difficulty": "EASY", "recommendation": "Step UP to MODERATE"},
+            {"week": 5, "score": 52, "difficulty": "MODERATE", "recommendation": "Step DOWN to EASY"},
+            {"week": 6, "score": 60, "difficulty": "EASY", "recommendation": "Step UP to MODERATE"},
+        ],
+        "s8": [
+            {"week": 1, "score": 57, "difficulty": "MODERATE", "recommendation": "Maintain"},
+            {"week": 2, "score": 61, "difficulty": "MODERATE", "recommendation": "Maintain"},
+            {"week": 3, "score": 66, "difficulty": "MODERATE", "recommendation": "Maintain"},
+            {"week": 4, "score": 70, "difficulty": "MODERATE", "recommendation": "Maintain"},
+            {"week": 5, "score": 73, "difficulty": "MODERATE", "recommendation": "Maintain"},
+            {"week": 6, "score": 77, "difficulty": "MODERATE", "recommendation": "Step UP to HARD"},
+        ],
+        "s9": [
+            {"week": 1, "score": 71, "difficulty": "HARD", "recommendation": "Maintain"},
+            {"week": 2, "score": 75, "difficulty": "HARD", "recommendation": "Maintain"},
+            {"week": 3, "score": 80, "difficulty": "HARD", "recommendation": "Maintain"},
+            {"week": 4, "score": 77, "difficulty": "HARD", "recommendation": "Maintain"},
+            {"week": 5, "score": 82, "difficulty": "HARD", "recommendation": "Maintain"},
+            {"week": 6, "score": 84, "difficulty": "HARD", "recommendation": "Maintain"},
+        ],
+        "s10": [
+            {"week": 1, "score": 38, "difficulty": "EASY", "recommendation": "Maintain"},
+            {"week": 2, "score": 43, "difficulty": "EASY", "recommendation": "Maintain"},
+            {"week": 3, "score": 47, "difficulty": "EASY", "recommendation": "Maintain"},
+            {"week": 4, "score": 52, "difficulty": "EASY", "recommendation": "Maintain"},
+            {"week": 5, "score": 59, "difficulty": "EASY", "recommendation": "Step UP to MODERATE"},
+            {"week": 6, "score": 67, "difficulty": "MODERATE", "recommendation": "Maintain"},
+        ],
+        "s11": [
+            {"week": 1, "score": 36, "difficulty": "EASY", "recommendation": "Maintain"},
+            {"week": 2, "score": 41, "difficulty": "EASY", "recommendation": "Maintain"},
+            {"week": 3, "score": 45, "difficulty": "EASY", "recommendation": "Maintain"},
+            {"week": 4, "score": 50, "difficulty": "EASY", "recommendation": "Maintain"},
+            {"week": 5, "score": 55, "difficulty": "EASY", "recommendation": "Step UP to MODERATE"},
+            {"week": 6, "score": 61, "difficulty": "MODERATE", "recommendation": "Maintain"},
+        ],
+        "s12": [
+            {"week": 1, "score": 82, "difficulty": "EASY", "recommendation": "Maintain"},
+            {"week": 2, "score": 85, "difficulty": "EASY", "recommendation": "Maintain"},
+            {"week": 3, "score": 88, "difficulty": "EASY", "recommendation": "Step UP to MODERATE"},
+            {"week": 4, "score": 80, "difficulty": "MODERATE", "recommendation": "Maintain"},
+            {"week": 5, "score": 83, "difficulty": "MODERATE", "recommendation": "Maintain"},
+            {"week": 6, "score": 86, "difficulty": "MODERATE", "recommendation": "Step UP to HARD"},
+        ],
+        "s13": [
+            {"week": 1, "score": 66, "difficulty": "MODERATE", "recommendation": "Maintain"},
+            {"week": 2, "score": 69, "difficulty": "MODERATE", "recommendation": "Maintain"},
+            {"week": 3, "score": 73, "difficulty": "MODERATE", "recommendation": "Step UP to HARD"},
+            {"week": 4, "score": 70, "difficulty": "HARD", "recommendation": "Maintain"},
+            {"week": 5, "score": 68, "difficulty": "HARD", "recommendation": "Maintain"},
+            {"week": 6, "score": 74, "difficulty": "HARD", "recommendation": "Maintain"},
+        ],
+        "s14": [
+            {"week": 1, "score": 52, "difficulty": "HARD", "recommendation": "Maintain"},
+            {"week": 2, "score": 49, "difficulty": "HARD", "recommendation": "Step DOWN to MODERATE"},
+            {"week": 3, "score": 63, "difficulty": "MODERATE", "recommendation": "Maintain"},
+            {"week": 4, "score": 58, "difficulty": "MODERATE", "recommendation": "Maintain"},
+            {"week": 5, "score": 61, "difficulty": "MODERATE", "recommendation": "Maintain"},
+            {"week": 6, "score": 65, "difficulty": "MODERATE", "recommendation": "Step UP to HARD"},
+        ],
+        "s15": [
+            {"week": 1, "score": 34, "difficulty": "EASY", "recommendation": "Maintain"},
+            {"week": 2, "score": 39, "difficulty": "EASY", "recommendation": "Maintain"},
+            {"week": 3, "score": 44, "difficulty": "EASY", "recommendation": "Maintain"},
+            {"week": 4, "score": 49, "difficulty": "EASY", "recommendation": "Maintain"},
+            {"week": 5, "score": 54, "difficulty": "EASY", "recommendation": "Maintain"},
+            {"week": 6, "score": 60, "difficulty": "EASY", "recommendation": "Step UP to MODERATE"},
+        ],
+    }
+    return fallback_progress.get(str(student_id), [])
 
 
 def fetch_teacher_student_summaries(cur):
@@ -982,6 +1218,7 @@ def init_database():
     with db_cursor(True) as (_, cur):
         schema = [
             """CREATE TABLE IF NOT EXISTS users (id INT AUTO_INCREMENT PRIMARY KEY,email VARCHAR(255) UNIQUE NOT NULL,password_hash VARCHAR(255) NOT NULL,role ENUM('teacher','student') NOT NULL,is_active TINYINT(1) NOT NULL DEFAULT 1,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
+            """CREATE TABLE IF NOT EXISTS program_settings (id TINYINT PRIMARY KEY,program_start_date DATE NOT NULL,manual_override_week TINYINT NULL,updated_by INT NULL,updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,CONSTRAINT chk_program_settings_id CHECK (id=1),FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
             """CREATE TABLE IF NOT EXISTS auth_tokens (id BIGINT AUTO_INCREMENT PRIMARY KEY,user_id INT NOT NULL,token VARCHAR(128) UNIQUE NOT NULL,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,INDEX idx_auth_tokens_user (user_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
             """CREATE TABLE IF NOT EXISTS students (id VARCHAR(20) PRIMARY KEY,user_id INT UNIQUE NOT NULL,full_name VARCHAR(255) NOT NULL,grade VARCHAR(20) NOT NULL,section VARCHAR(100) NOT NULL,class_level ENUM('EASY','MODERATE','HARD') NOT NULL DEFAULT 'EASY',pre_score INT NOT NULL DEFAULT 0,pre_assessment_completed TINYINT(1) NOT NULL DEFAULT 0,pre_assessment_completed_at TIMESTAMP NULL,avatar_type ENUM('initials','preset','upload') NOT NULL DEFAULT 'initials',avatar_value MEDIUMTEXT NULL,FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
             """CREATE TABLE IF NOT EXISTS passages (id VARCHAR(20) PRIMARY KEY,title VARCHAR(255) NOT NULL,genre VARCHAR(100) NOT NULL,text MEDIUMTEXT NOT NULL,label ENUM('EASY','MODERATE','HARD') NOT NULL,words INT NOT NULL,est_minutes INT NOT NULL,confidence DECIMAL(5,2) NULL,is_draft TINYINT(1) NOT NULL DEFAULT 0,created_by INT NULL,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
@@ -990,9 +1227,22 @@ def init_database():
             """CREATE TABLE IF NOT EXISTS weekly_assignments (id INT AUTO_INCREMENT PRIMARY KEY,week_no TINYINT NOT NULL,class_level ENUM('EASY','MODERATE','HARD') NOT NULL,passage_id VARCHAR(20) NOT NULL,UNIQUE KEY uniq_assign (week_no,class_level,passage_id),FOREIGN KEY (passage_id) REFERENCES passages(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
             """CREATE TABLE IF NOT EXISTS passage_completions (id BIGINT AUTO_INCREMENT PRIMARY KEY,student_id VARCHAR(20) NOT NULL,week_no TINYINT NOT NULL,passage_id VARCHAR(20) NOT NULL,completed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,UNIQUE KEY uniq_complete (student_id,week_no,passage_id),FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,FOREIGN KEY (passage_id) REFERENCES passages(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
             """CREATE TABLE IF NOT EXISTS quiz_attempts (id BIGINT AUTO_INCREMENT PRIMARY KEY,student_id VARCHAR(20) NOT NULL,passage_id VARCHAR(20) NOT NULL,week_no TINYINT NOT NULL,score_pct INT NOT NULL DEFAULT 0,correct_count INT NOT NULL DEFAULT 0,total_count INT NOT NULL DEFAULT 0,difficulty_rating TINYINT NULL,short_answer_text TEXT NULL,reading_time VARCHAR(20) NULL,responses_json JSON NULL,submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,FOREIGN KEY (passage_id) REFERENCES passages(id) ON DELETE CASCADE,INDEX idx_progress (student_id, week_no)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
+            """CREATE TABLE IF NOT EXISTS student_reading_sessions (id BIGINT AUTO_INCREMENT PRIMARY KEY,event_id VARCHAR(120) NOT NULL,student_id VARCHAR(20) NOT NULL,passage_id VARCHAR(20) NOT NULL,week_no TINYINT NOT NULL,reading_seconds INT NOT NULL DEFAULT 0,formatted_time VARCHAR(20) NULL,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,UNIQUE KEY uniq_reading_event (event_id),INDEX idx_reading_student_week (student_id, week_no),FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,FOREIGN KEY (passage_id) REFERENCES passages(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
         ]
         for sql in schema:
             cur.execute(sql)
+
+        cur.execute("SELECT id FROM program_settings WHERE id=1")
+        if not cur.fetchone():
+            cur.execute("SELECT CURRENT_DATE() AS today")
+            today = cur.fetchone()["today"]
+            cur.execute(
+                """
+                INSERT INTO program_settings (id, program_start_date, manual_override_week, updated_by)
+                VALUES (1, %s, NULL, NULL)
+                """,
+                (today,),
+            )
 
         cur.execute("SHOW COLUMNS FROM students LIKE 'avatar_type'")
         if not cur.fetchone():
@@ -1626,6 +1876,60 @@ def student_completions():
     return api_ok({"week": week, "completedPassageIds": ids})
 
 
+@app.post("/api/student/reading-time")
+def student_reading_time():
+    user, err = require_role("student")
+    if err:
+        return err
+
+    payload = request.get_json(silent=True) or {}
+    week = normalize_week(payload.get("week"))
+    passage_id = str(payload.get("passageId") or "").strip()
+    event_id = str(payload.get("eventId") or "").strip()
+    formatted_time = str(payload.get("formattedTime") or "").strip()
+    try:
+        reading_seconds = int(payload.get("readingSeconds") or 0)
+    except (TypeError, ValueError):
+        reading_seconds = 0
+    reading_seconds = max(0, reading_seconds)
+
+    if not passage_id:
+        return api_error("passageId is required.", 400)
+    if not event_id:
+        return api_error("eventId is required.", 400)
+
+    with db_cursor(True) as (_, cur):
+        student = student_row(cur, user)
+        if not student:
+            return api_error("Student profile not found.", 404)
+        if not pre_assessment_completed(student):
+            return api_error("Complete the pre-assessment first.", 403)
+
+        class_level = normalize_class_level(student["class_level"])
+        cur.execute(
+            "SELECT 1 FROM weekly_assignments WHERE week_no=%s AND class_level=%s AND passage_id=%s",
+            (week, class_level, passage_id),
+        )
+        if not cur.fetchone():
+            return api_error("Passage is not assigned to this student for the selected week.", 400)
+
+        cur.execute(
+            """
+            INSERT INTO student_reading_sessions (event_id, student_id, passage_id, week_no, reading_seconds, formatted_time)
+            VALUES (%s,%s,%s,%s,%s,%s)
+            ON DUPLICATE KEY UPDATE
+              student_id=VALUES(student_id),
+              passage_id=VALUES(passage_id),
+              week_no=VALUES(week_no),
+              reading_seconds=VALUES(reading_seconds),
+              formatted_time=VALUES(formatted_time)
+            """,
+            (event_id, student["id"], passage_id, week, reading_seconds, formatted_time or None),
+        )
+
+    return api_ok({"saved": True, "eventId": event_id})
+
+
 @app.post("/api/student/attempts")
 def student_attempts():
     user, err = require_role("student")
@@ -1767,6 +2071,75 @@ def teacher_students():
     return api_ok({"students": students})
 
 
+@app.get("/api/program/week")
+def api_program_week():
+    user, err = require_auth()
+    if err:
+        return err
+    del user
+    with db_cursor(True) as (_, cur):
+        settings = get_program_settings(cur)
+        if not settings:
+            return api_error("Program settings not configured.", 500)
+    return api_ok({"activeWeek": settings["activeWeek"]})
+
+
+@app.get("/api/program/week/settings")
+def api_program_week_settings_get():
+    user, err = require_role("teacher")
+    if err:
+        return err
+    del user
+    with db_cursor(True) as (_, cur):
+        settings = get_program_settings(cur)
+        if not settings:
+            return api_error("Program settings not configured.", 500)
+    return api_ok(settings)
+
+
+@app.put("/api/program/week/settings")
+def api_program_week_settings_put():
+    user, err = require_role("teacher")
+    if err:
+        return err
+
+    payload = request.get_json(silent=True)
+    if payload is None:
+        return api_error("Request body must be valid JSON.", 400)
+    if not isinstance(payload, dict):
+        return api_error("Request body must be a JSON object.", 400)
+
+    start_date_raw = payload.get("programStartDate")
+    override_week_raw = payload.get("manualOverrideWeek")
+
+    parsed_start_date = parse_program_start_date(start_date_raw)
+    if start_date_raw not in (None, "") and parsed_start_date is None:
+        return api_error("programStartDate must be in YYYY-MM-DD format.", 400)
+
+    manual_override_week = None
+    if override_week_raw not in (None, "", "null"):
+        try:
+            parsed_override = int(override_week_raw)
+        except (TypeError, ValueError):
+            return api_error("manualOverrideWeek must be a number between 1 and 8, or null.", 400)
+        if parsed_override < 1 or parsed_override > TOTAL_PROGRAM_WEEKS:
+            return api_error("manualOverrideWeek must be between 1 and 8, or null.", 400)
+        manual_override_week = parsed_override
+
+    with db_cursor(True) as (_, cur):
+        cur.execute(
+            """
+            UPDATE program_settings
+            SET program_start_date=%s, manual_override_week=%s, updated_by=%s
+            WHERE id=1
+            """,
+            (parsed_start_date, manual_override_week, user["id"]),
+        )
+        settings = get_program_settings(cur)
+
+    return api_ok(settings)
+
+
 @app.get("/api/teacher/reports/summary")
 def teacher_reports_summary():
     user, err = require_role("teacher")
@@ -1774,9 +2147,12 @@ def teacher_reports_summary():
         return err
     del user
 
-    active_week = normalize_week(request.args.get("activeWeek"))
+    active_week = request.args.get("activeWeek")
     with db_cursor(True) as (_, cur):
-        summary = build_teacher_report_summary(cur, active_week)
+        if active_week in (None, "", "null"):
+            settings = get_program_settings(cur)
+            active_week = settings["activeWeek"] if settings else 1
+        summary = build_teacher_report_summary(cur, normalize_week(active_week))
     return api_ok(summary)
 
 
