@@ -1,15 +1,9 @@
-# TODO - Step 3 Migration (`readwise_token` -> cookie session)
+# TODO - Teacher Pending Short Answers Page
 
-- [x] Confirm existing `app.py` auth/session flow points to update
-- [x] Confirm existing `api.js` token/header flow points to update
-- [ ] Update backend auth to prioritize server session cookie (HttpOnly/Secure/SameSite policy already configured)
-- [ ] Keep temporary token fallback for compatibility during rollout
-- [ ] Update frontend request layer to stop persistent localStorage token usage
-- [ ] Ensure frontend requests include cookies (`credentials: "include"`)
-- [ ] Ensure login/logout/me flows work with cookie session as source of truth
-- [ ] Run critical-path validation:
-  - [ ] Login creates authenticated session
-  - [ ] `/api/auth/me` works after refresh via cookie
-  - [ ] Logout clears session and rejects subsequent `/api/auth/me`
-  - [ ] Invalid/no token header does not break session-based auth
-- [ ] Summarize Step 3 result in simple terms (classroom + deployment ready)
+- [x] Read backend/API files to confirm available pending-short-answer data
+- [ ] Add backend endpoint for all pending short answers per student (if needed)
+- [ ] Add API wrapper in `api.js` for pending-short-answers endpoint
+- [ ] Create `pages/teacher-student-pending.html` with improved teacher review UI
+- [ ] Update `pages/teacher-student-detail.html` to link to new pending list page
+- [ ] Verify links to `teacher-score.html?sid=...&pid=...` work for each pending item
+- [ ] Perform quick consistency review for copy and styling

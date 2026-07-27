@@ -118,6 +118,47 @@ SEED_STUDENTS = [
         "section": "Jasmin",
         "class": "EASY",
         "pre": 0
+    },
+    {
+        "id": "s16",
+        "email": "elaira@pnhs.edu",
+        "password": "password123",
+        "name": "elle laira",
+        "grade": "7",
+        "section": "Jasmin",
+        "class": "EASY",
+        "pre": 0
+    },
+    {
+        "id": "s17",
+        "email": "mamfe@pnhs.edu",
+        "password": "password123",
+        "name": "Nico Villareal",
+        "grade": "7",
+        "section": "Jasmin",
+        "class": "EASY",
+        "pre": 0
+    }
+    ,
+     {
+        "id": "s18",
+        "email": "mamfe1@pnhs.edu",
+        "password": "password123",
+        "name": "Nico Villareal",
+        "grade": "7",
+        "section": "Jasmin",
+        "class": "EASY",
+        "pre": 0
+    }
+    ,{
+        "id": "s19",
+        "email": "mamfe2@pnhs.edu",
+        "password": "password123",
+        "name": "Nico Villareal",
+        "grade": "7",
+        "section": "Jasmin",
+        "class": "EASY",
+        "pre": 0
     }
 ]
 
@@ -1073,7 +1114,7 @@ def fetch_teacher_student_summaries(cur):
         progress = fetch_student_progress(cur, row["id"])
         latest = progress[-1] if progress else None
         cur.execute(
-            "SELECT COUNT(*) AS total FROM quiz_attempts WHERE student_id=%s AND short_answer_text IS NOT NULL",
+            "SELECT COUNT(*) AS total FROM quiz_attempts WHERE student_id=%s AND short_answer_text IS NOT NULL AND teacher_score IS NULL",
             (row["id"],),
         )
         pending_reviews = int(cur.fetchone()["total"] or 0)
@@ -1188,7 +1229,9 @@ def fetch_pending_short_answer(cur, student_id):
         FROM quiz_attempts qa
         JOIN passages p ON p.id=qa.passage_id
         LEFT JOIN assessments a ON a.passage_id=qa.passage_id
-        WHERE qa.student_id=%s AND qa.short_answer_text IS NOT NULL
+        WHERE qa.student_id=%s
+          AND qa.short_answer_text IS NOT NULL
+          AND qa.teacher_score IS NULL
         ORDER BY qa.submitted_at DESC
         LIMIT 1
         """,
@@ -1205,6 +1248,39 @@ def fetch_pending_short_answer(cur, student_id):
         "response": row.get("short_answer_text") or "",
         "submittedAt": row["submitted_at"].isoformat() if row.get("submitted_at") else None,
     }
+
+
+def fetch_pending_short_answers(cur, student_id):
+    cur.execute(
+        """
+        SELECT qa.id,qa.passage_id,qa.week_no,qa.short_answer_text,qa.submitted_at,
+               p.title,p.label,a.short_answer_prompt
+        FROM quiz_attempts qa
+        JOIN passages p ON p.id=qa.passage_id
+        LEFT JOIN assessments a ON a.passage_id=qa.passage_id
+        WHERE qa.student_id=%s
+          AND qa.short_answer_text IS NOT NULL
+          AND qa.teacher_score IS NULL
+        ORDER BY qa.submitted_at DESC, qa.id DESC
+        """,
+        (student_id,),
+    )
+    rows = cur.fetchall()
+    items = []
+    for row in rows:
+        items.append(
+            {
+                "attemptId": int(row["id"]),
+                "passageId": row["passage_id"],
+                "passageTitle": row["title"],
+                "week": int(row["week_no"]),
+                "label": row["label"],
+                "prompt": row.get("short_answer_prompt") or "",
+                "response": row.get("short_answer_text") or "",
+                "submittedAt": row["submitted_at"].isoformat() if row.get("submitted_at") else None,
+            }
+        )
+    return items
 
 def init_database():
     conn = mysql.connector.connect(**mysql_config(False))
@@ -1225,8 +1301,9 @@ def init_database():
             """CREATE TABLE IF NOT EXISTS assessment_questions (id INT AUTO_INCREMENT PRIMARY KEY,assessment_id INT NOT NULL,sort_order INT NOT NULL DEFAULT 0,difficulty ENUM('EASY','MODERATE','DIFFICULT','CUSTOM') NOT NULL DEFAULT 'EASY',type VARCHAR(60) NOT NULL,prompt TEXT NOT NULL,options_json JSON NULL,answer_index INT NULL,answer_key VARCHAR(255) NULL,answer_keys_json JSON NULL,FOREIGN KEY (assessment_id) REFERENCES assessments(id) ON DELETE CASCADE,INDEX idx_q_sort (assessment_id, sort_order)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
             """CREATE TABLE IF NOT EXISTS weekly_assignments (id INT AUTO_INCREMENT PRIMARY KEY,week_no TINYINT NOT NULL,class_level ENUM('EASY','MODERATE','HARD') NOT NULL,passage_id VARCHAR(20) NOT NULL,UNIQUE KEY uniq_assign (week_no,class_level,passage_id),FOREIGN KEY (passage_id) REFERENCES passages(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
             """CREATE TABLE IF NOT EXISTS passage_completions (id BIGINT AUTO_INCREMENT PRIMARY KEY,student_id VARCHAR(20) NOT NULL,week_no TINYINT NOT NULL,passage_id VARCHAR(20) NOT NULL,completed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,UNIQUE KEY uniq_complete (student_id,week_no,passage_id),FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,FOREIGN KEY (passage_id) REFERENCES passages(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
-            """CREATE TABLE IF NOT EXISTS quiz_attempts (id BIGINT AUTO_INCREMENT PRIMARY KEY,student_id VARCHAR(20) NOT NULL,passage_id VARCHAR(20) NOT NULL,week_no TINYINT NOT NULL,score_pct INT NOT NULL DEFAULT 0,correct_count INT NOT NULL DEFAULT 0,total_count INT NOT NULL DEFAULT 0,difficulty_rating TINYINT NULL,short_answer_text TEXT NULL,reading_time VARCHAR(20) NULL,responses_json JSON NULL,submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,FOREIGN KEY (passage_id) REFERENCES passages(id) ON DELETE CASCADE,INDEX idx_progress (student_id, week_no)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
+            """CREATE TABLE IF NOT EXISTS quiz_attempts (id BIGINT AUTO_INCREMENT PRIMARY KEY,student_id VARCHAR(20) NOT NULL,passage_id VARCHAR(20) NOT NULL,week_no TINYINT NOT NULL,score_pct INT NOT NULL DEFAULT 0,correct_count INT NOT NULL DEFAULT 0,total_count INT NOT NULL DEFAULT 0,difficulty_rating TINYINT NULL,short_answer_text TEXT NULL,reading_time VARCHAR(20) NULL,responses_json JSON NULL,teacher_score TINYINT NULL,teacher_feedback TEXT NULL,teacher_scored_by INT NULL,teacher_scored_at TIMESTAMP NULL,submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,FOREIGN KEY (passage_id) REFERENCES passages(id) ON DELETE CASCADE,FOREIGN KEY (teacher_scored_by) REFERENCES users(id) ON DELETE SET NULL,INDEX idx_progress (student_id, week_no),UNIQUE KEY uniq_student_passage_week (student_id, passage_id, week_no)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
             """CREATE TABLE IF NOT EXISTS student_reading_sessions (id BIGINT AUTO_INCREMENT PRIMARY KEY,event_id VARCHAR(120) NOT NULL,student_id VARCHAR(20) NOT NULL,passage_id VARCHAR(20) NOT NULL,week_no TINYINT NOT NULL,reading_seconds INT NOT NULL DEFAULT 0,formatted_time VARCHAR(20) NULL,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,UNIQUE KEY uniq_reading_event (event_id),INDEX idx_reading_student_week (student_id, week_no),FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,FOREIGN KEY (passage_id) REFERENCES passages(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
+            """CREATE TABLE IF NOT EXISTS student_reading_progress_drafts (id BIGINT AUTO_INCREMENT PRIMARY KEY,student_id VARCHAR(20) NOT NULL,passage_id VARCHAR(20) NOT NULL,week_no TINYINT NOT NULL,reading_seconds INT NOT NULL DEFAULT 0,last_event_id VARCHAR(120) NULL,is_locked TINYINT(1) NOT NULL DEFAULT 0,is_submitted TINYINT(1) NOT NULL DEFAULT 0,completed_at TIMESTAMP NULL,updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,UNIQUE KEY uniq_reading_draft (student_id, passage_id, week_no),INDEX idx_reading_draft_student_week (student_id, week_no),FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,FOREIGN KEY (passage_id) REFERENCES passages(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
         ]
         for sql in schema:
             cur.execute(sql)
@@ -1271,6 +1348,88 @@ def init_database():
         if not cur.fetchone():
             cur.execute(
                 "ALTER TABLE passages ADD COLUMN is_draft TINYINT(1) NOT NULL DEFAULT 0 AFTER confidence"
+            )
+
+        cur.execute("SHOW COLUMNS FROM student_reading_progress_drafts LIKE 'is_locked'")
+        if not cur.fetchone():
+            cur.execute(
+                "ALTER TABLE student_reading_progress_drafts ADD COLUMN is_locked TINYINT(1) NOT NULL DEFAULT 0 AFTER last_event_id"
+            )
+
+        cur.execute("SHOW COLUMNS FROM student_reading_progress_drafts LIKE 'completed_at'")
+        if not cur.fetchone():
+            cur.execute(
+                "ALTER TABLE student_reading_progress_drafts ADD COLUMN completed_at TIMESTAMP NULL AFTER is_locked"
+            )
+
+        cur.execute("SHOW COLUMNS FROM student_reading_progress_drafts LIKE 'is_submitted'")
+        if not cur.fetchone():
+            cur.execute(
+                "ALTER TABLE student_reading_progress_drafts ADD COLUMN is_submitted TINYINT(1) NOT NULL DEFAULT 0 AFTER is_locked"
+            )
+
+        cur.execute("SHOW INDEX FROM quiz_attempts WHERE Key_name='uniq_student_passage_week'")
+        uniq_index_row = cur.fetchone()
+        cur.fetchall()
+        if not uniq_index_row:
+            cur.execute(
+                """
+                DELETE qa1 FROM quiz_attempts qa1
+                JOIN quiz_attempts qa2
+                  ON qa1.student_id = qa2.student_id
+                 AND qa1.passage_id = qa2.passage_id
+                 AND qa1.week_no = qa2.week_no
+                 AND qa1.id > qa2.id
+                """
+            )
+            cur.execute(
+                "ALTER TABLE quiz_attempts ADD UNIQUE KEY uniq_student_passage_week (student_id, passage_id, week_no)"
+            )
+
+        cur.execute("SHOW COLUMNS FROM quiz_attempts LIKE 'teacher_score'")
+        if not cur.fetchone():
+            cur.execute("ALTER TABLE quiz_attempts ADD COLUMN teacher_score TINYINT NULL AFTER responses_json")
+
+        cur.execute("SHOW COLUMNS FROM quiz_attempts LIKE 'teacher_feedback'")
+        if not cur.fetchone():
+            cur.execute("ALTER TABLE quiz_attempts ADD COLUMN teacher_feedback TEXT NULL AFTER teacher_score")
+
+        cur.execute("SHOW COLUMNS FROM quiz_attempts LIKE 'teacher_scored_by'")
+        if not cur.fetchone():
+            cur.execute("ALTER TABLE quiz_attempts ADD COLUMN teacher_scored_by INT NULL AFTER teacher_feedback")
+
+        cur.execute("SHOW COLUMNS FROM quiz_attempts LIKE 'teacher_scored_at'")
+        if not cur.fetchone():
+            cur.execute("ALTER TABLE quiz_attempts ADD COLUMN teacher_scored_at TIMESTAMP NULL AFTER teacher_scored_by")
+
+        cur.execute(
+            "SHOW INDEX FROM quiz_attempts WHERE Key_name='idx_quiz_teacher_scored_by'"
+        )
+        teacher_idx_row = cur.fetchone()
+        cur.fetchall()
+        if not teacher_idx_row:
+            cur.execute("ALTER TABLE quiz_attempts ADD INDEX idx_quiz_teacher_scored_by (teacher_scored_by)")
+
+        cur.execute(
+            """
+            SELECT CONSTRAINT_NAME
+            FROM information_schema.KEY_COLUMN_USAGE
+            WHERE TABLE_SCHEMA=%s
+              AND TABLE_NAME='quiz_attempts'
+              AND COLUMN_NAME='teacher_scored_by'
+              AND REFERENCED_TABLE_NAME='users'
+            """,
+            (DB_NAME,),
+        )
+        teacher_fk_row = cur.fetchone()
+        cur.fetchall()
+        if not teacher_fk_row:
+            cur.execute(
+                """
+                ALTER TABLE quiz_attempts
+                ADD CONSTRAINT fk_quiz_attempts_teacher_scored_by
+                FOREIGN KEY (teacher_scored_by) REFERENCES users(id) ON DELETE SET NULL
+                """
             )
 
         def upsert_user(email, password, role):
@@ -1929,6 +2088,188 @@ def student_reading_time():
     return api_ok({"saved": True, "eventId": event_id})
 
 
+@app.get("/api/student/reading-progress")
+def student_reading_progress_get():
+    user, err = require_role("student")
+    if err:
+        return err
+
+    week = normalize_week(request.args.get("week"))
+    passage_id = str(request.args.get("passageId") or "").strip()
+    if not passage_id:
+        return api_error("passageId is required.", 400)
+
+    with db_cursor(True) as (_, cur):
+        student = student_row(cur, user)
+        if not student:
+            return api_error("Student profile not found.", 404)
+        if not pre_assessment_completed(student):
+            return api_error("Complete the pre-assessment first.", 403)
+
+        class_level = normalize_class_level(student["class_level"])
+        cur.execute(
+            "SELECT 1 FROM weekly_assignments WHERE week_no=%s AND class_level=%s AND passage_id=%s",
+            (week, class_level, passage_id),
+        )
+        if not cur.fetchone():
+            return api_error("Passage is not assigned to this student for the selected week.", 400)
+
+        cur.execute(
+            """
+            SELECT reading_seconds, last_event_id, is_locked, is_submitted, completed_at, updated_at
+            FROM student_reading_progress_drafts
+            WHERE student_id=%s AND passage_id=%s AND week_no=%s
+            """,
+            (student["id"], passage_id, week),
+        )
+        row = cur.fetchone()
+
+    return api_ok(
+        {
+            "week": week,
+            "passageId": passage_id,
+            "readingSeconds": int((row or {}).get("reading_seconds") or 0),
+            "lastEventId": (row or {}).get("last_event_id"),
+            "isLocked": bool(int((row or {}).get("is_locked") or 0)),
+            "isSubmitted": bool(int((row or {}).get("is_submitted") or 0)),
+            "completedAt": row["completed_at"].isoformat() if row and row.get("completed_at") else None,
+            "updatedAt": row["updated_at"].isoformat() if row and row.get("updated_at") else None,
+        }
+    )
+
+
+@app.post("/api/student/reading-progress")
+def student_reading_progress_post():
+    user, err = require_role("student")
+    if err:
+        return err
+
+    payload = request.get_json(silent=True) or {}
+    week = normalize_week(payload.get("week"))
+    passage_id = str(payload.get("passageId") or "").strip()
+    event_id = str(payload.get("eventId") or "").strip()
+    try:
+        reading_seconds = int(payload.get("readingSeconds") or 0)
+    except (TypeError, ValueError):
+        reading_seconds = 0
+    reading_seconds = max(0, reading_seconds)
+
+    if not passage_id:
+        return api_error("passageId is required.", 400)
+
+    with db_cursor(True) as (_, cur):
+        student = student_row(cur, user)
+        if not student:
+            return api_error("Student profile not found.", 404)
+        if not pre_assessment_completed(student):
+            return api_error("Complete the pre-assessment first.", 403)
+
+        class_level = normalize_class_level(student["class_level"])
+        cur.execute(
+            "SELECT 1 FROM weekly_assignments WHERE week_no=%s AND class_level=%s AND passage_id=%s",
+            (week, class_level, passage_id),
+        )
+        if not cur.fetchone():
+            return api_error("Passage is not assigned to this student for the selected week.", 400)
+
+        cur.execute(
+            """
+            INSERT INTO student_reading_progress_drafts (student_id, passage_id, week_no, reading_seconds, last_event_id, is_locked, is_submitted, completed_at)
+            VALUES (%s,%s,%s,%s,%s,0,0,NULL)
+            ON DUPLICATE KEY UPDATE
+              reading_seconds=IF(is_locked=1, reading_seconds, GREATEST(reading_seconds, VALUES(reading_seconds))),
+              last_event_id=VALUES(last_event_id)
+            """,
+            (student["id"], passage_id, week, reading_seconds, event_id or None),
+        )
+
+        cur.execute(
+            """
+            SELECT reading_seconds, last_event_id, is_locked, completed_at, updated_at
+            FROM student_reading_progress_drafts
+            WHERE student_id=%s AND passage_id=%s AND week_no=%s
+            """,
+            (student["id"], passage_id, week),
+        )
+        row = cur.fetchone()
+
+    return api_ok(
+        {
+            "saved": True,
+            "week": week,
+            "passageId": passage_id,
+            "readingSeconds": int((row or {}).get("reading_seconds") or 0),
+            "lastEventId": (row or {}).get("last_event_id"),
+            "isLocked": bool(int((row or {}).get("is_locked") or 0)),
+            "completedAt": row["completed_at"].isoformat() if row and row.get("completed_at") else None,
+            "updatedAt": row["updated_at"].isoformat() if row and row.get("updated_at") else None,
+        }
+    )
+
+
+@app.post("/api/student/reading-lock")
+def student_reading_lock_post():
+    user, err = require_role("student")
+    if err:
+        return err
+
+    payload = request.get_json(silent=True) or {}
+    week = normalize_week(payload.get("week"))
+    passage_id = str(payload.get("passageId") or "").strip()
+
+    if not passage_id:
+        return api_error("passageId is required.", 400)
+
+    with db_cursor(True) as (_, cur):
+        student = student_row(cur, user)
+        if not student:
+            return api_error("Student profile not found.", 404)
+        if not pre_assessment_completed(student):
+            return api_error("Complete the pre-assessment first.", 403)
+
+        class_level = normalize_class_level(student["class_level"])
+        cur.execute(
+            "SELECT 1 FROM weekly_assignments WHERE week_no=%s AND class_level=%s AND passage_id=%s",
+            (week, class_level, passage_id),
+        )
+        if not cur.fetchone():
+            return api_error("Passage is not assigned to this student for the selected week.", 400)
+
+        cur.execute(
+            """
+            INSERT INTO student_reading_progress_drafts (student_id, passage_id, week_no, reading_seconds, last_event_id, is_locked, completed_at)
+            VALUES (%s,%s,%s,0,NULL,1,NOW())
+            ON DUPLICATE KEY UPDATE
+              is_locked=1,
+              completed_at=COALESCE(completed_at, NOW())
+            """,
+            (student["id"], passage_id, week),
+        )
+
+        cur.execute(
+            """
+            SELECT reading_seconds, last_event_id, is_locked, completed_at, updated_at
+            FROM student_reading_progress_drafts
+            WHERE student_id=%s AND passage_id=%s AND week_no=%s
+            """,
+            (student["id"], passage_id, week),
+        )
+        row = cur.fetchone()
+
+    return api_ok(
+        {
+            "saved": True,
+            "week": week,
+            "passageId": passage_id,
+            "readingSeconds": int((row or {}).get("reading_seconds") or 0),
+            "lastEventId": (row or {}).get("last_event_id"),
+            "isLocked": bool(int((row or {}).get("is_locked") or 0)),
+            "completedAt": row["completed_at"].isoformat() if row and row.get("completed_at") else None,
+            "updatedAt": row["updated_at"].isoformat() if row and row.get("updated_at") else None,
+        }
+    )
+
+
 @app.post("/api/student/attempts")
 def student_attempts():
     user, err = require_role("student")
@@ -1973,6 +2314,15 @@ def student_attempts():
               student_id,passage_id,week_no,score_pct,correct_count,total_count,difficulty_rating,
               short_answer_text,reading_time,responses_json
             ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+            ON DUPLICATE KEY UPDATE
+              score_pct=VALUES(score_pct),
+              correct_count=VALUES(correct_count),
+              total_count=VALUES(total_count),
+              difficulty_rating=VALUES(difficulty_rating),
+              short_answer_text=VALUES(short_answer_text),
+              reading_time=VALUES(reading_time),
+              responses_json=VALUES(responses_json),
+              submitted_at=CURRENT_TIMESTAMP
             """,
             (
                 student["id"],
@@ -1994,6 +2344,17 @@ def student_attempts():
             (student["id"], week, passage_id),
         )
 
+        cur.execute(
+            """
+            INSERT INTO student_reading_progress_drafts (student_id, passage_id, week_no, reading_seconds, last_event_id, is_locked, completed_at)
+            VALUES (%s,%s,%s,0,NULL,1,NOW())
+            ON DUPLICATE KEY UPDATE
+              is_locked=1,
+              completed_at=COALESCE(completed_at, NOW())
+            """,
+            (student["id"], passage_id, week),
+        )
+
         cur.execute("SELECT passage_id FROM passage_completions WHERE student_id=%s AND week_no=%s ORDER BY completed_at", (student["id"], week))
         completed = [row["passage_id"] for row in cur.fetchall()]
 
@@ -2013,6 +2374,12 @@ def teacher_dashboard():
             """
             SELECT qa.student_id,s.full_name,p.id AS passage_id,p.title,qa.score_pct,qa.short_answer_text,qa.submitted_at
             FROM quiz_attempts qa
+            JOIN (
+                SELECT student_id, passage_id, week_no, MAX(id) AS latest_id
+                FROM quiz_attempts
+                GROUP BY student_id, passage_id, week_no
+            ) latest
+              ON latest.latest_id = qa.id
             JOIN students s ON s.id=qa.student_id
             JOIN passages p ON p.id=qa.passage_id
             ORDER BY qa.submitted_at DESC, qa.id DESC
@@ -2028,7 +2395,7 @@ def teacher_dashboard():
                     "passageId": row["passage_id"],
                     "passageTitle": row["title"],
                     "score": int(row["score_pct"] or 0),
-                    "status": "Pending Review" if row.get("short_answer_text") else "Scored",
+                    "status": "Pending Review" if row.get("short_answer_text") and row.get("teacher_score") is None else "Scored",
                     "submittedAt": row["submitted_at"].isoformat() if row.get("submitted_at") else None,
                 }
             )
@@ -2179,6 +2546,34 @@ def teacher_student_detail(student_id):
         progress = fetch_student_progress(cur, student_id)
         pending_short_answer = fetch_pending_short_answer(cur, student_id)
 
+        latest_scored_attempt = None
+        cur.execute(
+            """
+            SELECT qa.id,qa.passage_id,qa.week_no,qa.teacher_score,qa.teacher_feedback,
+                   qa.teacher_scored_by,qa.teacher_scored_at,p.title,u.full_name AS scorer_name
+            FROM quiz_attempts qa
+            JOIN passages p ON p.id = qa.passage_id
+            LEFT JOIN students u ON u.user_id = qa.teacher_scored_by
+            WHERE qa.student_id=%s
+              AND qa.teacher_score IS NOT NULL
+            ORDER BY qa.teacher_scored_at DESC, qa.id DESC
+            LIMIT 1
+            """,
+            (student_id,),
+        )
+        row = cur.fetchone()
+        if row:
+            latest_scored_attempt = {
+                "attemptId": int(row["id"]),
+                "passageId": row["passage_id"],
+                "passageTitle": row["title"],
+                "week": int(row["week_no"]),
+                "score": int(row["teacher_score"]),
+                "feedback": row.get("teacher_feedback") or "",
+                "scoredBy": row.get("scorer_name"),
+                "scoredAt": row["teacher_scored_at"].isoformat() if row.get("teacher_scored_at") else None,
+            }
+
     latest = progress[-1] if progress else None
     payload = {
         "student": {
@@ -2194,9 +2589,127 @@ def teacher_student_detail(student_id):
         "progress": progress,
         "latest": latest,
         "pendingShortAnswer": pending_short_answer,
+        "latestScoredAttempt": latest_scored_attempt,
     }
     return api_ok(payload)
 
+
+@app.get("/api/teacher/students/<student_id>/pending-short-answers")
+def teacher_student_pending_short_answers(student_id):
+    user, err = require_role("teacher")
+    if err:
+        return err
+    del user
+
+    with db_cursor(True) as (_, cur):
+        cur.execute(
+            """
+            SELECT s.id,s.full_name,s.grade,s.section,s.class_level,u.email
+            FROM students s
+            JOIN users u ON u.id=s.user_id
+            WHERE s.id=%s
+            """,
+            (student_id,),
+        )
+        student = cur.fetchone()
+        if not student:
+            return api_error("Student not found.", 404)
+
+        pending_items = fetch_pending_short_answers(cur, student_id)
+
+    return api_ok(
+        {
+            "student": {
+                "id": student["id"],
+                "name": student["full_name"],
+                "email": student["email"],
+                "grade": student["grade"],
+                "section": student["section"],
+                "classLevel": student["class_level"],
+            },
+            "pendingShortAnswers": pending_items,
+        }
+    )
+
+
+@app.post("/api/teacher/score")
+def teacher_score_save():
+    user, err = require_role("teacher")
+    if err:
+        return err
+
+    payload = request.get_json(silent=True) or {}
+    student_id = str(payload.get("studentId") or "").strip()
+    passage_id = str(payload.get("passageId") or "").strip()
+    if not student_id or not passage_id:
+        return api_error("studentId and passageId are required.", 400)
+
+    score_raw = payload.get("score")
+    try:
+        score = int(score_raw)
+    except (TypeError, ValueError):
+        return api_error("score must be an integer (0 or 1).", 400)
+
+    if score not in (0, 1):
+        return api_error("score must be 0 (Incorrect) or 1 (Correct).", 400)
+
+    feedback = str(payload.get("feedback") or "").strip()
+
+    with db_cursor(True) as (_, cur):
+        cur.execute("SELECT id FROM students WHERE id=%s", (student_id,))
+        if not cur.fetchone():
+            return api_error("Student not found.", 404)
+
+        cur.execute(
+            """
+            SELECT id,week_no
+            FROM quiz_attempts
+            WHERE student_id=%s AND passage_id=%s AND short_answer_text IS NOT NULL
+            ORDER BY submitted_at DESC, id DESC
+            LIMIT 1
+            """,
+            (student_id, passage_id),
+        )
+        attempt = cur.fetchone()
+        if not attempt:
+            return api_error("No short-answer attempt found for this student and passage.", 404)
+
+        cur.execute(
+            """
+            UPDATE quiz_attempts
+            SET teacher_score=%s,
+                teacher_feedback=%s,
+                teacher_scored_by=%s,
+                teacher_scored_at=NOW()
+            WHERE id=%s
+            """,
+            (score, feedback or None, user["id"], attempt["id"]),
+        )
+
+        cur.execute(
+            """
+            SELECT qa.id,qa.student_id,qa.passage_id,qa.week_no,qa.teacher_score,qa.teacher_feedback,
+                   qa.teacher_scored_at,u.full_name AS scorer_name
+            FROM quiz_attempts qa
+            LEFT JOIN students u ON u.user_id=qa.teacher_scored_by
+            WHERE qa.id=%s
+            """,
+            (attempt["id"],),
+        )
+        saved = cur.fetchone()
+
+    return api_ok(
+        {
+            "attemptId": int(saved["id"]),
+            "studentId": saved["student_id"],
+            "passageId": saved["passage_id"],
+            "week": int(saved["week_no"]),
+            "score": int(saved["teacher_score"]),
+            "feedback": saved.get("teacher_feedback") or "",
+            "scoredBy": saved.get("scorer_name"),
+            "scoredAt": saved["teacher_scored_at"].isoformat() if saved.get("teacher_scored_at") else None,
+        }
+    )
 
 @app.get("/api/student/progress")
 def student_progress():

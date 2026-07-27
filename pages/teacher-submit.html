@@ -658,7 +658,7 @@
     const label = escapeHtml(getClassDisplayName(data.label));
     const features = data.features || {};
     const confidenceText = typeof data.confidence === "number" ? Number(data.confidence).toFixed(1) + "%" : "Saved";
-    const f1ScoreText = "81.6%";
+    const f1ScoreText = "";
     const saveLabel = currentPassageId
       ? (isDraftPassage ? "Publish Passage" : "Update Passage")
       : "Save to Passage Library";
@@ -670,7 +670,7 @@
       '<div class="section-title">' + heading + '</div>' +
       '<span class="badge prediction-hero-badge ' + badgeClass(data.label) + '">' + label + '</span>' +
       '<div class="micro-copy">Confidence: ' + confidenceText + '</div>' +
-      '<div class="micro-copy">F-1 Score: ' + f1ScoreText + '</div>' +
+      '<div class="micro-copy"> ' + f1ScoreText + '</div>' +
       '</div>' +
       (isDraftPassage
         ? '<div class="surface-note surface-note-warn" style="margin-bottom:16px">This passage is still a draft. Complete the assessment and save to publish it to the ready library.</div>'

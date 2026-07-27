@@ -35,7 +35,7 @@
     </div>
     <div class="page-header">
       <h1>Score Short Answer</h1>
-      <p>Review the student's response and assign a score using the 3-point rubric.</p>
+      <p>Review the student's response and mark it as Correct (1) or Incorrect (0).</p>
     </div>
 
     <div class="card-grid card-grid-2" style="margin-bottom:16px;align-items:start">
@@ -72,21 +72,15 @@
 
       <!-- Scoring Panel -->
       <div class="card">
-        <div class="section-title">Scoring Rubric (0-3 Points)</div>
+        <div class="section-title">Scoring Rubric (Binary)</div>
 
         <!-- Rubric -->
         <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px">
           <div style="padding:10px 12px;background:#d4edda;border-radius:8px;font-size:13px">
-            <strong style="color:var(--easy)">3 Points</strong> - Clear, accurate, well-explained effect with specific detail
-          </div>
-          <div style="padding:10px 12px;background:#fff3cd;border-radius:8px;font-size:13px">
-            <strong style="color:var(--accent)">2 Points</strong> - Correct effect mentioned but lacks detail or clarity
+            <strong style="color:var(--easy)">1 (Correct)</strong> - The response is acceptable/correct.
           </div>
           <div style="padding:10px 12px;background:#fde8e8;border-radius:8px;font-size:13px">
-            <strong style="color:var(--hard)">1 Point</strong> - Vague or partially correct response
-          </div>
-          <div style="padding:10px 12px;background:#f7fafc;border-radius:8px;font-size:13px">
-            <strong style="color:var(--muted)">0 Points</strong> - No answer or completely incorrect
+            <strong style="color:var(--hard)">0 (Incorrect)</strong> - The response is incorrect or not acceptable.
           </div>
         </div>
 
@@ -114,17 +108,9 @@
               font-size:18px;font-weight:800;padding:14px"
             onclick="selectScore(0)">0</button>
           <button class="btn score-btn" data-score="1"
-            style="flex:1;background:#fde8e8;color:var(--hard);border:2px solid var(--hard);
-              font-size:18px;font-weight:800;padding:14px"
-            onclick="selectScore(1)">1</button>
-          <button class="btn score-btn" data-score="2"
-            style="flex:1;background:#fff3cd;color:var(--accent);border:2px solid var(--accent);
-              font-size:18px;font-weight:800;padding:14px"
-            onclick="selectScore(2)">2</button>
-          <button class="btn score-btn" data-score="3"
             style="flex:1;background:#d4edda;color:var(--easy);border:2px solid var(--easy);
               font-size:18px;font-weight:800;padding:14px"
-            onclick="selectScore(3)">3</button>
+            onclick="selectScore(1)">1</button>
         </div>
 
         <div id="score-selected" style="text-align:center;font-size:14px;color:var(--muted);
@@ -140,8 +126,8 @@
           onclick="submitScore()" disabled style="opacity:.5">
           Save Score
         </button>
-        <div class="micro-copy" style="margin-top:10px">
-          This scoring view now pulls the live student response. Final rubric persistence can be added next.
+        <div class="micro-copy" style="margin-top:10px" id="score-persist-note">
+          Scores and feedback are saved to the server.
         </div>
       </div>
     </div>
@@ -156,6 +142,7 @@
   var scoreParams = new URLSearchParams(location.search);
   var selectedStudentId = scoreParams.get("sid") || scoreParams.get("id") || "";
   var selectedPassageId = scoreParams.get("pid") || "";
+  var scoreSource = scoreParams.get("from") || "";
 
   function escapeHtml(value) {
     return String(value || "").replace(/[&<>"']/g, function(character) {
@@ -175,9 +162,9 @@
       active.style.transform = "scale(1.08)";
       active.style.boxShadow = "0 4px 12px rgba(0,0,0,0.15)";
     }
-    var labels = ["No answer / incorrect", "Partially correct", "Correct but lacks detail", "Excellent - clear and specific"];
+    var labels = ["Incorrect", "Correct"];
     document.getElementById("score-selected").innerHTML =
-      '<strong style="font-size:16px">' + val + ' / 3 points</strong>' +
+      '<strong style="font-size:16px">' + val + '</strong>' +
       ' - <span style="color:var(--muted)">' + labels[val] + '</span>';
 
     var btn = document.getElementById("submit-score-btn");
@@ -185,17 +172,37 @@
     btn.style.opacity = "1";
   }
 
-  function submitScore() {
-    if (selectedScore === null || !hasPendingResponse) return;
-    var name = document.getElementById("score-student-name").textContent || "the selected student";
-    showToast("Demo scoring saved locally: " + selectedScore + "/3 for " + name + ".");
-    setTimeout(function() {
-      if (selectedStudentId) {
-        window.location.href = "teacher-student-detail.html?id=" + encodeURIComponent(selectedStudentId);
-      } else {
-        window.location.href = "teacher-students.html";
-      }
-    }, 1500);
+  async function submitScore() {
+    if (selectedScore === null || !hasPendingResponse || !selectedStudentId || !selectedPassageId) return;
+    var submitBtn = document.getElementById("submit-score-btn");
+    submitBtn.disabled = true;
+    submitBtn.style.opacity = ".7";
+    submitBtn.textContent = "Saving...";
+
+    try {
+      await ReadWiseAPI.saveTeacherScore({
+        studentId: selectedStudentId,
+        passageId: selectedPassageId,
+        score: selectedScore,
+        feedback: document.getElementById("teacher-feedback").value || ""
+      });
+      var name = document.getElementById("score-student-name").textContent || "the selected student";
+      showToast("Result saved: " + (selectedScore === 1 ? "Correct" : "Incorrect") + " for " + name + ".");
+      setTimeout(function() {
+        if (selectedStudentId && scoreSource === "pending") {
+          window.location.href = "teacher-student-pending.html?sid=" + encodeURIComponent(selectedStudentId);
+        } else if (selectedStudentId) {
+          window.location.href = "teacher-student-detail.html?id=" + encodeURIComponent(selectedStudentId);
+        } else {
+          window.location.href = "teacher-students.html";
+        }
+      }, 1200);
+    } catch (error) {
+      showToast(error.message || "Unable to save score.", "#c0392b");
+      submitBtn.disabled = false;
+      submitBtn.style.opacity = selectedScore === null ? ".5" : "1";
+      submitBtn.textContent = "Save Score";
+    }
   }
 
   async function bootstrapPage() {
@@ -215,6 +222,7 @@
 
       if (pending && (!selectedPassageId || pending.passageId === selectedPassageId)) {
         hasPendingResponse = true;
+        selectedPassageId = pending.passageId || selectedPassageId;
         document.getElementById("score-passage-title").textContent = pending.passageTitle || "Untitled passage";
         document.getElementById("score-question-text").textContent = pending.prompt || "Short-answer prompt";
         document.getElementById("score-response-text").textContent = pending.response || "No response text recorded.";

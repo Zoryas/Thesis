@@ -96,6 +96,14 @@
 <script src="../api.js?v=20260316c"></script>
 <script src="../mockData.js?v=20260316b"></script>
 <script>
+  (function enforceStudentSession() {
+    const role = sessionStorage.getItem("role");
+    const studentId = sessionStorage.getItem("studentId");
+    if (role !== "student" || !studentId) {
+      window.location.replace("../login.html");
+    }
+  })();
+
   function scoreColor(score) {
     if (score >= 65) return levelColor("EASY");
     if (score >= 50) return levelColor("MODERATE");
@@ -107,7 +115,7 @@
     let weeklyPassages = [];
     let completedIds = [];
     let progress = [];
-    const week = ReadWiseAPI.getActiveWeek();
+    const week = await ReadWiseAPI.getActiveWeek();
 
     try {
       const cachedUser = ReadWiseAPI.getCachedUser();

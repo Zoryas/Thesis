@@ -213,6 +213,18 @@
     saveReadingTime: function(payload) {
       return request("/api/student/reading-time", { method: "POST", body: payload });
     },
+    getReadingProgress: function(week, passageId) {
+      var target = normalizeWeek(week);
+      return request(
+        "/api/student/reading-progress?week=" + target + "&passageId=" + encodeURIComponent(passageId)
+      );
+    },
+    saveReadingProgress: function(payload) {
+      return request("/api/student/reading-progress", { method: "POST", body: payload });
+    },
+    lockReading: function(payload) {
+      return request("/api/student/reading-lock", { method: "POST", body: payload });
+    },
     submitStudentPreAssessment: function(payload) {
       return request("/api/student/pre-assessment", { method: "POST", body: payload }).then(function(data) {
         if (data && data.user) cacheUser(data.user);
@@ -246,6 +258,12 @@
     },
     getTeacherStudentDetail: function(studentId) {
       return request("/api/teacher/students/" + encodeURIComponent(studentId));
+    },
+    getTeacherStudentPendingShortAnswers: function(studentId) {
+      return request("/api/teacher/students/" + encodeURIComponent(studentId) + "/pending-short-answers");
+    },
+    saveTeacherScore: function(payload) {
+      return request("/api/teacher/score", { method: "POST", body: payload || {} });
     },
     importPassagesCsv: function(file) {
       var form = new FormData();

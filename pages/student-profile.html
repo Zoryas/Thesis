@@ -191,6 +191,14 @@
 <script src="../api.js?v=20260316c"></script>
 <script src="../mockData.js?v=20260316b"></script>
 <script>
+  (function enforceStudentSession() {
+    const role = sessionStorage.getItem("role");
+    const studentId = sessionStorage.getItem("studentId");
+    if (role !== "student" || !studentId) {
+      window.location.replace("../login.html");
+    }
+  })();
+
   const AVATAR_FILES = [
     "avatar-boy-svgrepo-com.svg",
     "avatar-boy-svgrepo-com (1).svg",

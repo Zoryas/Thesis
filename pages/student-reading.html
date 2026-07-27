@@ -56,12 +56,30 @@
 <script src="../api.js?v=20260316c"></script>
 <script src="../mockData.js?v=20260316b"></script>
 <script>
+  (function enforceStudentSession() {
+    const role = sessionStorage.getItem("role");
+    const studentId = sessionStorage.getItem("studentId");
+    if (role !== "student" || !studentId) {
+      window.location.replace("../login.html");
+    }
+  })();
+
   const params = new URLSearchParams(location.search);
   const pid = params.get("id") || "p3";
-  const week = ReadWiseAPI.getActiveWeek();
-  const readingLockKey = "readingLocked_" + week + "_" + pid;
-  const readingSecsKey = "readingSecs_" + week + "_" + pid;
+  const week = awaitWeek();
+  const readingLockKey = "readingLocked_" + pid;
+  const readingSecsKeyBase = "readingSecs_";
   const readingQueueKey = "readingTimeQueue_v1";
+  let resolvedWeek = 1;
+  const readingProgressEventId = "rp_" + pid + "_wk";
+  let autosaveInterval = null;
+  let lastSavedProgressSecs = -1;
+
+  function awaitWeek() {
+    return Promise.resolve(ReadWiseAPI.getActiveWeek()).then(function(value) {
+      return Number(value) || 1;
+    });
+  }
 
   async function bootstrapPage() {
     let auth = null;
@@ -75,13 +93,15 @@
         throw new Error("Unauthorized");
       }
       document.getElementById("sb-name").textContent = auth.user.student.name || "Student";
+      const activeWeek = await week;
       const results = await Promise.all([
         ReadWiseAPI.getPassage(pid),
-        ReadWiseAPI.getStudentWeeklyPassages(week)
+        ReadWiseAPI.getStudentWeeklyPassages(activeWeek)
       ]);
       passage = results[0];
       const weekly = results[1];
       weeklyIds = ((weekly && weekly.passages) || []).map(function(entry) { return entry.id; });
+      await hydrateTimerFromServerDraft(activeWeek);
     } catch (error) {
       window.location.href = "../login.html";
       return;
@@ -93,22 +113,44 @@
       return;
     }
 
+    const activeWeek = await week;
     if (sessionStorage.getItem(readingLockKey) === "1") {
       window.location.href = "student-questions.html?id=" + encodeURIComponent(pid);
       return;
     }
 
+    try {
+      const state = await ReadWiseAPI.getReadingProgress(activeWeek, pid);
+      if (state && state.isLocked) {
+        sessionStorage.setItem(readingLockKey, "1");
+        window.location.href = "student-questions.html?id=" + encodeURIComponent(pid);
+        return;
+      }
+    } catch (error) {
+      // ignore and keep local fallback
+    }
+
     if (!weeklyIds.includes(pid)) {
       const warning = document.getElementById("week-warning");
       warning.style.display = "block";
-      warning.textContent = "This passage is outside your Week " + week + " assigned list.";
+      warning.textContent = "This passage is outside your Week " + activeWeek + " assigned list. Redirecting to your assigned passages...";
+      const nextBtn = document.getElementById("next-btn");
+      nextBtn.disabled = true;
+      nextBtn.textContent = "Not Assigned for This Week";
+      document.getElementById("timer-status").textContent = "Assigned passages only.";
+      if (timerInterval) clearInterval(timerInterval);
+      if (autosaveInterval) clearInterval(autosaveInterval);
+      setTimeout(function() {
+        window.location.href = "student-passage.html";
+      }, 1200);
+      return;
     }
 
     document.getElementById("passage-meta").innerHTML =
       '<div class="reading-meta">' +
       '<span class="badge ' + badgeClass(passage.label) + '">' + passage.label + '</span>' +
       '<span class="badge badge-primary">' + passage.genre + '</span>' +
-      '<span class="meta-pill">Week ' + week + "</span>" +
+      '<span class="meta-pill">Week ' + activeWeek + "</span>" +
       "</div>" +
       '<h2 class="reading-title">' + passage.title + "</h2>" +
       '<div class="card-meta-row">' +
@@ -128,15 +170,19 @@
     document.getElementById("timer").textContent = minutes + ":" + (seconds < 10 ? "0" : "") + seconds;
   }
 
-  function persistReadingProgress() {
-    sessionStorage.setItem(readingSecsKey, String(secs));
+  function getReadingSecsKey() {
+    return readingSecsKeyBase + resolvedWeek + "_" + pid;
   }
 
-  let secs = parseInt(sessionStorage.getItem(readingSecsKey) || "0", 10);
+  function persistReadingProgress() {
+    sessionStorage.setItem(getReadingSecsKey(), String(secs));
+  }
+
+  let secs = 0;
   if (!Number.isFinite(secs) || secs < 0) secs = 0;
   renderTimer();
 
-  let timerInterval = setInterval(tick, 1000);
+  let timerInterval = null;
   function tick() {
     secs++;
     renderTimer();
@@ -146,9 +192,13 @@
   document.addEventListener("visibilitychange", function() {
     if (document.visibilityState === "hidden") {
       persistReadingProgress();
+      saveReadingProgressBestEffort();
     }
   });
-  window.addEventListener("beforeunload", persistReadingProgress);
+  window.addEventListener("beforeunload", function() {
+    persistReadingProgress();
+    saveReadingProgressBestEffort();
+  });
 
   function readQueue() {
     try {
@@ -200,14 +250,51 @@
   }
 
   function buildReadingPayload(timeStr) {
-    const eventId = "rt_" + pid + "_" + week + "_" + Date.now() + "_" + Math.random().toString(36).slice(2, 10);
+    const eventId = "rt_" + pid + "_" + resolvedWeek + "_" + Date.now() + "_" + Math.random().toString(36).slice(2, 10);
     return {
       eventId: eventId,
       passageId: pid,
-      week: week,
+      week: resolvedWeek,
       readingSeconds: secs,
       formattedTime: timeStr
     };
+  }
+
+  async function hydrateTimerFromServerDraft(activeWeek) {
+    try {
+      const draft = await ReadWiseAPI.getReadingProgress(activeWeek, pid);
+      const serverSecs = Number((draft && draft.readingSeconds) || 0);
+      const merged = Math.max(Number(secs || 0), Number(serverSecs || 0));
+      secs = merged;
+      sessionStorage.setItem(getReadingSecsKey(), String(secs));
+      lastSavedProgressSecs = serverSecs;
+    } catch (error) {
+      // ignore draft load errors and continue local-only fallback
+    }
+  }
+
+  function startAutosave() {
+    if (autosaveInterval) clearInterval(autosaveInterval);
+    autosaveInterval = setInterval(function() {
+      saveReadingProgressBestEffort();
+    }, 10000);
+  }
+
+  async function saveReadingProgressBestEffort() {
+    if (!Number.isFinite(secs) || secs < 0) return false;
+    if (secs === lastSavedProgressSecs) return true;
+    try {
+      const saved = await ReadWiseAPI.saveReadingProgress({
+        eventId: readingProgressEventId + "_" + resolvedWeek,
+        passageId: pid,
+        week: resolvedWeek,
+        readingSeconds: secs
+      });
+      lastSavedProgressSecs = Number((saved && saved.readingSeconds) || secs);
+      return true;
+    } catch (error) {
+      return false;
+    }
   }
 
   async function goToQuestions() {
@@ -219,6 +306,8 @@
     }
 
     clearInterval(timerInterval);
+    if (autosaveInterval) clearInterval(autosaveInterval);
+    await saveReadingProgressBestEffort();
     const minutes = Math.floor(secs / 60);
     const seconds = secs % 60;
     const timeStr = minutes + ":" + (seconds < 10 ? "0" : "") + seconds;
@@ -226,6 +315,15 @@
     document.getElementById("timer-status").textContent = "Reading Time: " + timeStr;
     document.getElementById("next-btn").disabled = true;
     document.getElementById("next-btn").textContent = "Proceeding...";
+
+    try {
+      await ReadWiseAPI.lockReading({ week: resolvedWeek, passageId: pid });
+    } catch (error) {
+      document.getElementById("next-btn").disabled = false;
+      document.getElementById("next-btn").textContent = "Done Reading - Answer Questions";
+      document.getElementById("timer-status").textContent = "Unable to lock reading. Please try again.";
+      return;
+    }
 
     const savePayload = buildReadingPayload(timeStr);
     const saved = await saveReadingTimeBestEffort(savePayload);
@@ -236,7 +334,7 @@
 
     sessionStorage.setItem(readingLockKey, "1");
     sessionStorage.setItem("readingTime_" + pid, timeStr);
-    sessionStorage.removeItem(readingSecsKey);
+    sessionStorage.removeItem(getReadingSecsKey());
 
     setTimeout(function() {
       window.location.href = "student-questions.html?id=" + pid;
@@ -253,9 +351,18 @@
     window.location.href = "../login.html";
   }
 
-  flushQueuedReadingTimes();
-  window.addEventListener("online", flushQueuedReadingTimes);
-  bootstrapPage();
+  (async function initReadingPage() {
+    resolvedWeek = await week;
+    secs = parseInt(sessionStorage.getItem(getReadingSecsKey()) || "0", 10);
+    if (!Number.isFinite(secs) || secs < 0) secs = 0;
+    renderTimer();
+    timerInterval = setInterval(tick, 1000);
+
+    flushQueuedReadingTimes();
+    window.addEventListener("online", flushQueuedReadingTimes);
+    await bootstrapPage();
+    startAutosave();
+  })();
 </script>
 </body>
 </html>

@@ -42,6 +42,14 @@
 <script src="../api.js?v=20260316c"></script>
 <script src="../mockData.js?v=20260316b"></script>
 <script>
+  (function enforceStudentSession() {
+    const role = sessionStorage.getItem("role");
+    const studentId = sessionStorage.getItem("studentId");
+    if (role !== "student" || !studentId) {
+      window.location.replace("../login.html");
+    }
+  })();
+
   const PRE_ASSESSMENT_STEPS = [
     {
       id: "pre-easy",

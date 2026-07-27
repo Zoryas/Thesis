@@ -119,6 +119,14 @@
 <script src="../api.js?v=20260316c"></script>
 <script src="../mockData.js?v=20260316b"></script>
 <script>
+  (function enforceStudentSession() {
+    const role = sessionStorage.getItem("role");
+    const studentId = sessionStorage.getItem("studentId");
+    if (role !== "student" || !studentId) {
+      window.location.replace("../login.html");
+    }
+  })();
+
   const params = new URLSearchParams(location.search);
   const pid = params.get("id") || "p3";
   const activeWeek = ReadWiseAPI.getActiveWeek();
@@ -126,6 +134,7 @@
   let s = null;
   let qs = [];
   let shortAnswerPrompt = "";
+  let isSubmitting = false;
 
   const wrap = document.getElementById("questions-wrap");
 
@@ -453,12 +462,27 @@
   }
 
   async function submitAnswers() {
+    if (isSubmitting) {
+      return;
+    }
+
+    const submitBtn = document.getElementById("submit-btn");
+    isSubmitting = true;
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Submitting...";
+
     if (!p) {
       showToast("No passage loaded for this session.", "#c0392b");
+      isSubmitting = false;
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Submit Answers";
       return;
     }
     if (!qs.length) {
       showToast("No assessment questions are available yet.", "#c0392b");
+      isSubmitting = false;
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Submit Answers";
       return;
     }
 
@@ -472,6 +496,9 @@
     });
     if (unanswered) {
       showToast("Please complete every question before submitting.", "#c0392b");
+      isSubmitting = false;
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Submit Answers";
       return;
     }
 
@@ -493,11 +520,17 @@
 
     if (underReview && !saVal) {
       showToast("Please complete the short answer for teacher review.", "#c0392b");
+      isSubmitting = false;
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Submit Answers";
       return;
     }
 
     if (!difficultyValue) {
       showToast("Please provide your self-reported difficulty rating.", "#c0392b");
+      isSubmitting = false;
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Submit Answers";
       return;
     }
 
@@ -528,6 +561,9 @@
       });
     } catch (error) {
       showToast(error.message || "Unable to submit to server.", "#c0392b");
+      isSubmitting = false;
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Submit Answers";
       return;
     }
 

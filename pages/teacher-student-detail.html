@@ -83,7 +83,10 @@
             Waiting for data...
           </div>
         </div>
-        <a href="teacher-score.html" class="btn btn-danger btn-block" id="score-short-answer-link">Open Scoring View</a>
+        <div id="pending-short-answer-actions" style="display:flex;gap:8px;flex-wrap:wrap">
+          <a href="teacher-score.html" class="btn btn-danger btn-block" id="score-short-answer-link">Open Scoring View</a>
+          <a href="#" class="btn btn-outline btn-block" id="view-all-pending-link">Check All Pending Short Answers</a>
+        </div>
       </div>
     </div>
 
@@ -168,16 +171,46 @@
     });
   }
 
-  function renderPendingShortAnswer(studentId, pending) {
+  function renderPendingShortAnswer(studentId, pending, latestScoredAttempt, pendingCount) {
     var status = document.getElementById("pending-short-answer-status");
     var copy = document.getElementById("pending-short-answer-copy");
     var response = document.getElementById("pending-short-answer-response");
     var link = document.getElementById("score-short-answer-link");
+    var allPendingLink = document.getElementById("view-all-pending-link");
+    var totalPending = Number(pendingCount || 0);
+
+    allPendingLink.href = "teacher-student-pending.html?sid=" + encodeURIComponent(studentId);
+    allPendingLink.className = "btn btn-outline btn-block";
+    allPendingLink.textContent = totalPending > 0
+      ? ("Check All Pending Short Answers (" + totalPending + ")")
+      : "Check All Pending Short Answers";
+
+    if (!pending && latestScoredAttempt) {
+      status.textContent = "Last short answer has been scored";
+      status.style.color = "var(--easy)";
+      copy.innerHTML =
+        "<strong>Pending:</strong> " + totalPending + " short-answer response(s) waiting for review.<br>" +
+        "<strong>Passage:</strong> " + escapeHtml(latestScoredAttempt.passageTitle || "Untitled passage") +
+        (latestScoredAttempt.scoredAt ? "<br><strong>Scored At:</strong> " + escapeHtml(new Date(latestScoredAttempt.scoredAt).toLocaleString()) : "") +
+        (latestScoredAttempt.scoredBy ? "<br><strong>Scored By:</strong> " + escapeHtml(latestScoredAttempt.scoredBy) : "");
+      var scoredText = "--";
+      if (latestScoredAttempt.score === 1) scoredText = "Correct (1)";
+      else if (latestScoredAttempt.score === 0) scoredText = "Incorrect (0)";
+      response.textContent =
+        "Result: " + scoredText +
+        (latestScoredAttempt.feedback ? " | Feedback: " + latestScoredAttempt.feedback : "");
+      response.style.borderLeftColor = "var(--easy)";
+      link.className = "btn btn-outline btn-block";
+      link.href = "teacher-score.html?sid=" + encodeURIComponent(studentId) + "&pid=" + encodeURIComponent(latestScoredAttempt.passageId || "");
+      link.textContent = "Re-open Scoring View";
+      link.removeAttribute("aria-disabled");
+      return;
+    }
 
     if (!pending) {
       status.textContent = "No short-answer review is waiting right now";
       status.style.color = "var(--secondary)";
-      copy.textContent = "This student does not currently have a live short-answer response that needs teacher review.";
+      copy.textContent = "This student has " + totalPending + " short-answer response(s) waiting for review.";
       response.textContent = "When the student submits a passage with a short-answer prompt, the response will appear here.";
       response.style.borderLeftColor = "var(--primary)";
       link.className = "btn btn-outline btn-block";
@@ -190,6 +223,7 @@
     status.textContent = "Awaiting Teacher Review";
     status.style.color = "var(--hard)";
     copy.innerHTML =
+      "<strong>Pending:</strong> This student has " + totalPending + " short-answer response(s) to be graded.<br>" +
       "<strong>Passage:</strong> " + escapeHtml(pending.passageTitle) + " (" + escapeHtml(getClassDisplayName(pending.label || "MODERATE")) + ")<br>" +
       "<strong>Question:</strong> " + escapeHtml(pending.prompt || "Short-answer prompt");
     response.textContent = pending.response || "No response text recorded.";
@@ -258,6 +292,8 @@
       var progress = (detail && detail.progress) || [];
       var latest = detail && detail.latest;
       var pending = detail && detail.pendingShortAnswer;
+      var latestScoredAttempt = detail && detail.latestScoredAttempt;
+      var pendingCount = 0;
 
       if (!student) throw new Error("Student not found");
 
@@ -284,10 +320,17 @@
         document.getElementById("latest-rec").innerHTML = '<span class="muted-copy">No weekly passage attempts yet</span>';
       }
 
+      try {
+        var pendingData = await ReadWiseAPI.getTeacherStudentPendingShortAnswers(student.id);
+        pendingCount = ((pendingData && pendingData.pendingShortAnswers) || []).length;
+      } catch (e) {
+        pendingCount = pending ? 1 : 0;
+      }
+
       renderChart(progress);
       renderSessionTable(progress);
       renderTimeline(progress);
-      renderPendingShortAnswer(student.id, pending);
+      renderPendingShortAnswer(student.id, pending, latestScoredAttempt, pendingCount);
     } catch (error) {
       document.querySelector(".main").innerHTML =
         '<div class="card" style="text-align:center;padding:40px;color:var(--muted)">Student record could not be loaded.</div>';
