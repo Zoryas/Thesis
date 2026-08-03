@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -189,7 +189,6 @@
 <div class="toast" id="toast"></div>
 
 <script src="../api.js?v=20260316c"></script>
-<script src="../mockData.js?v=20260316b"></script>
 <script>
   (function enforceStudentSession() {
     const role = sessionStorage.getItem("role");
@@ -378,10 +377,17 @@
     currentAvatarType = activeStudent.avatarType || "initials";
     currentAvatarValue = activeStudent.avatarValue || "";
 
-    const progress = MOCK.weeklyProgress[activeStudent.id] || [];
+    let progress = [];
+    try {
+      const res = await ReadWiseAPI.getStudentProgress();
+      progress = (res && res.progress) ? res.progress : [];
+    } catch (e) {
+      progress = [];
+    }
     const scores = progress.map(function(entry) { return entry.score; });
     const latest = progress.length ? progress[progress.length - 1] : null;
-    const best = scores.length ? Math.max.apply(null, scores) : activeStudent.preScore;
+    const preVal = activeStudent.preScore || activeStudent.pre_score || 0;
+    const best = scores.length ? Math.max.apply(null, scores) : preVal;
     const initials = activeStudent.name.split(" ").map(function(part) { return part[0]; }).join("").slice(0, 2).toUpperCase();
 
     document.getElementById("avatar-initials").textContent = initials;

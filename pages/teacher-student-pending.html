@@ -57,7 +57,6 @@
 
 <div class="toast" id="toast"></div>
 <script src="../api.js?v=20260316c"></script>
-<script src="../mockData.js?v=20260316b"></script>
 <script>
   var params = new URLSearchParams(location.search);
   var sid = params.get("sid") || params.get("id") || "";
@@ -145,12 +144,9 @@
 
       renderPendingList(pendingItems);
     } catch (error) {
-      if (String(error && error.message || "").toLowerCase().indexOf("unauthorized") !== -1) {
-        window.location.href = "../login.html";
-        return;
-      }
-      document.querySelector(".main").innerHTML =
-        '<div class="card" style="text-align:center;padding:40px;color:var(--muted)">Pending short-answer queue could not be loaded.</div>';
+      // Teacher-only page: any failure should route back to login to prevent viewing protected UI.
+      window.location.href = "../login.html";
+      return;
     }
   }
 

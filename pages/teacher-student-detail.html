@@ -118,7 +118,6 @@
 </div>
 <div class="toast" id="toast"></div>
 <script src="../api.js?v=20260316c"></script>
-<script src="../mockData.js?v=20260316b"></script>
 <script>
   var params = new URLSearchParams(location.search);
   var sid = params.get("id") || params.get("sid") || "";
@@ -332,11 +331,9 @@
       renderTimeline(progress);
       renderPendingShortAnswer(student.id, pending, latestScoredAttempt, pendingCount);
     } catch (error) {
-      document.querySelector(".main").innerHTML =
-        '<div class="card" style="text-align:center;padding:40px;color:var(--muted)">Student record could not be loaded.</div>';
-      if (String(error && error.message || "").toLowerCase().indexOf("unauthorized") !== -1) {
-        window.location.href = "../login.html";
-      }
+      // Teacher-only page: any failure here should route back to login to prevent viewing protected UI.
+      window.location.href = "../login.html";
+      return;
     }
   }
 

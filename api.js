@@ -5,6 +5,7 @@
   var BASE_URL = String(RAW_BASE).replace(/\/+$/, "");
   var USER_CACHE_KEY = "readwise_user_v1";
   var TOTAL_WEEKS = 8;
+  var MAX_WEEKLY_PASSAGES_PER_CLASS = 5;
 
   function normalizeWeek(value) {
     var parsed = Number(value);
@@ -288,6 +289,68 @@
       });
     }
   };
+
+  function normalizeClassLevel(value) {
+    var raw = String(value || "").trim().toUpperCase();
+    if (raw === "HARD" || raw === "DIFFICULT") return "HARD";
+    if (raw === "MODERATE" || raw === "MEDIUM") return "MODERATE";
+    return "EASY";
+  }
+
+  function mapPassageLabelToClassLevel(label) {
+    return normalizeClassLevel(label);
+  }
+
+  function getClassDisplayName(level, format) {
+    var normalized = normalizeClassLevel(level);
+    var display = normalized === "HARD" ? "DIFFICULT" : normalized;
+    if (format === "upper") return display;
+    if (format === "lower") return display.toLowerCase();
+    return display.charAt(0) + display.slice(1).toLowerCase();
+  }
+
+  function formatRecommendationDisplay(value) {
+    var text = String(value || "").trim();
+    if (!text) return "";
+    return text
+      .replace(/\bUP\b/g, "Up")
+      .replace(/\bDOWN\b/g, "Down")
+      .replace(/\bMEDIUM\b/gi, getClassDisplayName("MODERATE"))
+      .replace(/\bMODERATE\b/gi, getClassDisplayName("MODERATE"))
+      .replace(/\bHARD\b/gi, getClassDisplayName("HARD"))
+      .replace(/\bDIFFICULT\b/gi, getClassDisplayName("HARD"))
+      .replace(/\bEASY\b/gi, getClassDisplayName("EASY"));
+  }
+
+  function badgeClass(l) {
+    var norm = normalizeClassLevel(l);
+    return norm === "EASY" ? "badge-easy" : norm === "MODERATE" ? "badge-moderate" : "badge-hard";
+  }
+
+  function levelColor(l) {
+    var norm = normalizeClassLevel(l);
+    if (norm === "EASY") return "#34c759";
+    if (norm === "MODERATE") return "#ff9f0a";
+    return "#ff453a";
+  }
+
+  function levelBg(l) {
+    var norm = normalizeClassLevel(l);
+    if (norm === "EASY") return "rgba(52, 199, 89, 0.14)";
+    if (norm === "MODERATE") return "rgba(255, 159, 10, 0.14)";
+    return "rgba(255, 69, 58, 0.14)";
+  }
+
+  if (typeof global.normalizeClassLevel !== "function") global.normalizeClassLevel = normalizeClassLevel;
+  if (typeof global.mapPassageLabelToClassLevel !== "function") global.mapPassageLabelToClassLevel = mapPassageLabelToClassLevel;
+  if (typeof global.getClassDisplayName !== "function") global.getClassDisplayName = getClassDisplayName;
+  if (typeof global.TOTAL_PROGRAM_WEEKS === "undefined") global.TOTAL_PROGRAM_WEEKS = TOTAL_WEEKS;
+  if (typeof global.MAX_WEEKLY_PASSAGES_PER_CLASS === "undefined") global.MAX_WEEKLY_PASSAGES_PER_CLASS = MAX_WEEKLY_PASSAGES_PER_CLASS;
+  if (typeof global.formatRecommendationDisplay !== "function") global.formatRecommendationDisplay = formatRecommendationDisplay;
+  if (typeof global.badgeClass !== "function") global.badgeClass = badgeClass;
+  if (typeof global.levelColor !== "function") global.levelColor = levelColor;
+  if (typeof global.levelBg !== "function") global.levelBg = levelBg;
 })(window);
+
 
 

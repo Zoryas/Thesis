@@ -1304,9 +1304,250 @@ def init_database():
             """CREATE TABLE IF NOT EXISTS quiz_attempts (id BIGINT AUTO_INCREMENT PRIMARY KEY,student_id VARCHAR(20) NOT NULL,passage_id VARCHAR(20) NOT NULL,week_no TINYINT NOT NULL,score_pct INT NOT NULL DEFAULT 0,correct_count INT NOT NULL DEFAULT 0,total_count INT NOT NULL DEFAULT 0,difficulty_rating TINYINT NULL,short_answer_text TEXT NULL,reading_time VARCHAR(20) NULL,responses_json JSON NULL,teacher_score TINYINT NULL,teacher_feedback TEXT NULL,teacher_scored_by INT NULL,teacher_scored_at TIMESTAMP NULL,submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,FOREIGN KEY (passage_id) REFERENCES passages(id) ON DELETE CASCADE,FOREIGN KEY (teacher_scored_by) REFERENCES users(id) ON DELETE SET NULL,INDEX idx_progress (student_id, week_no),UNIQUE KEY uniq_student_passage_week (student_id, passage_id, week_no)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
             """CREATE TABLE IF NOT EXISTS student_reading_sessions (id BIGINT AUTO_INCREMENT PRIMARY KEY,event_id VARCHAR(120) NOT NULL,student_id VARCHAR(20) NOT NULL,passage_id VARCHAR(20) NOT NULL,week_no TINYINT NOT NULL,reading_seconds INT NOT NULL DEFAULT 0,formatted_time VARCHAR(20) NULL,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,UNIQUE KEY uniq_reading_event (event_id),INDEX idx_reading_student_week (student_id, week_no),FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,FOREIGN KEY (passage_id) REFERENCES passages(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
             """CREATE TABLE IF NOT EXISTS student_reading_progress_drafts (id BIGINT AUTO_INCREMENT PRIMARY KEY,student_id VARCHAR(20) NOT NULL,passage_id VARCHAR(20) NOT NULL,week_no TINYINT NOT NULL,reading_seconds INT NOT NULL DEFAULT 0,last_event_id VARCHAR(120) NULL,is_locked TINYINT(1) NOT NULL DEFAULT 0,is_submitted TINYINT(1) NOT NULL DEFAULT 0,completed_at TIMESTAMP NULL,updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,UNIQUE KEY uniq_reading_draft (student_id, passage_id, week_no),INDEX idx_reading_draft_student_week (student_id, week_no),FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,FOREIGN KEY (passage_id) REFERENCES passages(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
+
+            # ===== Production relational model (transitional minimal subset for backfill) =====
+            # Identity/hierarchy (added first; compatibility-first: no endpoint cutover yet)
+            """CREATE TABLE IF NOT EXISTS reading_levels (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                code ENUM('EASY','MODERATE','HARD') NOT NULL UNIQUE,
+                description VARCHAR(255) NULL,
+                threshold_min INT NOT NULL DEFAULT 0,
+                threshold_max INT NOT NULL DEFAULT 100
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
+
+            """CREATE TABLE IF NOT EXISTS teachers (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL UNIQUE,
+                full_name VARCHAR(255) NOT NULL,
+                department VARCHAR(100) NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
+
+            """CREATE TABLE IF NOT EXISTS classes (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                grade_level VARCHAR(20) NOT NULL,
+                curriculum_code VARCHAR(20) NOT NULL,
+                adviser_teacher_id INT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_classes_grade (grade_level),
+                FOREIGN KEY (adviser_teacher_id) REFERENCES teachers(id) ON DELETE SET NULL
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
+
+            """CREATE TABLE IF NOT EXISTS sections (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                class_id INT NOT NULL,
+                name VARCHAR(100) NOT NULL,
+                school_year INT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY uniq_section (class_id, name, school_year),
+                FOREIGN KEY (class_id) REFERENCES classes(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
+
+            """CREATE TABLE IF NOT EXISTS reading_sessions (
+                id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                legacy_quiz_attempt_id BIGINT UNIQUE NULL,
+                student_id VARCHAR(20) NOT NULL,
+                passage_id VARCHAR(20) NOT NULL,
+                week_no TINYINT NOT NULL,
+                started_at TIMESTAMP NULL,
+                completed_at TIMESTAMP NULL,
+                duration_seconds INT NOT NULL DEFAULT 0,
+                status ENUM('in_progress','completed') NOT NULL DEFAULT 'in_progress',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_reading_sessions_student_week (student_id, week_no),
+                FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
+                FOREIGN KEY (passage_id) REFERENCES passages(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
+
+            """CREATE TABLE IF NOT EXISTS student_answers (
+                id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                legacy_quiz_attempt_id BIGINT UNIQUE NULL,
+                session_id BIGINT NOT NULL,
+                question_id BIGINT NULL,
+                answer_payload_json JSON NULL,
+                is_correct_nullable TINYINT NULL,
+                submitted_at TIMESTAMP NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY uniq_session_question (session_id, question_id),
+                INDEX idx_student_answers_session_question (session_id, question_id),
+                FOREIGN KEY (session_id) REFERENCES reading_sessions(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
+
+            """CREATE TABLE IF NOT EXISTS short_answer_responses (
+                id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                legacy_quiz_attempt_id BIGINT UNIQUE NULL,
+                student_answer_id BIGINT NOT NULL,
+                response_text TEXT NOT NULL,
+                needs_manual_review TINYINT(1) NOT NULL DEFAULT 0,
+                submitted_at TIMESTAMP NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY uniq_student_answer (student_answer_id),
+                FOREIGN KEY (student_answer_id) REFERENCES student_answers(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
+
+            """CREATE TABLE IF NOT EXISTS short_answer_scores (
+                id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                legacy_quiz_attempt_id BIGINT UNIQUE NULL,
+                short_answer_response_id BIGINT NOT NULL,
+                teacher_id INT NULL,
+                score_binary TINYINT NULL,
+                feedback TEXT NULL,
+                scored_at TIMESTAMP NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY uniq_short_answer_response (short_answer_response_id),
+                FOREIGN KEY (short_answer_response_id) REFERENCES short_answer_responses(id) ON DELETE CASCADE,
+                FOREIGN KEY (teacher_id) REFERENCES users(id) ON DELETE SET NULL
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
+
+            """CREATE TABLE IF NOT EXISTS scores (
+                id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                legacy_quiz_attempt_id BIGINT UNIQUE NULL,
+                session_id BIGINT NOT NULL,
+                objective_score_pct INT NULL,
+                short_answer_score_pct INT NULL,
+                total_score_pct INT NULL,
+                computed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY uniq_session_score (session_id),
+                FOREIGN KEY (session_id) REFERENCES reading_sessions(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
+
+            """CREATE TABLE IF NOT EXISTS reading_history (
+                id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                student_id VARCHAR(20) NOT NULL,
+                session_id BIGINT NULL,
+                summary_json JSON NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_reading_history_student_created (student_id, created_at),
+                FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
+                FOREIGN KEY (session_id) REFERENCES reading_sessions(id) ON DELETE SET NULL
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
+
+            """CREATE TABLE IF NOT EXISTS recommendations (
+                id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                student_id VARCHAR(20) NOT NULL,
+                week_no TINYINT NOT NULL DEFAULT 1,
+                source_type VARCHAR(20) NOT NULL DEFAULT 'rule',
+                recommendation_text VARCHAR(255) NOT NULL,
+                suggested_level_id INT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY uniq_recommendation_student_week (student_id, week_no),
+                INDEX idx_recommendations_student_created (student_id, created_at),
+                FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
+                FOREIGN KEY (suggested_level_id) REFERENCES reading_levels(id) ON DELETE SET NULL
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
+
+            # ===== ER Production relational model (questions/choices) =====
+            """CREATE TABLE IF NOT EXISTS questions (
+                id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                passage_id VARCHAR(20) NOT NULL,
+                type VARCHAR(60) NOT NULL,
+                prompt TEXT NOT NULL,
+                sequence_no INT NOT NULL,
+                metadata_json JSON NULL,
+                INDEX idx_questions_passage_seq (passage_id, sequence_no),
+                FOREIGN KEY (passage_id) REFERENCES passages(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
+
+            """CREATE TABLE IF NOT EXISTS choices (
+                id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                question_id BIGINT NOT NULL,
+                choice_text TEXT NOT NULL,
+                is_correct TINYINT(1) NOT NULL DEFAULT 0,
+                sequence_no INT NOT NULL DEFAULT 0,
+                INDEX idx_choices_question_seq (question_id, sequence_no),
+                FOREIGN KEY (question_id) REFERENCES questions(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
         ]
         for sql in schema:
             cur.execute(sql)
+
+        # ===== Backfill next identity/hierarchy tables (compatibility-first) =====
+        # reading_levels: EASY/MODERATE/HARD with temporary thresholds
+        cur.execute("SELECT COUNT(*) AS c FROM reading_levels")
+        if int(cur.fetchone()["c"] or 0) == 0:
+            cur.execute(
+                """
+                INSERT INTO reading_levels (code, description, threshold_min, threshold_max)
+                VALUES
+                  ('EASY','Below 55',0,54),
+                  ('MODERATE','55 to 69',55,69),
+                  ('HARD','70 and above',70,100)
+                """
+            )
+
+        # teachers: 1 row per legacy users(role=teacher)
+        cur.execute(
+            """
+            SELECT COUNT(*) AS c
+            FROM teachers t
+            JOIN users u ON u.id=t.user_id
+            WHERE u.role='teacher'
+            """
+        )
+        # If there are no teachers yet, seed all teacher users.
+        if int(cur.fetchone()["c"] or 0) == 0:
+            cur.execute(
+                """
+                INSERT INTO teachers (user_id, full_name, department)
+                SELECT
+                  u.id AS user_id,
+                  -- placeholder full_name: email local-part (or email if no @)
+                  CASE
+                    WHEN INSTR(u.email,'@')>0 THEN SUBSTRING_INDEX(u.email,'@',1)
+                    ELSE u.email
+                  END AS full_name,
+                  NULL AS department
+                FROM users u
+                WHERE u.role='teacher'
+                """
+            )
+
+        # classes & sections: derived from legacy students (grade_level + class_level + section)
+        # We'll create:
+        # - one class per distinct (grade, class_level)
+        # - one section per distinct (grade, class_level, section name)
+        cur.execute("SELECT COUNT(*) AS c FROM classes")
+        if int(cur.fetchone()["c"] or 0) == 0:
+            # Ensure we have at least one teacher to reference adviser_teacher_id (can be NULL)
+            cur.execute("SELECT id FROM teachers ORDER BY id DESC LIMIT 1")
+            adviser = cur.fetchone()
+            adviser_teacher_id = adviser["id"] if adviser else None
+
+            # Create classes
+            cur.execute(
+                """
+                INSERT INTO classes (grade_level, curriculum_code, adviser_teacher_id)
+                SELECT
+                  s.grade AS grade_level,
+                  s.class_level AS curriculum_code,
+                  %s AS adviser_teacher_id
+                FROM students s
+                GROUP BY s.grade, s.class_level
+                """,
+                (adviser_teacher_id,),
+            )
+
+            # Use current year as placeholder school_year
+            cur.execute("SELECT YEAR(CURRENT_DATE()) AS y")
+            current_year = int(cur.fetchone()["y"])
+
+            cur.execute(
+                """
+                INSERT INTO sections (class_id, name, school_year)
+                SELECT
+                  c.id AS class_id,
+                  s.section AS name,
+                  %s AS school_year
+                FROM students s
+                JOIN classes c
+                  ON c.grade_level=s.grade AND c.curriculum_code=s.class_level
+                GROUP BY c.id, s.section
+                """,
+                (current_year,),
+            )
+
+        # ===== End backfill =====
 
         cur.execute("SELECT id FROM program_settings WHERE id=1")
         if not cur.fetchone():
@@ -1366,6 +1607,29 @@ def init_database():
         if not cur.fetchone():
             cur.execute(
                 "ALTER TABLE student_reading_progress_drafts ADD COLUMN is_submitted TINYINT(1) NOT NULL DEFAULT 0 AFTER is_locked"
+            )
+
+        cur.execute("SHOW COLUMNS FROM recommendations LIKE 'week_no'")
+        if not cur.fetchone():
+            cur.execute(
+                "ALTER TABLE recommendations ADD COLUMN week_no TINYINT NOT NULL DEFAULT 1 AFTER student_id"
+            )
+
+        cur.execute("SHOW INDEX FROM recommendations WHERE Key_name='uniq_recommendation_student_week'")
+        rec_uniq_row = cur.fetchone()
+        cur.fetchall()
+        if not rec_uniq_row:
+            cur.execute(
+                """
+                DELETE r1 FROM recommendations r1
+                JOIN recommendations r2
+                  ON r1.student_id = r2.student_id
+                 AND r1.week_no = r2.week_no
+                 AND r1.id > r2.id
+                """
+            )
+            cur.execute(
+                "ALTER TABLE recommendations ADD UNIQUE KEY uniq_recommendation_student_week (student_id, week_no)"
             )
 
         cur.execute("SHOW INDEX FROM quiz_attempts WHERE Key_name='uniq_student_passage_week'")
@@ -1563,7 +1827,6 @@ def predict():
         return jsonify({"error": str(error)}), 400
 
 
-@app.post("/api/auth/login")
 def auth_login():
     payload = request.get_json(silent=True) or {}
     email = str(payload.get("email") or "").strip().lower()
@@ -1601,7 +1864,6 @@ def auth_login():
     return api_ok({"user": serialize_user(row), "token": token})
 
 
-@app.post("/api/auth/logout")
 def auth_logout():
     token = get_request_token()
     if token:
@@ -1611,7 +1873,6 @@ def auth_logout():
     return api_ok({"message": "Logged out."})
 
 
-@app.get("/api/auth/me")
 def auth_me():
     user, err = require_auth()
     if err:
@@ -1619,7 +1880,6 @@ def auth_me():
     return api_ok({"user": serialize_user(user)})
 
 
-@app.post("/api/student/pre-assessment")
 def student_pre_assessment_submit():
     user, err = require_role("student")
     if err:
@@ -1657,7 +1917,6 @@ def student_pre_assessment_submit():
     )
 
 
-@app.put("/api/student/profile/avatar")
 def student_profile_avatar_update():
     user, err = require_role("student")
     if err:
@@ -1686,7 +1945,6 @@ def student_profile_avatar_update():
 
     return api_ok({"user": serialize_user(refreshed_user)})
 
-@app.get("/api/passages")
 def passages_list():
     user, err = require_auth()
     if err:
@@ -1705,7 +1963,6 @@ def passages_list():
     return api_ok(passages)
 
 
-@app.get("/api/passages/<passage_id>")
 def passage_get(passage_id):
     user, err = require_auth()
     if err:
@@ -1780,7 +2037,6 @@ def save_passage(cur, payload, author_id, passage_id=None, allow_empty_assessmen
     return out
 
 
-@app.post("/api/passages")
 def passage_create():
     user, err = require_role("teacher")
     if err:
@@ -1794,7 +2050,6 @@ def passage_create():
     return api_ok(saved, 201)
 
 
-@app.put("/api/passages/<passage_id>")
 def passage_update(passage_id):
     user, err = require_role("teacher")
     if err:
@@ -1810,7 +2065,6 @@ def passage_update(passage_id):
     return api_ok(saved)
 
 
-@app.post("/api/passages/import-csv")
 def passage_import_csv():
     user, err = require_role("teacher")
     if err:
@@ -1916,7 +2170,6 @@ def passage_import_csv():
             "results": results,
         }
     )
-@app.delete("/api/passages/<passage_id>")
 def passage_delete(passage_id):
     user, err = require_role("teacher")
     if err:
@@ -1928,7 +2181,6 @@ def passage_delete(passage_id):
             return api_error("Passage not found.", 404)
     return api_ok({"deleted": True, "id": passage_id})
 
-@app.get("/api/assignments")
 def assignments_get():
     user, err = require_auth()
     if err:
@@ -1939,7 +2191,6 @@ def assignments_get():
         return api_ok({"week": week, "assignments": get_weekly_assignments(cur, week)})
 
 
-@app.post("/api/assignments")
 def assignments_post():
     user, err = require_role("teacher")
     if err:
@@ -1974,7 +2225,6 @@ def assignments_post():
         return api_ok({"week": week, "assignments": get_weekly_assignments(cur, week), "message": "Passage assigned."})
 
 
-@app.delete("/api/assignments")
 def assignments_delete():
     user, err = require_role("teacher")
     if err:
@@ -1991,7 +2241,6 @@ def assignments_delete():
         return api_ok({"week": week, "assignments": get_weekly_assignments(cur, week), "message": "Assignment removed."})
 
 
-@app.get("/api/student/weekly-passages")
 def student_weekly_passages():
     user, err = require_role("student")
     if err:
@@ -2017,7 +2266,6 @@ def student_weekly_passages():
     return api_ok({"week": week, "classLevel": class_level, "passages": passages})
 
 
-@app.get("/api/student/completions")
 def student_completions():
     user, err = require_role("student")
     if err:
@@ -2034,7 +2282,6 @@ def student_completions():
     return api_ok({"week": week, "completedPassageIds": ids})
 
 
-@app.post("/api/student/reading-time")
 def student_reading_time():
     user, err = require_role("student")
     if err:
@@ -2088,7 +2335,6 @@ def student_reading_time():
     return api_ok({"saved": True, "eventId": event_id})
 
 
-@app.get("/api/student/reading-progress")
 def student_reading_progress_get():
     user, err = require_role("student")
     if err:
@@ -2138,7 +2384,6 @@ def student_reading_progress_get():
     )
 
 
-@app.post("/api/student/reading-progress")
 def student_reading_progress_post():
     user, err = require_role("student")
     if err:
@@ -2207,7 +2452,6 @@ def student_reading_progress_post():
     )
 
 
-@app.post("/api/student/reading-lock")
 def student_reading_lock_post():
     user, err = require_role("student")
     if err:
@@ -2270,7 +2514,6 @@ def student_reading_lock_post():
     )
 
 
-@app.post("/api/student/attempts")
 def student_attempts():
     user, err = require_role("student")
     if err:
@@ -2304,7 +2547,10 @@ def student_attempts():
             return api_error("Complete the pre-assessment first.", 403)
         class_level = normalize_class_level(student["class_level"])
 
-        cur.execute("SELECT 1 FROM weekly_assignments WHERE week_no=%s AND class_level=%s AND passage_id=%s", (week, class_level, passage_id))
+        cur.execute(
+            "SELECT 1 FROM weekly_assignments WHERE week_no=%s AND class_level=%s AND passage_id=%s",
+            (week, class_level, passage_id),
+        )
         if not cur.fetchone():
             return api_error("Passage is not assigned to this student for the selected week.", 400)
 
@@ -2337,7 +2583,20 @@ def student_attempts():
                 json.dumps(responses, ensure_ascii=False) if responses else None,
             ),
         )
-        attempt_id = cur.lastrowid
+
+        # IMPORTANT: with ON DUPLICATE KEY UPDATE, lastrowid may not reliably represent the existing row.
+        # Re-fetch the attempt id deterministically by legacy unique key (student_id, passage_id, week_no).
+        cur.execute(
+            """
+            SELECT id
+            FROM quiz_attempts
+            WHERE student_id=%s AND passage_id=%s AND week_no=%s
+            ORDER BY id DESC
+            LIMIT 1
+            """,
+            (student["id"], passage_id, week),
+        )
+        attempt_id = int(cur.fetchone()["id"])
 
         cur.execute(
             "INSERT INTO passage_completions (student_id,week_no,passage_id) VALUES (%s,%s,%s) ON DUPLICATE KEY UPDATE completed_at=completed_at",
@@ -2355,13 +2614,113 @@ def student_attempts():
             (student["id"], passage_id, week),
         )
 
-        cur.execute("SELECT passage_id FROM passage_completions WHERE student_id=%s AND week_no=%s ORDER BY completed_at", (student["id"], week))
+        # Dual-write (normalized production model) - critical path
+        cur.execute(
+            """
+            INSERT INTO reading_sessions
+              (legacy_quiz_attempt_id, student_id, passage_id, week_no, started_at, completed_at, duration_seconds, status)
+            VALUES (%s,%s,%s,%s,NULL,NOW(),0,'completed')
+            ON DUPLICATE KEY UPDATE
+              student_id=VALUES(student_id),
+              passage_id=VALUES(passage_id),
+              week_no=VALUES(week_no),
+              completed_at=COALESCE(VALUES(completed_at), completed_at),
+              status='completed',
+              duration_seconds=0
+            """,
+            (attempt_id, student["id"], passage_id, week),
+        )
+        cur.execute(
+            "SELECT id FROM reading_sessions WHERE legacy_quiz_attempt_id=%s",
+            (attempt_id,),
+        )
+        session_id = int(cur.fetchone()["id"])
+
+        responses_payload = json.dumps(responses, ensure_ascii=False) if responses else None
+        cur.execute(
+            """
+            INSERT INTO student_answers
+              (legacy_quiz_attempt_id, session_id, question_id, answer_payload_json, is_correct_nullable, submitted_at)
+            VALUES (%s,%s,NULL,%s,NULL,NOW())
+            ON DUPLICATE KEY UPDATE
+              session_id=VALUES(session_id),
+              answer_payload_json=VALUES(answer_payload_json),
+              submitted_at=VALUES(submitted_at)
+            """,
+            (attempt_id, session_id, responses_payload),
+        )
+        cur.execute(
+            "SELECT id FROM student_answers WHERE legacy_quiz_attempt_id=%s ORDER BY id DESC LIMIT 1",
+            (attempt_id,),
+        )
+        student_answer_id = int(cur.fetchone()["id"])
+
+        if short_answer:
+            cur.execute(
+                """
+                INSERT INTO short_answer_responses
+                  (legacy_quiz_attempt_id, student_answer_id, response_text, needs_manual_review, submitted_at)
+                VALUES (%s,%s,%s,0,NOW())
+                ON DUPLICATE KEY UPDATE
+                  student_answer_id=VALUES(student_answer_id),
+                  response_text=VALUES(response_text),
+                  needs_manual_review=VALUES(needs_manual_review),
+                  submitted_at=COALESCE(VALUES(submitted_at), submitted_at)
+                """,
+                (attempt_id, student_answer_id, short_answer),
+            )
+        else:
+            # If there's no short answer, ensure we don't create inconsistent rows.
+            cur.execute(
+                "DELETE FROM short_answer_responses WHERE legacy_quiz_attempt_id=%s",
+                (attempt_id,),
+            )
+
+        objective_score_pct = max(0, min(100, score))
+        cur.execute(
+            """
+            INSERT INTO scores
+              (legacy_quiz_attempt_id, session_id, objective_score_pct, short_answer_score_pct, total_score_pct, computed_at)
+            VALUES (%s,%s,%s,NULL,%s,NOW())
+            ON DUPLICATE KEY UPDATE
+              objective_score_pct=VALUES(objective_score_pct),
+              total_score_pct=VALUES(total_score_pct),
+              computed_at=VALUES(computed_at)
+            """,
+            (attempt_id, session_id, objective_score_pct, objective_score_pct),
+        )
+
+        # Dual-write reading history (for later reporting/analytics cutover)
+        cur.execute(
+            "SELECT id FROM reading_history WHERE session_id=%s LIMIT 1",
+            (session_id,),
+        )
+        if not cur.fetchone():
+            history_summary = {
+                "weekNo": week,
+                "passageId": passage_id,
+                "scorePct": int(objective_score_pct),
+                "shortAnswerPresent": bool(short_answer),
+                "readingTime": reading_time or None,
+                "submittedAt": datetime.now(timezone.utc).isoformat(),
+            }
+            cur.execute(
+                """
+                INSERT INTO reading_history (student_id, session_id, summary_json)
+                VALUES (%s,%s,%s)
+                """,
+                (student["id"], session_id, json.dumps(history_summary, ensure_ascii=False)),
+            )
+
+        cur.execute(
+            "SELECT passage_id FROM passage_completions WHERE student_id=%s AND week_no=%s ORDER BY completed_at",
+            (student["id"], week),
+        )
         completed = [row["passage_id"] for row in cur.fetchall()]
 
     return api_ok({"attemptId": attempt_id, "week": week, "passageId": passage_id, "completedPassageIds": completed}, 201)
 
 
-@app.get("/api/teacher/dashboard")
 def teacher_dashboard():
     user, err = require_role("teacher")
     if err:
@@ -2425,7 +2784,6 @@ def teacher_dashboard():
     )
 
 
-@app.get("/api/teacher/students")
 def teacher_students():
     user, err = require_role("teacher")
     if err:
@@ -2437,7 +2795,6 @@ def teacher_students():
     return api_ok({"students": students})
 
 
-@app.get("/api/program/week")
 def api_program_week():
     user, err = require_auth()
     if err:
@@ -2450,7 +2807,6 @@ def api_program_week():
     return api_ok({"activeWeek": settings["activeWeek"]})
 
 
-@app.get("/api/program/week/settings")
 def api_program_week_settings_get():
     user, err = require_role("teacher")
     if err:
@@ -2463,7 +2819,6 @@ def api_program_week_settings_get():
     return api_ok(settings)
 
 
-@app.put("/api/program/week/settings")
 def api_program_week_settings_put():
     user, err = require_role("teacher")
     if err:
@@ -2506,7 +2861,6 @@ def api_program_week_settings_put():
     return api_ok(settings)
 
 
-@app.get("/api/teacher/reports/summary")
 def teacher_reports_summary():
     user, err = require_role("teacher")
     if err:
@@ -2522,7 +2876,6 @@ def teacher_reports_summary():
     return api_ok(summary)
 
 
-@app.get("/api/teacher/students/<student_id>")
 def teacher_student_detail(student_id):
     user, err = require_role("teacher")
     if err:
@@ -2594,7 +2947,6 @@ def teacher_student_detail(student_id):
     return api_ok(payload)
 
 
-@app.get("/api/teacher/students/<student_id>/pending-short-answers")
 def teacher_student_pending_short_answers(student_id):
     user, err = require_role("teacher")
     if err:
@@ -2632,7 +2984,6 @@ def teacher_student_pending_short_answers(student_id):
     )
 
 
-@app.post("/api/teacher/score")
 def teacher_score_save():
     user, err = require_role("teacher")
     if err:
@@ -2686,6 +3037,34 @@ def teacher_score_save():
             (score, feedback or None, user["id"], attempt["id"]),
         )
 
+        # Dual-write (normalized production model) - critical path
+        # Link teacher score to short_answer_response created from this quiz attempt.
+        cur.execute(
+            """
+            SELECT id
+            FROM short_answer_responses
+            WHERE legacy_quiz_attempt_id=%s
+            ORDER BY id DESC
+            LIMIT 1
+            """,
+            (attempt["id"],),
+        )
+        sar = cur.fetchone()
+        if sar:
+            cur.execute(
+                """
+                INSERT INTO short_answer_scores
+                  (legacy_quiz_attempt_id, short_answer_response_id, teacher_id, score_binary, feedback, scored_at)
+                VALUES (%s,%s,%s,%s,%s,NOW())
+                ON DUPLICATE KEY UPDATE
+                  teacher_id=VALUES(teacher_id),
+                  score_binary=VALUES(score_binary),
+                  feedback=VALUES(feedback),
+                  scored_at=VALUES(scored_at)
+                """,
+                (attempt["id"], int(sar["id"]), user["id"], 1 if score == 1 else 0, feedback or None),
+            )
+
         cur.execute(
             """
             SELECT qa.id,qa.student_id,qa.passage_id,qa.week_no,qa.teacher_score,qa.teacher_feedback,
@@ -2711,7 +3090,6 @@ def teacher_score_save():
         }
     )
 
-@app.get("/api/student/progress")
 def student_progress():
     user, err = require_role("student")
     if err:
@@ -2730,6 +3108,16 @@ def student_progress():
 def handle_mysql_error(_):
     return api_error("Database operation failed. Check MySQL configuration and service.", 500)
 
+
+from routes.auth_routes import auth_bp
+from routes.passage_routes import passage_bp
+from routes.student_routes import student_bp
+from routes.teacher_routes import teacher_bp
+
+app.register_blueprint(auth_bp)
+app.register_blueprint(student_bp)
+app.register_blueprint(teacher_bp)
+app.register_blueprint(passage_bp)
 
 init_database()
 
