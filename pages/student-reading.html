@@ -53,12 +53,32 @@
     </div>
   </main>
 </div>
-<script src="../api.js?v=20260316c"></script>
+<script src="../api.js?v=20260804"></script>
 <script>
-  (function enforceStudentSession() {
+  (async function enforceStudentSession() {
     const role = sessionStorage.getItem("role");
     const studentId = sessionStorage.getItem("studentId");
     if (role !== "student" || !studentId) {
+      try {
+        let cached = (typeof ReadWiseAPI !== "undefined" && ReadWiseAPI.getCachedUser)
+          ? ReadWiseAPI.getCachedUser()
+          : null;
+        if (!cached && typeof ReadWiseAPI !== "undefined" && typeof ReadWiseAPI.me === "function") {
+          try {
+            const refreshed = await ReadWiseAPI.me();
+            if (refreshed && refreshed.user) cached = refreshed.user;
+          } catch (e) {
+            // ignore me() failures
+          }
+        }
+        if (cached && cached.role === "student" && cached.student && cached.student.id) {
+          sessionStorage.setItem("role", cached.role);
+          sessionStorage.setItem("studentId", String(cached.student.id));
+          return;
+        }
+      } catch (e) {
+        // ignore and fall through to redirect
+      }
       window.location.replace("../login.html");
     }
   })();
@@ -102,7 +122,14 @@
       weeklyIds = ((weekly && weekly.passages) || []).map(function(entry) { return entry.id; });
       await hydrateTimerFromServerDraft(activeWeek);
     } catch (error) {
-      window.location.href = "../login.html";
+      if (error && (error.status === 401 || /unauthorized/i.test(error.message))) {
+        window.location.href = "../login.html";
+        return;
+      }
+      document.getElementById("passage-body").innerHTML =
+        '<div class="surface-note surface-note-danger">Unable to load this passage. ' +
+        (error && error.message ? String(error.message) : "Please try again later.") +
+        '</div>';
       return;
     }
 

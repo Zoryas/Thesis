@@ -4,28 +4,20 @@ from io import StringIO
 from flask import Blueprint, request
 
 from db import db_cursor
-from routes.helpers import api_error, api_ok, require_auth, require_role
+from routes.helpers import (
+    api_error,
+    api_ok,
+    build_prediction_response,
+    count_words,
+    estimate_minutes,
+    normalize_assessment_payload,
+    normalize_class_level,
+    normalize_week,
+    require_auth,
+    require_role,
+)
 
 passage_bp = Blueprint("passage_bp", __name__)
-
-
-def _load_app_helpers():
-    from app import (
-        build_prediction_response,
-        count_words,
-        estimate_minutes,
-        normalize_assessment_payload,
-        normalize_class_level,
-        normalize_week,
-    )
-    return {
-        "build_prediction_response": build_prediction_response,
-        "count_words": count_words,
-        "estimate_minutes": estimate_minutes,
-        "normalize_assessment_payload": normalize_assessment_payload,
-        "normalize_class_level": normalize_class_level,
-        "normalize_week": normalize_week,
-    }
 
 
 def serialize_passage(row):
@@ -72,8 +64,6 @@ def fetch_assessment(cur, passage_id):
 
 
 def upsert_assessment(cur, passage_id, payload, passage_label, allow_empty=False):
-    helpers = _load_app_helpers()
-    normalize_assessment_payload = helpers["normalize_assessment_payload"]
     normalized = normalize_assessment_payload(payload, passage_label, allow_empty=allow_empty)
     questions = normalized["questions"]
     short_answer = normalized["shortAnswerPrompt"]
@@ -110,8 +100,6 @@ def upsert_assessment(cur, passage_id, payload, passage_label, allow_empty=False
 
 
 def get_weekly_assignments(cur, week):
-    helpers = _load_app_helpers()
-    normalize_class_level = helpers["normalize_class_level"]
     out = {"EASY": [], "MODERATE": [], "HARD": []}
     cur.execute("SELECT class_level, passage_id FROM weekly_assignments WHERE week_no=%s ORDER BY id", (week,))
     for row in cur.fetchall():
@@ -128,12 +116,6 @@ def get_passage_usage_weeks(cur):
 
 
 def save_passage(cur, payload, author_id, passage_id=None, allow_empty_assessment=False, is_draft=False):
-    helpers = _load_app_helpers()
-    count_words = helpers["count_words"]
-    estimate_minutes = helpers["estimate_minutes"]
-    normalize_assessment_payload = helpers["normalize_assessment_payload"]
-    normalize_class_level = helpers["normalize_class_level"]
-
     title = str(payload.get("title") or "").strip()
     genre = str(payload.get("genre") or "Expository").strip() or "Expository"
     text = str(payload.get("text") or "").strip()
@@ -255,9 +237,6 @@ def passage_import_csv():
     if err:
         return err
 
-    helpers = _load_app_helpers()
-    build_prediction_response = helpers["build_prediction_response"]
-
     upload = request.files.get("file")
     if not upload or not upload.filename:
         return api_error("CSV file is required.", 400)
@@ -362,9 +341,6 @@ def passage_delete(passage_id):
 
 @passage_bp.get("/api/assignments")
 def assignments_get():
-    helpers = _load_app_helpers()
-    normalize_week = helpers["normalize_week"]
-
     user, err = require_auth()
     if err:
         return err
@@ -376,10 +352,6 @@ def assignments_get():
 
 @passage_bp.post("/api/assignments")
 def assignments_post():
-    helpers = _load_app_helpers()
-    normalize_class_level = helpers["normalize_class_level"]
-    normalize_week = helpers["normalize_week"]
-
     user, err = require_role("teacher")
     if err:
         return err
@@ -415,10 +387,6 @@ def assignments_post():
 
 @passage_bp.delete("/api/assignments")
 def assignments_delete():
-    helpers = _load_app_helpers()
-    normalize_class_level = helpers["normalize_class_level"]
-    normalize_week = helpers["normalize_week"]
-
     user, err = require_role("teacher")
     if err:
         return err

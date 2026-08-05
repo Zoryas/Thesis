@@ -12,7 +12,7 @@ Provide clearer end-to-end demo data for thesis checking:
 ---
 
 ## File Updated
-- `mockData.js`
+- `client_assessment_helpers.js`
 
 ---
 
@@ -102,7 +102,7 @@ Added to `MOCK.weeklyProgress`:
   - `Maintain`
   - `Step UP to ...`
   - `Step DOWN to ...`
-- Ensured new records are consistent with existing schema and helper functions in `mockData.js`.
+- Ensured new records are consistent with existing schema and helper functions in `client_assessment_helpers.js`.
 
 ---
 

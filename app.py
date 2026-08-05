@@ -3,23 +3,17 @@ import csv
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from io import StringIO
-from pathlib import Path
 import json
 import os
 import re
 import secrets
 
-import joblib
 import mysql.connector
 import numpy as np
 from flask import Flask, jsonify, request, session
 from flask_cors import CORS
-from scipy.sparse import csr_matrix, hstack
 from werkzeug.security import check_password_hash, generate_password_hash
 
-BASE_DIR = Path(__file__).resolve().parent
-MODEL_DIR = BASE_DIR / "ml_model"
-MIN_WORDS = 30
 TOTAL_PROGRAM_WEEKS = 8
 MAX_WEEKLY_PASSAGES_PER_CLASS = 5
 
@@ -52,13 +46,6 @@ CORS(
     origins=origins_list,
     allow_headers=["Content-Type", "X-Auth-Token", "Authorization"],
 )
-
-ARTIFACTS = {
-    "svm_model": joblib.load(MODEL_DIR / "svm_model.pkl"),
-    "word_vectorizer": joblib.load(MODEL_DIR / "word_vectorizer.pkl"),
-    "char_vectorizer": joblib.load(MODEL_DIR / "char_vectorizer.pkl"),
-    "label_encoder": joblib.load(MODEL_DIR / "label_encoder.pkl"),
-}
 
 DB_POOL = None
 
@@ -638,55 +625,6 @@ def average_numbers(values):
     if not cleaned:
         return None
     return int(round(sum(cleaned) / len(cleaned)))
-
-
-def build_prediction_response(text):
-    raw_text = str(text or "").strip()
-    if not raw_text:
-        raise ValueError("No text provided.")
-
-    word_count = count_words(raw_text)
-    if word_count < MIN_WORDS:
-        raise ValueError("Passage too short. Minimum 30 words.")
-
-    cleaned = re.sub(r"\s+", " ", raw_text.replace("\n", " ").replace("\t", " ")).strip().lower()
-    words = re.findall(r"[A-Za-z]+(?:'[A-Za-z]+)?", raw_text)
-    sentences = [part.strip() for part in re.split(r"[.!?]+", raw_text) if part.strip()]
-    sentence_count = max(len(sentences), 1)
-    avg_sentence_length = word_count / sentence_count
-    avg_word_length = sum(len(word) for word in words) / max(word_count, 1)
-    type_token_ratio = len({word.lower() for word in words}) / max(word_count, 1)
-
-    surface = csr_matrix(
-        np.asarray([[avg_sentence_length, avg_word_length, type_token_ratio, float(word_count)]], dtype=float)
-    )
-    word_features = ARTIFACTS["word_vectorizer"].transform([cleaned])
-    char_features = ARTIFACTS["char_vectorizer"].transform([cleaned])
-    feature_matrix = hstack([word_features, char_features, surface], format="csr")
-
-    prediction_code = ARTIFACTS["svm_model"].predict(feature_matrix)[0]
-    predicted = ARTIFACTS["label_encoder"].inverse_transform([prediction_code])[0]
-    predicted = normalize_class_level(predicted)
-
-    scores = ARTIFACTS["svm_model"].decision_function(feature_matrix)
-    values = np.asarray(scores[0] if np.ndim(scores) > 1 else scores, dtype=float)
-    if values.ndim == 0:
-        values = np.array([-float(values), float(values)])
-    shifted = values - np.max(values)
-    probs = np.exp(shifted)
-    probs /= probs.sum()
-    confidence = float(np.max(probs) * 100.0)
-
-    return {
-        "label": predicted,
-        "confidence": round(confidence, 1),
-        "features": {
-            "avg_sentence_length": round(avg_sentence_length, 2),
-            "avg_word_length": round(avg_word_length, 2),
-            "type_token_ratio": round(type_token_ratio, 3),
-            "passage_length": int(word_count),
-        },
-    }
 
 
 def mysql_config(include_db=True):
@@ -1798,6 +1736,5 @@ init_database()
 
 
 if __name__ == "__main__":
-    print("Loaded model artifacts from", MODEL_DIR)
     print(f"Connected to MySQL database '{DB_NAME}' on {DB_HOST}:{DB_PORT}")
     app.run(debug=True, host="127.0.0.1", port=5000)

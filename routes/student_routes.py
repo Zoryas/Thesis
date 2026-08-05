@@ -2,35 +2,27 @@ import json
 from flask import Blueprint, request
 
 from db import db_cursor
-from routes.helpers import api_error, api_ok, pre_assessment_completed, require_role, serialize_passage, serialize_user, student_row
+from routes.helpers import (
+    api_error,
+    api_ok,
+    classify_pre_assessment_level,
+    fetch_student_progress,
+    normalize_avatar_type,
+    normalize_class_level,
+    normalize_week,
+    pre_assessment_completed,
+    require_role,
+    sanitize_avatar_value,
+    serialize_passage,
+    serialize_user,
+    student_row,
+)
 
 student_bp = Blueprint("student_bp", __name__)
 
 
-def _load_app_helpers():
-    from app import (
-        classify_pre_assessment_level,
-        fetch_student_progress,
-        normalize_avatar_type,
-        normalize_class_level,
-        normalize_week,
-        sanitize_avatar_value,
-    )
-    return {
-        "classify_pre_assessment_level": classify_pre_assessment_level,
-        "fetch_student_progress": fetch_student_progress,
-        "normalize_avatar_type": normalize_avatar_type,
-        "normalize_class_level": normalize_class_level,
-        "normalize_week": normalize_week,
-        "sanitize_avatar_value": sanitize_avatar_value,
-    }
-
-
 @student_bp.post("/api/student/pre-assessment")
 def student_pre_assessment_submit():
-    helpers = _load_app_helpers()
-    classify_pre_assessment_level = helpers["classify_pre_assessment_level"]
-
     user, err = require_role("student")
     if err:
         return err
@@ -67,10 +59,6 @@ def student_pre_assessment_submit():
 
 @student_bp.put("/api/student/profile/avatar")
 def student_profile_avatar_update():
-    helpers = _load_app_helpers()
-    normalize_avatar_type = helpers["normalize_avatar_type"]
-    sanitize_avatar_value = helpers["sanitize_avatar_value"]
-
     user, err = require_role("student")
     if err:
         return err
@@ -105,10 +93,6 @@ def student_profile_avatar_update():
 
 @student_bp.get("/api/student/weekly-passages")
 def student_weekly_passages():
-    helpers = _load_app_helpers()
-    normalize_class_level = helpers["normalize_class_level"]
-    normalize_week = helpers["normalize_week"]
-
     user, err = require_role("student")
     if err:
         return err
@@ -135,9 +119,6 @@ def student_weekly_passages():
 
 @student_bp.get("/api/student/completions")
 def student_completions():
-    helpers = _load_app_helpers()
-    normalize_week = helpers["normalize_week"]
-
     user, err = require_role("student")
     if err:
         return err
@@ -155,10 +136,6 @@ def student_completions():
 
 @student_bp.post("/api/student/reading-time")
 def student_reading_time():
-    helpers = _load_app_helpers()
-    normalize_class_level = helpers["normalize_class_level"]
-    normalize_week = helpers["normalize_week"]
-
     user, err = require_role("student")
     if err:
         return err
@@ -213,10 +190,6 @@ def student_reading_time():
 
 @student_bp.get("/api/student/reading-progress")
 def student_reading_progress_get():
-    helpers = _load_app_helpers()
-    normalize_class_level = helpers["normalize_class_level"]
-    normalize_week = helpers["normalize_week"]
-
     user, err = require_role("student")
     if err:
         return err
@@ -267,10 +240,6 @@ def student_reading_progress_get():
 
 @student_bp.post("/api/student/reading-progress")
 def student_reading_progress_post():
-    helpers = _load_app_helpers()
-    normalize_class_level = helpers["normalize_class_level"]
-    normalize_week = helpers["normalize_week"]
-
     user, err = require_role("student")
     if err:
         return err
@@ -340,10 +309,6 @@ def student_reading_progress_post():
 
 @student_bp.post("/api/student/reading-lock")
 def student_reading_lock_post():
-    helpers = _load_app_helpers()
-    normalize_class_level = helpers["normalize_class_level"]
-    normalize_week = helpers["normalize_week"]
-
     user, err = require_role("student")
     if err:
         return err
@@ -407,10 +372,6 @@ def student_reading_lock_post():
 
 @student_bp.post("/api/student/attempts")
 def student_attempts():
-    helpers = _load_app_helpers()
-    normalize_class_level = helpers["normalize_class_level"]
-    normalize_week = helpers["normalize_week"]
-
     user, err = require_role("student")
     if err:
         return err
@@ -608,9 +569,6 @@ def student_attempts():
 
 @student_bp.get("/api/student/progress")
 def student_progress():
-    helpers = _load_app_helpers()
-    fetch_student_progress = helpers["fetch_student_progress"]
-
     user, err = require_role("student")
     if err:
         return err

@@ -1,15 +1,9 @@
 from flask import Blueprint, jsonify, request, session
 
 from db import db_cursor
-from routes.helpers import api_error, api_ok, current_user, get_request_token, serialize_user
+from routes.helpers import api_error, api_ok, build_prediction_response, current_user, get_request_token, serialize_user
 
 status_bp = Blueprint("status_bp", __name__)
-
-
-def _load_app_helpers():
-    from app import build_prediction_response
-
-    return {"build_prediction_response": build_prediction_response}
 
 
 @status_bp.get("/")
@@ -68,8 +62,6 @@ def api_debug_session():
 @status_bp.post("/predict")
 def predict():
     payload = request.get_json(silent=True) or {}
-    helpers = _load_app_helpers()
-    build_prediction_response = helpers["build_prediction_response"]
     try:
         return jsonify(build_prediction_response(payload.get("text", "")))
     except ValueError as error:

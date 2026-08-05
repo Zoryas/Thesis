@@ -1,46 +1,29 @@
 from flask import Blueprint, request
 
 from db import db_cursor
-from routes.helpers import api_error, api_ok, require_auth, require_role
+from routes.helpers import (
+    api_error,
+    api_ok,
+    average_numbers,
+    build_teacher_report_summary,
+    fetch_pending_short_answer,
+    fetch_pending_short_answers,
+    fetch_student_progress,
+    fetch_teacher_student_summaries,
+    get_program_settings,
+    normalize_class_level,
+    normalize_week,
+    parse_program_start_date,
+    require_auth,
+    require_role,
+    TOTAL_PROGRAM_WEEKS,
+)
 
 teacher_bp = Blueprint("teacher_bp", __name__)
 
 
-def _load_app_helpers():
-    from app import (
-        TOTAL_PROGRAM_WEEKS,
-        average_numbers,
-        build_teacher_report_summary,
-        fetch_pending_short_answer,
-        fetch_pending_short_answers,
-        fetch_student_progress,
-        fetch_teacher_student_summaries,
-        get_program_settings,
-        normalize_class_level,
-        normalize_week,
-        parse_program_start_date,
-    )
-    return {
-        "TOTAL_PROGRAM_WEEKS": TOTAL_PROGRAM_WEEKS,
-        "average_numbers": average_numbers,
-        "build_teacher_report_summary": build_teacher_report_summary,
-        "fetch_pending_short_answer": fetch_pending_short_answer,
-        "fetch_pending_short_answers": fetch_pending_short_answers,
-        "fetch_student_progress": fetch_student_progress,
-        "fetch_teacher_student_summaries": fetch_teacher_student_summaries,
-        "get_program_settings": get_program_settings,
-        "normalize_class_level": normalize_class_level,
-        "normalize_week": normalize_week,
-        "parse_program_start_date": parse_program_start_date,
-    }
-
-
 @teacher_bp.get("/api/teacher/dashboard")
 def teacher_dashboard():
-    helpers = _load_app_helpers()
-    normalize_class_level = helpers["normalize_class_level"]
-    fetch_teacher_student_summaries = helpers["fetch_teacher_student_summaries"]
-
     user, err = require_role("teacher")
     if err:
         return err
@@ -105,8 +88,7 @@ def teacher_dashboard():
 
 @teacher_bp.get("/api/teacher/students")
 def teacher_students():
-    helpers = _load_app_helpers()
-    fetch_teacher_student_summaries = helpers["fetch_teacher_student_summaries"]
+    fetch_teacher_student_summaries = fetch_teacher_student_summaries
 
     user, err = require_role("teacher")
     if err:
@@ -120,9 +102,6 @@ def teacher_students():
 
 @teacher_bp.get("/api/program/week")
 def api_program_week():
-    helpers = _load_app_helpers()
-    get_program_settings = helpers["get_program_settings"]
-
     user, err = require_auth()
     if err:
         return err
@@ -137,9 +116,6 @@ def api_program_week():
 
 @teacher_bp.get("/api/program/week/settings")
 def api_program_week_settings_get():
-    helpers = _load_app_helpers()
-    get_program_settings = helpers["get_program_settings"]
-
     user, err = require_role("teacher")
     if err:
         return err
@@ -153,11 +129,6 @@ def api_program_week_settings_get():
 
 @teacher_bp.put("/api/program/week/settings")
 def api_program_week_settings_put():
-    helpers = _load_app_helpers()
-    TOTAL_PROGRAM_WEEKS = helpers["TOTAL_PROGRAM_WEEKS"]
-    get_program_settings = helpers["get_program_settings"]
-    parse_program_start_date = helpers["parse_program_start_date"]
-
     user, err = require_role("teacher")
     if err:
         return err
@@ -167,8 +138,6 @@ def api_program_week_settings_put():
         return api_error("Request body must be valid JSON.", 400)
     if not isinstance(payload, dict):
         return api_error("Request body must be a JSON object.", 400)
-
-    from app import parse_program_start_date
 
     start_date_raw = payload.get("programStartDate")
     override_week_raw = payload.get("manualOverrideWeek")
@@ -203,11 +172,6 @@ def api_program_week_settings_put():
 
 @teacher_bp.get("/api/teacher/reports/summary")
 def teacher_reports_summary():
-    helpers = _load_app_helpers()
-    build_teacher_report_summary = helpers["build_teacher_report_summary"]
-    get_program_settings = helpers["get_program_settings"]
-    normalize_week = helpers["normalize_week"]
-
     user, err = require_role("teacher")
     if err:
         return err
@@ -224,10 +188,6 @@ def teacher_reports_summary():
 
 @teacher_bp.get("/api/teacher/students/<student_id>")
 def teacher_student_detail(student_id):
-    helpers = _load_app_helpers()
-    fetch_pending_short_answer = helpers["fetch_pending_short_answer"]
-    fetch_student_progress = helpers["fetch_student_progress"]
-
     user, err = require_role("teacher")
     if err:
         return err
@@ -300,9 +260,6 @@ def teacher_student_detail(student_id):
 
 @teacher_bp.get("/api/teacher/students/<student_id>/pending-short-answers")
 def teacher_student_pending_short_answers(student_id):
-    helpers = _load_app_helpers()
-    fetch_pending_short_answers = helpers["fetch_pending_short_answers"]
-
     user, err = require_role("teacher")
     if err:
         return err

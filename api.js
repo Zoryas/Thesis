@@ -4,6 +4,7 @@
   var RAW_BASE = global.READWISE_API_BASE_URL || ("http://" + defaultHost + ":5000");
   var BASE_URL = String(RAW_BASE).replace(/\/+$/, "");
   var USER_CACHE_KEY = "readwise_user_v1";
+  var USER_TOKEN_KEY = "readwise_auth_token_v1";
   var TOTAL_WEEKS = 8;
   var MAX_WEEKLY_PASSAGES_PER_CLASS = 5;
 
@@ -51,12 +52,23 @@
     }
   }
 
-  function cacheUser(user) {
+  function getCachedToken() {
+    try {
+      return global.localStorage.getItem(USER_TOKEN_KEY) || null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function cacheUser(user, token) {
     try {
       if (user && typeof user === "object") {
         global.localStorage.setItem(USER_CACHE_KEY, JSON.stringify(user));
       } else {
         global.localStorage.removeItem(USER_CACHE_KEY);
+      }
+      if (token) {
+        global.localStorage.setItem(USER_TOKEN_KEY, token);
       }
     } catch (error) {
       // ignore storage errors
@@ -68,6 +80,7 @@
   function clearCachedUser() {
     try {
       global.localStorage.removeItem(USER_CACHE_KEY);
+      global.localStorage.removeItem(USER_TOKEN_KEY);
     } catch (error) {
       // ignore storage errors
     }
@@ -84,6 +97,12 @@
     if (body !== undefined && body !== null && typeof body !== "string" && !isFormData) {
       headers["Content-Type"] = headers["Content-Type"] || "application/json";
       body = JSON.stringify(body);
+    }
+
+    var token = getCachedToken();
+    if (token) {
+      headers["Authorization"] = headers["Authorization"] || "Bearer " + token;
+      headers["X-Auth-Token"] = headers["X-Auth-Token"] || token;
     }
 
     var response = await fetch(buildUrl(path), {
@@ -104,7 +123,11 @@
       if (response.status === 401) {
         clearCachedUser();
       }
-      throw new Error((payload && payload.error) || ("Request failed (" + response.status + ")"));
+      var errorMessage = (payload && payload.error) || ("Request failed (" + response.status + ")");
+      var error = new Error(errorMessage);
+      error.status = response.status;
+      error.isAuthError = response.status === 401;
+      throw error;
     }
 
     if (!payload || payload.ok === false) {
@@ -140,7 +163,7 @@
         method: "POST",
         body: { email: email, password: password, role: role }
       }).then(function(data) {
-        if (data && data.user) cacheUser(data.user);
+        if (data && data.user) cacheUser(data.user, data.token);
         return data;
       });
     },
@@ -158,14 +181,14 @@
       var cachedUser = settings.forceRefresh ? null : getCachedUser();
       if (cachedUser) {
         request("/api/auth/me").then(function(data) {
-          if (data && data.user) cacheUser(data.user);
+          if (data && data.user) cacheUser(data.user, getCachedToken());
         }).catch(function() {
           // keep cached user as temporary fallback if refresh fails
         });
         return Promise.resolve({ user: cachedUser, cached: true });
       }
       return request("/api/auth/me").then(function(data) {
-        if (data && data.user) cacheUser(data.user);
+        if (data && data.user) cacheUser(data.user, getCachedToken());
         return data;
       });
     },
@@ -350,6 +373,19 @@
   if (typeof global.badgeClass !== "function") global.badgeClass = badgeClass;
   if (typeof global.levelColor !== "function") global.levelColor = levelColor;
   if (typeof global.levelBg !== "function") global.levelBg = levelBg;
+  function showToast(msg, color) {
+    try {
+      var t = global.document && global.document.getElementById && global.document.getElementById("toast");
+      if (!t) return;
+      t.textContent = String(msg || "");
+      t.style.background = color || "#2c3e6b";
+      t.style.display = "block";
+      setTimeout(function() { try { t.style.display = "none"; } catch (e) {} }, 2800);
+    } catch (e) {
+      // ignore
+    }
+  }
+  if (typeof global.showToast !== "function") global.showToast = showToast;
 })(window);
 
 

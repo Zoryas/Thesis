@@ -6,6 +6,7 @@
   <title>Questions - TalaSaAI</title>
   <link rel="stylesheet" href="../stylesheets/shared.css?v=20260316b">
   <script src="../runtime-config.js?v=20260316c"></script>
+  <script src="../client_assessment_helpers.js?v=20260804"></script>
   <style>
     #difficulty-slider {
       -webkit-appearance: none;
@@ -116,19 +117,54 @@
   </main>
 </div>
 <div class="toast" id="toast"></div>
-<script src="../api.js?v=20260316c"></script>
+<script src="../api.js?v=20260804"></script>
 <script>
-  (function enforceStudentSession() {
+  // Ensure a toast helper exists even if api.js wasn't loaded or cached.
+  if (typeof window.showToast !== "function") {
+    window.showToast = function(msg, color) {
+      try {
+        var t = document.getElementById("toast");
+        if (!t) return;
+        t.textContent = String(msg || "");
+        t.style.background = color || "#2c3e6b";
+        t.style.display = "block";
+        setTimeout(function() { try { t.style.display = "none"; } catch (e) {} }, 2800);
+      } catch (e) {
+        // ignore
+      }
+    };
+  }
+  (async function enforceStudentSession() {
     const role = sessionStorage.getItem("role");
     const studentId = sessionStorage.getItem("studentId");
     if (role !== "student" || !studentId) {
+      try {
+        let cached = (typeof ReadWiseAPI !== "undefined" && ReadWiseAPI.getCachedUser)
+          ? ReadWiseAPI.getCachedUser()
+          : null;
+        if (!cached && typeof ReadWiseAPI !== "undefined" && typeof ReadWiseAPI.me === "function") {
+          try {
+            const refreshed = await ReadWiseAPI.me();
+            if (refreshed && refreshed.user) cached = refreshed.user;
+          } catch (e) {
+            // ignore me() failures
+          }
+        }
+        if (cached && cached.role === "student" && cached.student && cached.student.id) {
+          sessionStorage.setItem("role", cached.role);
+          sessionStorage.setItem("studentId", String(cached.student.id));
+          return;
+        }
+      } catch (e) {
+        // ignore and fall through to redirect
+      }
       window.location.replace("../login.html");
     }
   })();
 
   const params = new URLSearchParams(location.search);
   const pid = params.get("id") || "p3";
-  const activeWeek = ReadWiseAPI.getActiveWeek();
+  let activeWeek = 1;
   let p = null;
   let s = null;
   let qs = [];
@@ -141,6 +177,12 @@
     try {
       const cachedUser = ReadWiseAPI.getCachedUser();
       const auth = cachedUser ? { user: cachedUser, cached: true } : await ReadWiseAPI.me();
+      try {
+        const resolved = await ReadWiseAPI.getActiveWeek();
+        activeWeek = Number(resolved) || 1;
+      } catch (e) {
+        activeWeek = 1;
+      }
       if (!auth || !auth.user || auth.user.role !== "student" || !auth.user.student) {
         throw new Error("Unauthorized");
       }
@@ -175,7 +217,15 @@
 
       renderQuestions();
     } catch (error) {
-      window.location.href = "../login.html";
+      if (error && (error.status === 401 || /unauthorized/i.test(error.message))) {
+        window.location.href = "../login.html";
+        return;
+      }
+      document.getElementById("questions-wrap").innerHTML =
+        '<div class="card"><div class="surface-note surface-note-danger">Unable to load assessment. ' +
+        (error && error.message ? String(error.message) : "Please try again later.") +
+        '</div></div>';
+      document.getElementById("submit-btn").disabled = true;
     }
   }
 
@@ -533,7 +583,7 @@
       return;
     }
 
-    sessionStorage.setItem("result_" + pid, JSON.stringify({
+    const resultObj = {
       score: pct,
       correct: fullyCorrect,
       total: qs.length,
@@ -544,21 +594,28 @@
       underReview: underReview,
       responses: responses,
       readingTime: sessionStorage.getItem("readingTime_" + pid) || "-"
-    }));
+    };
+    sessionStorage.setItem("result_" + pid, JSON.stringify(resultObj));
+
+    const attemptPayload = {
+      week: activeWeek,
+      passageId: pid,
+      score: pct,
+      correct: fullyCorrect,
+      total: qs.length,
+      difficulty: difficultyValue,
+      shortAnswer: saVal,
+      responses: responses,
+      readingTime: sessionStorage.getItem("readingTime_" + pid) || "-"
+    };
 
     try {
-      await ReadWiseAPI.submitStudentAttempt({
-        week: activeWeek,
-        passageId: pid,
-        score: pct,
-        correct: fullyCorrect,
-        total: qs.length,
-        difficulty: difficultyValue,
-        shortAnswer: saVal,
-        responses: responses,
-        readingTime: sessionStorage.getItem("readingTime_" + pid) || "-"
-      });
+      console.debug("Submitting attempt payload:", attemptPayload);
+      try { console.debug("Cached token:", ReadWiseAPI.getCachedUser && ReadWiseAPI.getCachedToken ? ReadWiseAPI.getCachedToken() : null); } catch(e) {}
+      const resp = await ReadWiseAPI.submitStudentAttempt(attemptPayload);
+      console.debug("Submit response:", resp);
     } catch (error) {
+      console.error("Submit error:", error);
       showToast(error.message || "Unable to submit to server.", "#c0392b");
       isSubmitting = false;
       submitBtn.disabled = false;
