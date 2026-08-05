@@ -386,6 +386,165 @@
     }
   }
   if (typeof global.showToast !== "function") global.showToast = showToast;
+
+  function initSidebarAndThemeControls() {
+    if (!global.document || !global.document.body) return;
+
+    var sidebar = document.querySelector(".sidebar");
+    var main = document.querySelector(".main");
+    if (!sidebar || !main) return;
+
+    var shellToggle = document.querySelector(".shell-toggle");
+    if (!shellToggle) {
+      shellToggle = document.createElement("button");
+      shellToggle.type = "button";
+      shellToggle.className = "shell-toggle";
+      shellToggle.setAttribute("aria-label", "Toggle sidebar");
+      shellToggle.innerHTML = '<span class="icon" data-icon="menu"></span>';
+      document.body.appendChild(shellToggle);
+    }
+
+    var overlay = document.querySelector(".sidebar-overlay");
+    if (!overlay) {
+      overlay = document.createElement("div");
+      overlay.className = "sidebar-overlay";
+      document.body.appendChild(overlay);
+    }
+
+    var themeToggle = document.querySelector(".theme-toggle");
+    if (!themeToggle) {
+      themeToggle = document.createElement("button");
+      themeToggle.type = "button";
+      themeToggle.className = "theme-toggle";
+      themeToggle.setAttribute("aria-label", "Toggle dark mode");
+      themeToggle.innerHTML = '<span class="icon" data-icon="moon"></span>';
+      document.body.appendChild(themeToggle);
+    }
+
+    var userSidebarCollapsedKey = "readwise_sidebar_collapsed";
+    var userThemeKey = "readwise_theme_preference";
+
+    function isSidebarOpen() {
+      return document.body.classList.contains("sidebar-open");
+    }
+
+    function isSidebarCollapsed() {
+      return document.body.classList.contains("sidebar-collapsed");
+    }
+
+    function setSidebarOpen(value) {
+      if (value) {
+        document.body.classList.add("sidebar-open");
+      } else {
+        document.body.classList.remove("sidebar-open");
+      }
+    }
+
+    function setSidebarCollapsed(value) {
+      if (value) {
+        document.body.classList.add("sidebar-collapsed");
+      } else {
+        document.body.classList.remove("sidebar-collapsed");
+      }
+      try {
+        localStorage.setItem(userSidebarCollapsedKey, value ? "1" : "0");
+      } catch (e) {
+        // ignore storage failures
+      }
+    }
+
+    function loadSidebarState() {
+      var collapsed = false;
+      try {
+        collapsed = localStorage.getItem(userSidebarCollapsedKey) === "1";
+      } catch (e) {
+        collapsed = false;
+      }
+      if (window.matchMedia && window.matchMedia("(max-width: 900px)").matches) {
+        document.body.classList.remove("sidebar-collapsed");
+        document.body.classList.remove("sidebar-open");
+      } else {
+        if (collapsed) {
+          document.body.classList.add("sidebar-collapsed");
+        } else {
+          document.body.classList.remove("sidebar-collapsed");
+        }
+      }
+      syncSidebarBreakpoint();
+    }
+
+    function syncSidebarBreakpoint() {
+      if (window.matchMedia && window.matchMedia("(max-width: 900px)").matches) {
+        document.body.classList.remove("sidebar-collapsed");
+      } else {
+        document.body.classList.remove("sidebar-open");
+      }
+    }
+
+    function getThemePreference() {
+      try {
+        var stored = localStorage.getItem(userThemeKey);
+        if (stored === "dark" || stored === "light") return stored;
+      } catch (e) {
+        // ignore
+      }
+      if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {
+        return "dark";
+      }
+      return "light";
+    }
+
+    function updateThemeDisplay(preference) {
+      document.documentElement.setAttribute("data-theme-preference", preference);
+      document.documentElement.style.colorScheme = preference;
+      document.documentElement.style.backgroundColor = preference === "dark" ? "#070b11" : "#ffffff";
+      var icon = themeToggle.querySelector(".icon");
+      if (preference === "dark") {
+        themeToggle.setAttribute("aria-label", "Switch to light mode");
+        if (icon) icon.setAttribute("data-icon", "sun");
+      } else {
+        themeToggle.setAttribute("aria-label", "Switch to dark mode");
+        if (icon) icon.setAttribute("data-icon", "moon");
+      }
+    }
+
+    function setThemePreference(value) {
+      var normalized = value === "dark" ? "dark" : "light";
+      updateThemeDisplay(normalized);
+      try {
+        localStorage.setItem(userThemeKey, normalized);
+      } catch (e) {
+        // ignore
+      }
+    }
+
+    shellToggle.addEventListener("click", function() {
+      if (window.matchMedia && window.matchMedia("(max-width: 900px)").matches) {
+        setSidebarOpen(!isSidebarOpen());
+      } else {
+        setSidebarCollapsed(!isSidebarCollapsed());
+      }
+    });
+
+    overlay.addEventListener("click", function() {
+      setSidebarOpen(false);
+    });
+
+    themeToggle.addEventListener("click", function() {
+      var next = document.documentElement.getAttribute("data-theme-preference") === "dark" ? "light" : "dark";
+      setThemePreference(next);
+    });
+
+    loadSidebarState();
+    window.addEventListener("resize", syncSidebarBreakpoint);
+    setThemePreference(getThemePreference());
+  }
+
+  if (typeof global.addEventListener === "function") {
+    global.addEventListener("DOMContentLoaded", initSidebarAndThemeControls);
+  } else if (typeof document !== "undefined") {
+    initSidebarAndThemeControls();
+  }
 })(window);
 
 

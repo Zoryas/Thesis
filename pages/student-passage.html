@@ -23,7 +23,7 @@
       <a href="student-pre-assessment.html"><span class="icon" data-icon="assessment"></span><span class="nav-label">Pre-Assessment</span></a>
     </nav>
     <div class="sidebar-footer">
-      <div class="user-info"><strong id="sb-name">-</strong>Grade 7</div>
+      <div class="user-info"><strong id="sb-name">-</strong> <span id="sb-meta">Grade 7</span></div>
       <button class="logout-btn" onclick="logout()"><span class="icon" data-icon="logout"></span><span class="nav-label">Logout</span></button>
     </div>
   </aside>
@@ -80,6 +80,10 @@
     }
 
     document.getElementById("sb-name").textContent = student.name;
+    document.getElementById("sb-meta").textContent = [
+      "Grade " + (student.grade || student.class_level || "7"),
+      student.section || student.school || ""
+    ].filter(Boolean).join(" | ");
     document.getElementById("week-subtitle").textContent =
       "Week " + week + " assignments for " + getClassDisplayName(student.classLevel) + " class (" +
       passages.length + " passages)";

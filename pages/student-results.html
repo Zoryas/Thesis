@@ -23,7 +23,7 @@
       <a href="student-pre-assessment.html"><span class="icon" data-icon="assessment"></span><span class="nav-label">Pre-Assessment</span></a>
     </nav>
     <div class="sidebar-footer">
-      <div class="user-info"><strong id="sb-name">-</strong>Grade 7</div>
+      <div class="user-info"><strong id="sb-name">-</strong> <span id="sb-meta">Grade 7</span></div>
       <button class="logout-btn" onclick="logout()"><span class="icon" data-icon="logout"></span><span class="nav-label">Logout</span></button>
     </div>
   </aside>
@@ -111,6 +111,10 @@
     const student = auth.user.student;
     const activeWeek = ReadWiseAPI.getActiveWeek();
     document.getElementById("sb-name").textContent = student ? student.name : "Student";
+    document.getElementById("sb-meta").textContent = student ? [
+      "Grade " + (student.grade || student.class_level || "7"),
+      student.section || student.school || ""
+    ].filter(Boolean).join(" | ") : "";
     document.getElementById("result-sub").textContent = passage ? (passage.title + " - " + passage.label) : "Session completed";
 
     const raw = sessionStorage.getItem("result_" + pid);

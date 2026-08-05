@@ -23,7 +23,7 @@
       <a href="student-pre-assessment.html" class="active"><span class="icon" data-icon="assessment"></span><span class="nav-label">Pre-Assessment</span></a>
     </nav>
     <div class="sidebar-footer">
-      <div class="user-info"><strong id="sb-name">-</strong>Grade 7</div>
+      <div class="user-info"><strong id="sb-name">-</strong> <span id="sb-meta">Grade 7</span></div>
       <button class="logout-btn" onclick="logout()"><span class="icon" data-icon="logout"></span><span class="nav-label">Logout</span></button>
     </div>
   </aside>
@@ -39,7 +39,8 @@
   </main>
 </div>
 <div class="toast" id="toast"></div>
-<script src="../api.js?v=20260804"></script>
+<script src="../client_assessment_helpers.js?v=20260805"></script>
+<script src="../api.js?v=20260805"></script>
 <script>
   (function enforceStudentSession() {
     const role = sessionStorage.getItem("role");
@@ -611,6 +612,10 @@
       }
       activeStudent = auth.user.student;
       document.getElementById("sb-name").textContent = activeStudent.name || "Student";
+      document.getElementById("sb-meta").textContent = [
+        "Grade " + (activeStudent.grade || activeStudent.class_level || "7"),
+        activeStudent.section || activeStudent.school || ""
+      ].filter(Boolean).join(" | ");
       if (activeStudent.preAssessmentCompleted) {
         const doneIndicator = document.getElementById("step-indicator");
         doneIndicator.innerHTML = '<span class="badge badge-success" style="font-size:14px;padding:6px 16px">Pre-Assessment Complete</span>';

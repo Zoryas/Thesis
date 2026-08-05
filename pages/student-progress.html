@@ -24,7 +24,7 @@
       <a href="student-pre-assessment.html"><span class="icon" data-icon="assessment"></span><span class="nav-label">Pre-Assessment</span></a>
     </nav>
     <div class="sidebar-footer">
-      <div class="user-info"><strong id="sb-name">-</strong>Grade 7</div>
+      <div class="user-info"><strong id="sb-name">-</strong> <span id="sb-meta">Grade 7</span></div>
       <button class="logout-btn" onclick="sessionStorage.clear();window.location.href='../login.html'"><span class="icon" data-icon="logout"></span><span class="nav-label">Logout</span></button>
     </div>
   </aside>
@@ -64,7 +64,7 @@
     </div>
   </main>
 </div>
-<script src="../api.js?v=20260804"></script>
+<script src="../api.js?v=20260805"></script>
 <script>
   (async function initProgress() {
     let auth = null;
@@ -74,12 +74,16 @@
     } catch (e) {
       auth = null;
     }
-    if (!auth || !auth.user || auth.user.role !== "student") {
+    if (!auth || !auth.user || auth.user.role !== "student" || !auth.user.student) {
       window.location.replace("../login.html");
       return;
     }
-    const student = auth.user;
+    const student = auth.user.student;
     document.getElementById("sb-name").textContent = student.name || student.full_name || "Student";
+    document.getElementById("sb-meta").textContent = [
+      "Grade " + (student.grade || student.class_level || "7"),
+      student.section || student.school || "Sampaguita"
+    ].filter(Boolean).join(" | ");
 
     let prog = [];
     try {

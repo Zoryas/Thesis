@@ -23,7 +23,7 @@
       <a href="student-pre-assessment.html"><span class="icon" data-icon="assessment"></span><span class="nav-label">Pre-Assessment</span></a>
     </nav>
     <div class="sidebar-footer">
-      <div class="user-info"><strong id="sb-name">-</strong>Grade 7</div>
+      <div class="user-info"><strong id="sb-name">-</strong> <span id="sb-meta">Grade 7</span></div>
       <button class="logout-btn" onclick="logout()"><span class="icon" data-icon="logout"></span><span class="nav-label">Logout</span></button>
     </div>
   </aside>
@@ -112,6 +112,10 @@
         throw new Error("Unauthorized");
       }
       document.getElementById("sb-name").textContent = auth.user.student.name || "Student";
+      document.getElementById("sb-meta").textContent = [
+        "Grade " + (auth.user.student.grade || auth.user.student.class_level || "7"),
+        auth.user.student.section || auth.user.student.school || ""
+      ].filter(Boolean).join(" | ");
       const activeWeek = await week;
       const results = await Promise.all([
         ReadWiseAPI.getPassage(pid),

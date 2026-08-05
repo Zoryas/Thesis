@@ -392,11 +392,17 @@
 
     document.getElementById("avatar-initials").textContent = initials;
     document.getElementById("sb-name").textContent = activeStudent.name;
-    document.getElementById("sb-meta").textContent = "Grade " + activeStudent.grade + " | " + activeStudent.section;
+    document.getElementById("sb-meta").textContent = [
+      "Grade " + (activeStudent.grade || activeStudent.class_level || "7"),
+      activeStudent.section || activeStudent.school || ""
+    ].filter(Boolean).join(" | ");
     document.getElementById("full-name").textContent = activeStudent.name;
-    document.getElementById("profile-summary").textContent = "Grade " + activeStudent.grade + " student from " + activeStudent.section;
+    document.getElementById("profile-summary").textContent = "Grade " + (activeStudent.grade || activeStudent.class_level || "7") + " student from " + (activeStudent.section || activeStudent.school || "");
     document.getElementById("info-name").textContent = activeStudent.name;
-    document.getElementById("info-grade").textContent = "Grade " + activeStudent.grade + " | " + activeStudent.section;
+    document.getElementById("info-grade").textContent = [
+      "Grade " + (activeStudent.grade || activeStudent.class_level || "7"),
+      activeStudent.section || activeStudent.school || ""
+    ].filter(Boolean).join(" | ");
     document.getElementById("demo-email").textContent = DEMO_EMAILS[activeStudent.id] || "student@example.com";
     document.getElementById("program-week").textContent =
       "Week " + (latest ? latest.week : 1) + " of " + TOTAL_PROGRAM_WEEKS;
