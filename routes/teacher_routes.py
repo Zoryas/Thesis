@@ -31,31 +31,60 @@ def teacher_dashboard():
 
     with db_cursor(True) as (_, cur):
         students = fetch_teacher_student_summaries(cur)
+
         cur.execute(
             """
-            SELECT qa.student_id,s.full_name,p.id AS passage_id,p.title,qa.score_pct,qa.short_answer_text,qa.submitted_at
+            SELECT qa.student_id, s.full_name, p.id AS passage_id, p.title,
+                   qa.score_pct, qa.short_answer_text, qa.correct_count, qa.total_count,
+                   qa.teacher_score, sc.objective_score_pct, sc.short_answer_score_pct,
+                   sc.total_score_pct, qa.submitted_at
             FROM quiz_attempts qa
             JOIN (
                 SELECT student_id, passage_id, week_no, MAX(id) AS latest_id
                 FROM quiz_attempts
                 GROUP BY student_id, passage_id, week_no
-            ) latest
-              ON latest.latest_id = qa.id
-            JOIN students s ON s.id=qa.student_id
-            JOIN passages p ON p.id=qa.passage_id
+            ) latest ON latest.latest_id = qa.id
+            JOIN students s ON s.id = qa.student_id
+            JOIN passages p ON p.id = qa.passage_id
+            LEFT JOIN scores sc ON sc.legacy_quiz_attempt_id = qa.id
             ORDER BY qa.submitted_at DESC, qa.id DESC
             LIMIT 6
             """
         )
+
         submissions = []
         for row in cur.fetchall():
+            # compute display fraction (num/denom) using teacher_score when available for short-answer
+            correct = int(row.get("correct_count") or 0)
+            total = int(row.get("total_count") or 0)
+            teacher = row.get("teacher_score")
+            has_short = bool(row.get("short_answer_text"))
+
+            num = None
+            denom = None
+            if has_short and teacher is not None:
+                num = correct + int(teacher or 0)
+                denom = total + 1
+            elif total and total > 0:
+                num = correct
+                denom = total
+
+            display_score = f"{num}/{denom}" if (num is not None and denom and denom > 0) else None
+            percent_score = None
+            if display_score:
+                try:
+                    percent_score = int(round((num / denom) * 100))
+                except Exception:
+                    percent_score = None
+
             submissions.append(
                 {
                     "studentId": row["student_id"],
                     "studentName": row["full_name"],
                     "passageId": row["passage_id"],
                     "passageTitle": row["title"],
-                    "score": int(row["score_pct"] or 0),
+                    "displayScore": display_score,
+                    "percentScore": percent_score,
                     "status": "Pending Review" if row.get("short_answer_text") and row.get("teacher_score") is None else "Scored",
                     "submittedAt": row["submitted_at"].isoformat() if row.get("submitted_at") else None,
                 }
@@ -88,8 +117,6 @@ def teacher_dashboard():
 
 @teacher_bp.get("/api/teacher/students")
 def teacher_students():
-    fetch_teacher_student_summaries = fetch_teacher_student_summaries
-
     user, err = require_role("teacher")
     if err:
         return err
@@ -305,6 +332,14 @@ def teacher_score_save():
     payload = request.get_json(silent=True) or {}
     student_id = str(payload.get("studentId") or "").strip()
     passage_id = str(payload.get("passageId") or "").strip()
+    attempt_id_raw = payload.get("attemptId")
+    attempt_id = None
+    if attempt_id_raw is not None and str(attempt_id_raw).strip():
+        try:
+            attempt_id = int(attempt_id_raw)
+        except (TypeError, ValueError):
+            return api_error("attemptId must be an integer.", 400)
+
     if not student_id or not passage_id:
         return api_error("studentId and passageId are required.", 400)
 
@@ -324,16 +359,27 @@ def teacher_score_save():
         if not cur.fetchone():
             return api_error("Student not found.", 404)
 
-        cur.execute(
-            """
-            SELECT id,week_no
-            FROM quiz_attempts
-            WHERE student_id=%s AND passage_id=%s AND short_answer_text IS NOT NULL
-            ORDER BY submitted_at DESC, id DESC
-            LIMIT 1
-            """,
-            (student_id, passage_id),
-        )
+        if attempt_id is None:
+            cur.execute(
+                """
+                SELECT id,week_no
+                FROM quiz_attempts
+                WHERE student_id=%s AND passage_id=%s AND short_answer_text IS NOT NULL AND teacher_score IS NULL
+                ORDER BY submitted_at DESC, id DESC
+                LIMIT 1
+                """,
+                (student_id, passage_id),
+            )
+        else:
+            cur.execute(
+                """
+                SELECT id,week_no
+                FROM quiz_attempts
+                WHERE id=%s AND student_id=%s AND passage_id=%s AND short_answer_text IS NOT NULL
+                LIMIT 1
+                """,
+                (attempt_id, student_id, passage_id),
+            )
         attempt = cur.fetchone()
         if not attempt:
             return api_error("No short-answer attempt found for this student and passage.", 404)
@@ -375,6 +421,37 @@ def teacher_score_save():
                 """,
                 (attempt["id"], int(sar["id"]), user["id"], 1 if score == 1 else 0, feedback or None),
             )
+
+        # compute and persist short-answer percent and total percent into scores (when a reading session exists)
+        cur.execute("SELECT correct_count,total_count,score_pct,short_answer_text FROM quiz_attempts WHERE id=%s", (attempt["id"],))
+        qa_row = cur.fetchone()
+        if qa_row:
+            correct = int(qa_row.get("correct_count") or 0)
+            total = int(qa_row.get("total_count") or 0)
+            objective_pct = int(qa_row.get("score_pct") or 0)
+            # If we're scoring a short answer, include it as one additional question
+            denom = total + 1
+            num = correct + (1 if score == 1 else 0)
+            short_answer_pct = int(round(((1 if score == 1 else 0) / denom) * 100)) if denom > 0 else None
+            total_pct = int(round((num / denom) * 100)) if denom > 0 else None
+
+            # find reading session id for this legacy attempt
+            cur.execute("SELECT id FROM reading_sessions WHERE legacy_quiz_attempt_id=%s", (attempt["id"],))
+            rs = cur.fetchone()
+            if rs and rs.get("id"):
+                session_id = int(rs["id"])
+                cur.execute(
+                    """
+                    INSERT INTO scores (legacy_quiz_attempt_id, session_id, objective_score_pct, short_answer_score_pct, total_score_pct, computed_at)
+                    VALUES (%s,%s,%s,%s,%s,NOW())
+                    ON DUPLICATE KEY UPDATE
+                      objective_score_pct=VALUES(objective_score_pct),
+                      short_answer_score_pct=VALUES(short_answer_score_pct),
+                      total_score_pct=VALUES(total_score_pct),
+                      computed_at=VALUES(computed_at)
+                    """,
+                    (attempt["id"], session_id, objective_pct, short_answer_pct, total_pct),
+                )
 
         cur.execute(
             """

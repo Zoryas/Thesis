@@ -42,7 +42,6 @@
         <div class="progress" style="margin:16px 0;height:14px">
           <div class="progress-bar" id="score-bar" style="background:var(--primary)"></div>
         </div>
-        <div id="reading-time" class="micro-copy"></div>
       </div>
 
       <div class="card-grid card-grid-2" style="margin-bottom:16px">
@@ -52,19 +51,21 @@
           <div class="kpi-support" id="review-note">Auto-scored by the system.</div>
         </div>
         <div class="stat-card" style="text-align:center">
-          <div class="stat-label">System Recommendation</div>
+          <div class="stat-label">Reading Time</div>
           <div id="rec-badge" style="margin-top:10px"></div>
         </div>
       </div>
 
-      <div class="card" style="margin-bottom:16px">
-        <div class="section-title">Your Difficulty Rating</div>
-        <div id="self-rating" class="surface-note">Not provided</div>
-      </div>
+      <div class="card-grid card-grid-2" style="margin-bottom:16px">
+        <div class="card" style="margin-bottom:16px">
+          <div class="section-title">Your Difficulty Rating</div>
+          <div id="self-rating" class="surface-note">Not provided</div>
+        </div>
 
-      <div class="card" style="margin-bottom:16px">
-        <div class="section-title">Weekly Assignment Status</div>
-        <div id="week-status" class="surface-note"></div>
+        <div class="card" style="margin-bottom:16px">
+          <div class="section-title">Weekly Assignment Status</div>
+          <div id="week-status" class="surface-note"></div>
+        </div>
       </div>
 
       <div class="card" id="sa-section" style="margin-bottom:16px;display:none">
@@ -141,7 +142,6 @@
       ? "Final score is hidden while teacher review is in progress."
       : (result.correct + " of " + result.total + " fully correct");
     document.getElementById("score-bar").style.width = underReview ? "0%" : (result.score + "%");
-    document.getElementById("reading-time").textContent = "Reading Time: " + result.readingTime;
 
     let label = "", color = "";
     if (underReview) {
@@ -159,29 +159,8 @@
       ? "Short answer submitted. Waiting for teacher scoring."
       : "Auto-scored result is finalized.";
 
-    let recommendation = "Maintain", recColor = "var(--accent)";
-    let recommendationHint = "Based on your latest recorded progress trend.";
-    if (underReview) {
-      recommendation = "Pending Review";
-      recColor = "var(--moderate)";
-      recommendationHint = "Waiting for teacher scoring";
-    } else {
-      try {
-        const progressResponse = await ReadWiseAPI.getStudentProgress();
-        const progress = (progressResponse && progressResponse.progress) || [];
-        const latest = progress.length ? progress[progress.length - 1] : null;
-        if (latest && latest.recommendation) {
-          recommendation = latest.recommendation;
-          recommendationHint = latest.reason || recommendationHint;
-        }
-      } catch (error) {
-        // fallback uses default recommendation when progress cannot be loaded
-      }
-      if (String(recommendation).toUpperCase().indexOf("UP") !== -1) recColor = "var(--easy)";
-      else if (String(recommendation).toUpperCase().indexOf("DOWN") !== -1) recColor = "var(--hard)";
-    }
     document.getElementById("rec-badge").innerHTML =
-      '<div class="result-recommendation"><strong style="color:' + recColor + '">' + recommendation + '</strong><div class="micro-copy">' + recommendationHint + '</div></div>';
+      '<div class="result-recommendation"><strong style="color:var(--accent)">' + (result.readingTime || "Not recorded") + '</strong><div class="micro-copy">Time spent on this passage.</div></div>';
 
     document.getElementById("self-rating").textContent = selfRating || "Not provided";
 
@@ -199,6 +178,8 @@
       const total = weeklyPassages.length || MAX_WEEKLY_PASSAGES_PER_CLASS;
       document.getElementById("week-status").textContent =
         "Week " + resultWeek + ": " + completedCount + " of " + total + " assigned passages completed.";
+
+      // no additional recommendation logic needed here since reading time is shown above
     } catch (error) {
       document.getElementById("week-status").textContent =
         "Week " + resultWeek + ": status unavailable.";

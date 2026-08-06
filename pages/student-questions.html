@@ -194,6 +194,12 @@
       ].filter(Boolean).join(" | ");
 
       p = await ReadWiseAPI.getPassage(pid);
+      const completion = await ReadWiseAPI.getStudentCompletions(activeWeek);
+      const completedIds = (completion && completion.completedPassageIds) || [];
+      if (completedIds.includes(pid)) {
+        window.location.href = "student-results.html?id=" + encodeURIComponent(pid);
+        return;
+      }
       const assessment = p.assessment || { questions: [], shortAnswerPrompt: "" };
       qs = (assessment.questions || []).map(function(q) { return normalizeAssessmentQuestion(q); });
       shortAnswerPrompt = assessment.shortAnswerPrompt || "";

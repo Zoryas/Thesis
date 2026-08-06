@@ -794,7 +794,7 @@ def build_teacher_report_summary(cur, active_week):
 def fetch_pending_short_answer(cur, student_id):
     cur.execute(
         """
-        SELECT qa.passage_id,qa.short_answer_text,qa.submitted_at,p.title,p.label,a.short_answer_prompt
+        SELECT qa.id, qa.passage_id,qa.short_answer_text,qa.submitted_at,p.title,p.label,a.short_answer_prompt
         FROM quiz_attempts qa
         JOIN passages p ON p.id=qa.passage_id
         LEFT JOIN assessments a ON a.passage_id=qa.passage_id
@@ -810,6 +810,7 @@ def fetch_pending_short_answer(cur, student_id):
     if not row:
         return None
     return {
+        "attemptId": int(row["id"]),
         "passageId": row["passage_id"],
         "passageTitle": row["title"],
         "label": row["label"],

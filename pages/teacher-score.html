@@ -141,6 +141,7 @@
   var scoreParams = new URLSearchParams(location.search);
   var selectedStudentId = scoreParams.get("sid") || scoreParams.get("id") || "";
   var selectedPassageId = scoreParams.get("pid") || "";
+  var selectedAttemptId = scoreParams.get("attemptId") || "";
   var scoreSource = scoreParams.get("from") || "";
 
   function escapeHtml(value) {
@@ -179,12 +180,16 @@
     submitBtn.textContent = "Saving...";
 
     try {
-      await ReadWiseAPI.saveTeacherScore({
+      var payload = {
         studentId: selectedStudentId,
         passageId: selectedPassageId,
         score: selectedScore,
         feedback: document.getElementById("teacher-feedback").value || ""
-      });
+      };
+      if (selectedAttemptId) {
+        payload.attemptId = selectedAttemptId;
+      }
+      await ReadWiseAPI.saveTeacherScore(payload);
       var name = document.getElementById("score-student-name").textContent || "the selected student";
       showToast("Result saved: " + (selectedScore === 1 ? "Correct" : "Incorrect") + " for " + name + ".");
       setTimeout(function() {

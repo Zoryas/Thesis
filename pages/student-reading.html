@@ -144,6 +144,19 @@
     }
 
     const activeWeek = await week;
+    let completedIds = [];
+    try {
+      const completion = await ReadWiseAPI.getStudentCompletions(activeWeek);
+      completedIds = (completion && completion.completedPassageIds) || [];
+    } catch (error) {
+      // ignore completion lookup failures and continue with lock fallback
+    }
+
+    if (completedIds.includes(pid)) {
+      window.location.href = "student-results.html?id=" + encodeURIComponent(pid);
+      return;
+    }
+
     if (sessionStorage.getItem(readingLockKey) === "1") {
       window.location.href = "student-questions.html?id=" + encodeURIComponent(pid);
       return;

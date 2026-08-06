@@ -107,10 +107,10 @@
       passages.map(function(passage, index) {
         const done = completedIds.includes(passage.id);
         const status = done
-          ? '<span class="badge badge-easy">Completed</span>'
+          ? '<span class="badge badge-easy">See Score</span>'
           : '<span class="badge badge-moderate">Pending</span>';
         const actionButton = done
-          ? '<button class="btn btn-outline" type="button" disabled>Completed</button>'
+          ? '<a href="student-results.html?id=' + passage.id + '" class="btn btn-outline btn-sm">See Score</a>'
           : '<a href="student-reading.html?id=' + passage.id + '" class="btn btn-primary">Start Reading</a>';
         const preview = passage.text.split("\n")[0].slice(0, 260).trim() + "...";
         return (

@@ -206,7 +206,9 @@
               '<span class="library-card-fact">' + passage.words + " words</span>" +
               '<span class="library-card-fact">~' + passage.time + ' min</span>' +
             "</div>" +
-            '<a class="btn btn-primary btn-sm" href="student-reading.html?id=' + passage.id + '">Open Passage</a>' +
+            (done
+              ? '<a class="btn btn-outline btn-sm" href="student-results.html?id=' + passage.id + '">See Score</a>'
+              : '<a class="btn btn-primary btn-sm" href="student-reading.html?id=' + passage.id + '">Open Passage</a>') +
           "</div>"
         );
       }).join("");

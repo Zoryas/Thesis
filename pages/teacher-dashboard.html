@@ -281,11 +281,26 @@
       } else {
         submissionsBody.innerHTML = recentSubmissions.map(function(item) {
           const badgeClassName = item.status === "Pending Review" ? "badge-moderate" : "badge-easy";
+          const scoreValue = Number(item.score);
+          const scoreText = Number.isFinite(scoreValue) ? scoreValue + "%" : "N/A";
+          // Prefer displayScore (fraction) when available, otherwise show percent or N/A
+          const display = item.displayScore || null;
+          const pct = Number(item.percentScore);
+          let scoreTextRendered;
+          if (display) {
+            scoreTextRendered = display + (Number.isFinite(pct) ? ' (' + pct + '%' + ')' : '');
+          } else {
+            scoreTextRendered = Number.isFinite(pct) ? pct + '%' : 'N/A';
+          }
+
+          const statusElement = item.status === 'Pending Review'
+            ? '<a href="teacher-student-detail.html?id=' + encodeURIComponent(item.studentId) + '" class="badge ' + badgeClassName + '">' + escapeHtml(item.status) + '</a>'
+            : '<span class="badge ' + badgeClassName + '">' + escapeHtml(item.status) + '</span>';
           return '<tr>' +
             '<td data-label="Student">' + escapeHtml(item.studentName) + '</td>' +
             '<td data-label="Passage">' + escapeHtml(item.passageTitle) + '</td>' +
-            '<td data-label="Score">' + escapeHtml(item.score) + '%</td>' +
-            '<td data-label="Status"><span class="badge ' + badgeClassName + '">' + escapeHtml(item.status) + '</span></td>' +
+            '<td data-label="Score">' + escapeHtml(scoreTextRendered) + '</td>' +
+            '<td data-label="Status">' + statusElement + '</td>' +
             '</tr>';
         }).join("");
       }

@@ -1193,6 +1193,7 @@ body.sidebar-collapsed .demo-banner {
 
 .badge {
   display: inline-flex;
+  justify-content: center;
   align-items: center;
   min-height: 28px;
   padding: 0 12px;
@@ -1202,6 +1203,27 @@ body.sidebar-collapsed .demo-banner {
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+  transition: transform 180ms ease, box-shadow 180ms ease, background-color 180ms ease, border-color 180ms ease;
+  text-align: center;
+}
+
+.badge:hover,
+.badge:focus-visible {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+}
+
+.badge a,
+.badge {
+  cursor: pointer;
+}
+
+.badge a {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  text-decoration: none;
+  color: inherit;
 }
 
 .badge-easy {
@@ -1220,6 +1242,12 @@ body.sidebar-collapsed .demo-banner {
   background: rgba(184, 121, 29, 0.12);
   border-color: rgba(184, 121, 29, 0.16);
   color: var(--moderate);
+}
+
+.badge-moderate:hover,
+.badge-moderate:focus-visible {
+  background: rgba(184, 121, 29, 0.18);
+  border-color: rgba(184, 121, 29, 0.24);
 }
 
 .badge-hard {
@@ -1319,6 +1347,11 @@ body.sidebar-collapsed .demo-banner {
   --btn-bg: transparent;
   --btn-color: var(--secondary);
   --btn-border: var(--border);
+}
+
+.btn-outline.btn-sm {
+  --btn-color: var(--primary);
+  --btn-border: rgba(58, 102, 159, 0.24);
 }
 
 .btn-danger {
@@ -2028,6 +2061,15 @@ body.sidebar-collapsed .main {
   justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
+}
+
+.result-recommendation {
+  display: grid;
+  justify-items: center;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+  width: 100%;
 }
 
 .assignment-panel-header h3,
@@ -3853,6 +3895,16 @@ html[data-theme-preference="dark"] [style*="background:#fff"] {
 
   .teacher-dashboard-page .dashboard-mobile-table td .badge {
     justify-self: start;
+  }
+
+  .teacher-dashboard-page .dashboard-mobile-table td[data-label="Status"] .badge {
+    justify-self: center;
+    width: 100%;
+  }
+
+  .teacher-dashboard-page .dashboard-mobile-table td[data-label="Status"] .badge a {
+    width: 100%;
+    justify-content: center;
   }
 
   .teacher-dashboard-page .dashboard-chart-card .chart-wrap {

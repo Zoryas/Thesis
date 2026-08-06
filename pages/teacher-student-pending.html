@@ -97,7 +97,7 @@
     countCopy.textContent = items.length + " pending short-answer response(s) waiting for teacher review.";
 
     list.innerHTML = items.map(function(item, index) {
-      var scoreUrl = "teacher-score.html?sid=" + encodeURIComponent(sid) + "&pid=" + encodeURIComponent(item.passageId || "") + "&from=pending";
+      var scoreUrl = "teacher-score.html?sid=" + encodeURIComponent(sid) + "&pid=" + encodeURIComponent(item.passageId || "") + "&attemptId=" + encodeURIComponent(item.attemptId || "") + "&from=pending";
       return (
         '<div class="card" style="border:1px solid #f3d4d4;background:#fff;">' +
           '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">' +

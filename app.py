@@ -147,6 +147,16 @@ SEED_STUDENTS = [
         "class": "EASY",
         "pre": 0
     }
+    ,{
+            "id": "s20",
+            "email": "mamfe334@pnhs.edu",
+            "password": "password123",
+            "name": "fehablids",
+            "grade": "7",
+            "section": "ccs",
+            "class": "HARD",
+            "pre": 0
+        }
 ]
 
 SEED_PASSAGES = [
