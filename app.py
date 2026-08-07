@@ -14,6 +14,8 @@ from flask import Flask, jsonify, request, session
 from flask_cors import CORS
 from werkzeug.security import check_password_hash, generate_password_hash
 
+from app_config import get_allowed_origins
+
 TOTAL_PROGRAM_WEEKS = 8
 MAX_WEEKLY_PASSAGES_PER_CLASS = 5
 
@@ -43,13 +45,7 @@ app.config.update(
     SESSION_COOKIE_SECURE=IS_PRODUCTION,
 )
 
-ALLOWED_ORIGINS = os.environ.get("READWISE_ALLOWED_ORIGINS", "")
-if IS_PRODUCTION:
-    origins_list = [o.strip() for o in ALLOWED_ORIGINS.split(",") if o.strip()]
-    if not origins_list:
-        raise RuntimeError("READWISE_ALLOWED_ORIGINS must be set when READWISE_ENV=production")
-else:
-    origins_list = [o.strip() for o in ALLOWED_ORIGINS.split(",") if o.strip()] or ["http://localhost", "http://127.0.0.1"]
+origins_list = get_allowed_origins(IS_PRODUCTION)
 
 CORS(
     app,
