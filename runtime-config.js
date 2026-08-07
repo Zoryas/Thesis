@@ -27,7 +27,13 @@
 
   var hostname = (global.location && global.location.hostname ? global.location.hostname : "").toLowerCase();
   var isLocalHost = hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1" || hostname.endsWith(".local");
-  global.READWISE_API_BASE_URL = isLocalHost ? "http://localhost:5000" : "https://read-wise-3tto.onrender.com";
+  if (isLocalHost) {
+    global.READWISE_API_BASE_URL = "http://localhost:5000";
+  } else if (global.location && global.location.origin) {
+    global.READWISE_API_BASE_URL = global.location.origin;
+  } else {
+    global.READWISE_API_BASE_URL = "https://readwise-api-production.up.railway.app";
+  }
 })(window);
 
 
