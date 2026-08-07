@@ -94,12 +94,12 @@ Prepare the system for repeatable deployment and support.
 ## Phase 4 — Final Delivery Criteria
 The system should be considered complete when these final items are met.
 
-- [ ] Functional student and teacher workflows work end-to-end
-- [ ] All critical APIs are tested for happy and error paths
-- [ ] Authorization and security hardening are verified
-- [ ] Production runtime configuration is documented and enforced
-- [ ] Monitoring, healthchecks, and deploy/runbook docs exist
-- [ ] The system can be started by a production server process like Gunicorn
+- [x] Functional student and teacher workflows work end-to-end
+- [x] All critical APIs are tested for happy and error paths
+- [x] Authorization and security hardening are verified
+- [x] Production runtime configuration is documented and enforced
+- [x] Monitoring, healthchecks, and deploy/runbook docs exist
+- [x] The system can be started by a production server process like Gunicorn
 
 ## Phase 5 — Publish Checklist
 - [ ] Confirm environment variables in production
