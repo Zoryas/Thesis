@@ -153,10 +153,31 @@
 </div>
 <div class="toast" id="toast"></div>
 <script src="../api.js?v=20260423f"></script>
+<script src="../client_assessment_helpers.js"></script>
 <script>
   const PREDICTION_API_URL = ReadWiseAPI.baseUrl + "/predict";
   const pageParams = new URLSearchParams(window.location.search);
   const LEVELS = ["EASY", "MODERATE", "DIFFICULT"];
+
+  function getQuestionTypeCatalog() {
+    return {
+      EASY: [
+        { type: "multiple_choice", label: "Multiple Choice" },
+        { type: "true_false", label: "True/False" }
+      ],
+      MODERATE: [
+        { type: "multiple_choice_harder", label: "Multiple Choice (Harder)" },
+        { type: "true_false_modified", label: "True/False (Modified)" },
+        { type: "sequence", label: "Sequence" }
+      ],
+      DIFFICULT: [
+        { type: "fill_blank", label: "Fill in the Blanks" },
+        { type: "identification", label: "Identification" },
+        { type: "enumeration", label: "Enumeration" }
+      ]
+    };
+  }
+
   const TYPE_CATALOG = getQuestionTypeCatalog();
 
   let currentPassageId = pageParams.get("id");
@@ -329,9 +350,20 @@
     }
   }
 
+  function getQuestionTypesForDifficulty(level) {
+    const normalizedLevel = LEVELS.includes(String(level || "").toUpperCase()) ? String(level).toUpperCase() : "EASY";
+    const entries = TYPE_CATALOG[normalizedLevel] || TYPE_CATALOG.EASY || [];
+    return entries.map(function(entry) {
+      return {
+        value: entry.type || entry.value,
+        label: entry.label || entry.type || entry.value
+      };
+    });
+  }
+
   function createQuestionTemplate(level, type) {
     const selectedLevel = LEVELS.includes(String(level || "").toUpperCase()) ? String(level).toUpperCase() : "EASY";
-    const allowed = TYPE_CATALOG[selectedLevel].map(function(entry) { return entry.value; });
+    const allowed = getQuestionTypesForDifficulty(selectedLevel).map(function(entry) { return entry.value; });
     const selectedType = allowed.includes(type) ? type : allowed[0];
     const q = normalizeAssessmentQuestion({ difficulty: selectedLevel, type: selectedType, prompt: "" });
     if (selectedType === "multiple_choice" || selectedType === "multiple_choice_harder" || selectedType === "sequence") {
@@ -650,6 +682,8 @@
       '<div class="error-panel surface-note surface-note-danger"><div class="section-title">Prediction unavailable</div><div>' +
       escapeHtml(message) +
       '</div><div class="micro-copy">Start the local Flask server with: python app.py</div></div>';
+    lastPrediction = null;
+    lastAnalyzedText = "";
   }
 
   function renderResult(data, options) {
@@ -765,9 +799,23 @@
 
     if (!title) return showToast("Please enter a passage title.", "#c0392b");
     if (!text) return showToast("Please enter the passage text.", "#c0392b");
-    if (!lastPrediction) return showToast("Analyze the passage before saving.", "#c0392b");
-    if (text !== lastAnalyzedText) return showToast("Passage text changed. Analyze again before saving.", "#c0392b");
     if (assessmentBuild.error) return showToast(assessmentBuild.error, "#c0392b");
+
+    if (!lastPrediction || !lastAnalyzedText) {
+      try {
+        await analyzePassage();
+      } catch (error) {
+        return showToast(error.message || "Analyze the passage before saving.", "#c0392b");
+      }
+    }
+
+    if (text !== lastAnalyzedText) {
+      return showToast("Passage text changed. Analyze again before saving.", "#c0392b");
+    }
+
+    if (!lastPrediction) {
+      return showToast("Prediction unavailable. Please analyze the passage again.", "#c0392b");
+    }
 
     const override = document.getElementById("override-label");
     const finalLabel = override && override.value ? override.value : lastPrediction.label;

@@ -5,6 +5,17 @@
     return values.map(function(v){ return String(v||"").trim(); });
   }
 
+  function normalizeQuestionDifficulty(level){
+    var raw = String(level || "").trim().toUpperCase();
+    if (raw === "HARD" || raw === "DIFFICULT") return "DIFFICULT";
+    if (raw === "MODERATE" || raw === "MEDIUM") return "MODERATE";
+    return "EASY";
+  }
+
+  function mapPassageLabelToQuestionDifficulty(label){
+    return normalizeQuestionDifficulty(label);
+  }
+
   function normalizeAssessmentQuestion(question){
     var src = question || {};
     var difficulty = String(src.difficulty || "EASY").trim().toUpperCase();
@@ -33,6 +44,8 @@
     return { questions: qs, shortAnswerPrompt: String(src.shortAnswerPrompt || src.shortAnswer || "").trim() };
   }
 
+  if(typeof global.normalizeQuestionDifficulty !== 'function') global.normalizeQuestionDifficulty = normalizeQuestionDifficulty;
+  if(typeof global.mapPassageLabelToQuestionDifficulty !== 'function') global.mapPassageLabelToQuestionDifficulty = mapPassageLabelToQuestionDifficulty;
   if(typeof global.normalizeAssessmentQuestion !== 'function') global.normalizeAssessmentQuestion = normalizeAssessmentQuestion;
   if(typeof global.normalizeAssessmentData !== 'function') global.normalizeAssessmentData = normalizeAssessmentData;
 })(window);

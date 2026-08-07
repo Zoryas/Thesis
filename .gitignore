@@ -30,6 +30,11 @@ Thumbs.db
 *.tmp
 *.cache
 
+# Temporary verification probes
+temp_*_probe.py
+temp_probe.py
+__pycache__/
+
 # Dataset / generated data files (not needed to push)
 imports/*.csv
 test/*.csv
