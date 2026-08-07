@@ -55,6 +55,7 @@ CORS(
 )
 
 DB_POOL = None
+DB_READY = False
 
 SEED_TEACHERS = [
     {"email": "ms.villanueva@pnhs.edu", "password": "teacher123"},
@@ -1238,17 +1239,25 @@ def fetch_pending_short_answers(cur, student_id):
     return items
 
 def init_database():
-    conn = mysql.connector.connect(**mysql_config(False))
-    cur = conn.cursor()
-    cur.execute(f"CREATE DATABASE IF NOT EXISTS `{DB_NAME}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
-    conn.commit()
-    cur.close()
-    conn.close()
+    global DB_READY
+    try:
+        conn = mysql.connector.connect(**mysql_config(False))
+    except Exception as exc:
+        print(f"Database unavailable during startup: {exc}")
+        DB_READY = False
+        return False
 
-    run_migrations()
+    try:
+        cur = conn.cursor()
+        cur.execute(f"CREATE DATABASE IF NOT EXISTS `{DB_NAME}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
+        conn.commit()
+        cur.close()
+        conn.close()
 
-    with db_cursor(True) as (_, cur):
-        schema = [
+        run_migrations()
+
+        with db_cursor(True) as (_, cur):
+            schema = [
             """CREATE TABLE IF NOT EXISTS users (id INT AUTO_INCREMENT PRIMARY KEY,email VARCHAR(255) UNIQUE NOT NULL,password_hash VARCHAR(255) NOT NULL,role ENUM('teacher','student') NOT NULL,is_active TINYINT(1) NOT NULL DEFAULT 1,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
             """CREATE TABLE IF NOT EXISTS program_settings (id TINYINT PRIMARY KEY,program_start_date DATE NOT NULL,manual_override_week TINYINT NULL,updated_by INT NULL,updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,CONSTRAINT chk_program_settings_id CHECK (id=1),FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
             """CREATE TABLE IF NOT EXISTS auth_tokens (id BIGINT AUTO_INCREMENT PRIMARY KEY,user_id INT NOT NULL,token VARCHAR(128) UNIQUE NOT NULL,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,INDEX idx_auth_tokens_user (user_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
@@ -1429,74 +1438,74 @@ def init_database():
                 FOREIGN KEY (question_id) REFERENCES questions(id) ON DELETE CASCADE
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
         ]
-        for sql in schema:
-            cur.execute(sql)
+            for sql in schema:
+                cur.execute(sql)
 
-        # ===== Backfill next identity/hierarchy tables (compatibility-first) =====
-        # reading_levels: EASY/MODERATE/HARD with temporary thresholds
-        cur.execute("SELECT COUNT(*) AS c FROM reading_levels")
-        if int(cur.fetchone()["c"] or 0) == 0:
-            cur.execute(
-                """
-                INSERT INTO reading_levels (code, description, threshold_min, threshold_max)
-                VALUES
-                  ('EASY','Below 55',0,54),
-                  ('MODERATE','55 to 69',55,69),
-                  ('HARD','70 and above',70,100)
-                """
-            )
+            # ===== Backfill next identity/hierarchy tables (compatibility-first) =====
+            # reading_levels: EASY/MODERATE/HARD with temporary thresholds
+            cur.execute("SELECT COUNT(*) AS c FROM reading_levels")
+            if int(cur.fetchone()["c"] or 0) == 0:
+                cur.execute(
+                    """
+                    INSERT INTO reading_levels (code, description, threshold_min, threshold_max)
+                    VALUES
+                      ('EASY','Below 55',0,54),
+                      ('MODERATE','55 to 69',55,69),
+                      ('HARD','70 and above',70,100)
+                    """
+                )
 
         # teachers: 1 row per legacy users(role=teacher)
-        cur.execute(
-            """
-            SELECT COUNT(*) AS c
-            FROM teachers t
-            JOIN users u ON u.id=t.user_id
-            WHERE u.role='teacher'
-            """
-        )
-        # If there are no teachers yet, seed all teacher users.
-        if int(cur.fetchone()["c"] or 0) == 0:
             cur.execute(
                 """
-                INSERT INTO teachers (user_id, full_name, department)
-                SELECT
-                  u.id AS user_id,
-                  -- placeholder full_name: email local-part (or email if no @)
-                  CASE
-                    WHEN INSTR(u.email,'@')>0 THEN SUBSTRING_INDEX(u.email,'@',1)
-                    ELSE u.email
-                  END AS full_name,
-                  NULL AS department
-                FROM users u
+                SELECT COUNT(*) AS c
+                FROM teachers t
+                JOIN users u ON u.id=t.user_id
                 WHERE u.role='teacher'
                 """
             )
+            # If there are no teachers yet, seed all teacher users.
+            if int(cur.fetchone()["c"] or 0) == 0:
+                cur.execute(
+                    """
+                    INSERT INTO teachers (user_id, full_name, department)
+                    SELECT
+                      u.id AS user_id,
+                      -- placeholder full_name: email local-part (or email if no @)
+                      CASE
+                        WHEN INSTR(u.email,'@')>0 THEN SUBSTRING_INDEX(u.email,'@',1)
+                        ELSE u.email
+                      END AS full_name,
+                      NULL AS department
+                    FROM users u
+                    WHERE u.role='teacher'
+                    """
+                )
 
         # classes & sections: derived from legacy students (grade_level + class_level + section)
         # We'll create:
         # - one class per distinct (grade, class_level)
         # - one section per distinct (grade, class_level, section name)
-        cur.execute("SELECT COUNT(*) AS c FROM classes")
-        if int(cur.fetchone()["c"] or 0) == 0:
-            # Ensure we have at least one teacher to reference adviser_teacher_id (can be NULL)
-            cur.execute("SELECT id FROM teachers ORDER BY id DESC LIMIT 1")
-            adviser = cur.fetchone()
-            adviser_teacher_id = adviser["id"] if adviser else None
+            cur.execute("SELECT COUNT(*) AS c FROM classes")
+            if int(cur.fetchone()["c"] or 0) == 0:
+                # Ensure we have at least one teacher to reference adviser_teacher_id (can be NULL)
+                cur.execute("SELECT id FROM teachers ORDER BY id DESC LIMIT 1")
+                adviser = cur.fetchone()
+                adviser_teacher_id = adviser["id"] if adviser else None
 
-            # Create classes
-            cur.execute(
-                """
-                INSERT INTO classes (grade_level, curriculum_code, adviser_teacher_id)
-                SELECT
-                  s.grade AS grade_level,
-                  s.class_level AS curriculum_code,
-                  %s AS adviser_teacher_id
-                FROM students s
-                GROUP BY s.grade, s.class_level
-                """,
-                (adviser_teacher_id,),
-            )
+                # Create classes
+                cur.execute(
+                    """
+                    INSERT INTO classes (grade_level, curriculum_code, adviser_teacher_id)
+                    SELECT
+                      s.grade AS grade_level,
+                      s.class_level AS curriculum_code,
+                      %s AS adviser_teacher_id
+                    FROM students s
+                    GROUP BY s.grade, s.class_level
+                    """,
+                    (adviser_teacher_id,),
+                )
 
             # Use current year as placeholder school_year
             cur.execute("SELECT YEAR(CURRENT_DATE()) AS y")
@@ -1504,7 +1513,7 @@ def init_database():
 
             cur.execute(
                 """
-                INSERT INTO sections (class_id, name, school_year)
+                INSERT IGNORE INTO sections (class_id, name, school_year)
                 SELECT
                   c.id AS class_id,
                   s.section AS name,
@@ -1746,6 +1755,14 @@ def init_database():
                 for class_level, ids in by_class.items():
                     for pid in ids[:MAX_WEEKLY_PASSAGES_PER_CLASS]:
                         cur.execute("INSERT IGNORE INTO weekly_assignments (week_no,class_level,passage_id) VALUES (%s,%s,%s)", (week, class_level, pid))
+
+        DB_READY = True
+        return True
+
+    except Exception as exc:
+        print(f"Database initialization failed: {exc}")
+        DB_READY = False
+        return False
 
 @app.errorhandler(mysql.connector.Error)
 def handle_mysql_error(_):
