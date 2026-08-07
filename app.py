@@ -13,6 +13,7 @@ import mysql.connector
 import numpy as np
 from flask import Flask, jsonify, request, session, send_from_directory, abort
 from flask_cors import CORS
+from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from app_config import get_allowed_origins
@@ -31,6 +32,7 @@ if not re.fullmatch(r"[A-Za-z0-9_]+", DB_NAME):
     raise RuntimeError("Invalid READWISE_DB_NAME")
 
 app = Flask(__name__)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1, x_prefix=1)
 IS_PRODUCTION = os.environ.get("READWISE_ENV") == "production"
 
 SECRET_KEY = os.environ.get("READWISE_SECRET_KEY")
