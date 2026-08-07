@@ -1851,7 +1851,8 @@ def frontend_static(filename):
     return serve_frontend_file(filename)
 
 
-init_database()
+if os.environ.get("READWISE_SKIP_AUTO_INIT") != "1":
+    init_database()
 
 
 if __name__ == "__main__":
