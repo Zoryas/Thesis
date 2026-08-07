@@ -37,7 +37,7 @@
 
       <div class="card result-hero" style="margin-bottom:16px">
         <div class="result-score" id="score-big">-%</div>
-        <div id="score-label" class="result-label"></div>
+        <div id="score-label" class="result-label" style="display:none"></div>
         <div id="score-fraction" class="result-summary"></div>
         <div class="progress" style="margin:16px 0;height:14px">
           <div class="progress-bar" id="score-bar" style="background:var(--primary)"></div>
@@ -118,9 +118,17 @@
     ].filter(Boolean).join(" | ") : "";
     document.getElementById("result-sub").textContent = passage ? (passage.title + " - " + passage.label) : "Session completed";
 
-    const raw = sessionStorage.getItem("result_" + pid);
+    let serverResult = null;
+    let serverFetchError = false;
+    try {
+      serverResult = await ReadWiseAPI.getStudentAttempt(pid);
+    } catch (fetchError) {
+      serverFetchError = true;
+      console.warn("Unable to fetch server result:", fetchError);
+    }
+
     const fallback = { score: 0, correct: 0, total: 1, readingTime: "-", shortAnswer: "", week: activeWeek, underReview: false };
-    const result = raw ? JSON.parse(raw) : fallback;
+    const result = serverResult || fallback;
     const resultWeek = Number(result.week || activeWeek);
     const underReview = !!result.underReview;
     const rawDifficulty = result.difficulty;
@@ -137,27 +145,32 @@
     const reviewStatusEl = document.getElementById("review-status");
     const reviewNoteEl = document.getElementById("review-note");
 
-    document.getElementById("score-big").textContent = underReview ? "Pending" : (result.score + "%");
-    document.getElementById("score-fraction").textContent = underReview
-      ? "Final score is hidden while teacher review is in progress."
-      : (result.correct + " of " + result.total + " fully correct");
-    document.getElementById("score-bar").style.width = underReview ? "0%" : (result.score + "%");
+    const hasSubmission = Boolean(serverResult);
+    const noSubmissionMessage = serverFetchError
+      ? "Unable to load result from server."
+      : "No submission found for this passage.";
 
-    let label = "", color = "";
-    if (underReview) {
-      label = "Teacher Review Required";
-      color = "var(--moderate)";
-    } else if (result.score >= 75) { label = "Excellent"; color = "var(--easy)"; }
-    else if (result.score >= 60) { label = "Good Job"; color = "var(--accent)"; }
-    else { label = "Needs Improvement"; color = "var(--hard)"; }
-    document.getElementById("score-label").textContent = label;
-    document.getElementById("score-label").style.color = color;
+    document.getElementById("score-big").textContent = hasSubmission
+      ? (underReview ? "Pending" : (result.score + "%"))
+      : "No score";
+    document.getElementById("score-fraction").textContent = hasSubmission
+      ? (underReview ? "Final score is hidden while teacher review is in progress." : (result.correct + " of " + result.total + " fully correct"))
+      : noSubmissionMessage;
+    document.getElementById("score-bar").style.width = hasSubmission
+      ? (underReview ? "0%" : (result.score + "%"))
+      : "0%";
 
-    reviewStatusEl.textContent = underReview ? "Under Review" : "Finalized";
-    reviewStatusEl.style.color = underReview ? "var(--moderate)" : "var(--easy)";
-    reviewNoteEl.textContent = underReview
-      ? "Short answer submitted. Waiting for teacher scoring."
-      : "Auto-scored result is finalized.";
+    const scoreLabelEl = document.getElementById("score-label");
+    scoreLabelEl.textContent = "";
+    scoreLabelEl.style.display = "none";
+
+    reviewStatusEl.textContent = hasSubmission ? (underReview ? "Under Review" : "Finalized") : "Not Submitted";
+    reviewStatusEl.style.color = hasSubmission ? (underReview ? "var(--moderate)" : "var(--easy)") : "var(--primary)";
+    reviewNoteEl.textContent = hasSubmission
+      ? (underReview
+        ? "Short answer submitted. Waiting for teacher scoring."
+        : "Auto-scored result is finalized.")
+      : (serverFetchError ? "Unable to retrieve result from the server." : "Submit this passage first to see your score.");
 
     document.getElementById("rec-badge").innerHTML =
       '<div class="result-recommendation"><strong style="color:var(--accent)">' + (result.readingTime || "Not recorded") + '</strong><div class="micro-copy">Time spent on this passage.</div></div>';

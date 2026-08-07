@@ -593,20 +593,7 @@
       return;
     }
 
-    const resultObj = {
-      score: pct,
-      correct: fullyCorrect,
-      total: qs.length,
-      week: activeWeek,
-      passageId: pid,
-      shortAnswer: saVal,
-      difficulty: difficultyValue,
-      underReview: underReview,
-      responses: responses,
-      readingTime: sessionStorage.getItem("readingTime_" + pid) || "-"
-    };
-    sessionStorage.setItem("result_" + pid, JSON.stringify(resultObj));
-
+    const readingTimeValue = await getReadingTimeForSubmit();
     const attemptPayload = {
       week: activeWeek,
       passageId: pid,
@@ -616,7 +603,7 @@
       difficulty: difficultyValue,
       shortAnswer: saVal,
       responses: responses,
-      readingTime: sessionStorage.getItem("readingTime_" + pid) || "-"
+      readingTime: readingTimeValue
     };
 
     try {
@@ -637,6 +624,25 @@
     setTimeout(function() {
       window.location.href = "student-results.html?id=" + pid;
     }, 900);
+  }
+
+  async function getReadingTimeForSubmit() {
+    const stored = sessionStorage.getItem("readingTime_" + pid);
+    if (stored && stored !== "-") {
+      return stored;
+    }
+    try {
+      const progress = await ReadWiseAPI.getReadingProgress(activeWeek, pid);
+      const seconds = Number((progress && progress.readingSeconds) || 0);
+      if (Number.isFinite(seconds) && seconds > 0) {
+        const minutes = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return minutes + ":" + (secs < 10 ? "0" : "") + secs;
+      }
+    } catch (error) {
+      console.warn("Unable to load reading progress for submit:", error);
+    }
+    return stored || "-";
   }
 
   async function logout() {

@@ -578,6 +578,55 @@ def student_attempts():
     return api_ok({"attemptId": attempt_id, "week": week, "passageId": passage_id, "completedPassageIds": completed}, 201)
 
 
+@student_bp.get("/api/student/attempts")
+def student_attempts_get():
+    user, err = require_role("student")
+    if err:
+        return err
+
+    passage_id = str(request.args.get("passageId") or "").strip()
+    if not passage_id:
+        return api_error("passageId is required.", 400)
+
+    with db_cursor(True) as (_, cur):
+        student = student_row(cur, user)
+        if not student:
+            return api_error("Student profile not found.", 404)
+        if not pre_assessment_completed(student):
+            return api_error("Complete the pre-assessment first.", 403)
+
+        cur.execute(
+            """
+            SELECT qa.score_pct, qa.correct_count, qa.total_count,
+                   qa.difficulty_rating, qa.short_answer_text,
+                   qa.reading_time, qa.week_no, qa.teacher_score
+            FROM quiz_attempts qa
+            WHERE qa.student_id=%s AND qa.passage_id=%s
+            ORDER BY qa.submitted_at DESC, qa.id DESC
+            LIMIT 1
+            """,
+            (student["id"], passage_id),
+        )
+        row = cur.fetchone()
+
+    if not row:
+        return api_ok(None)
+
+    return api_ok(
+        {
+            "passageId": passage_id,
+            "week": int(row["week_no"]),
+            "score": int(row["score_pct"] or 0),
+            "correct": int(row["correct_count"] or 0),
+            "total": int(row["total_count"] or 0),
+            "difficulty": int(row["difficulty_rating"]) if row.get("difficulty_rating") is not None else None,
+            "shortAnswer": row.get("short_answer_text") or "",
+            "readingTime": row.get("reading_time") or "-",
+            "underReview": bool(row.get("short_answer_text")) and row.get("teacher_score") is None,
+        }
+    )
+
+
 @student_bp.get("/api/student/progress")
 def student_progress():
     user, err = require_role("student")

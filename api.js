@@ -231,6 +231,16 @@
       var target = normalizeWeek(week);
       return request("/api/student/completions?week=" + target);
     },
+    getStudentAttempt: function(passageId, week) {
+      if (!passageId) {
+        return Promise.reject(new Error("passageId is required."));
+      }
+      var query = "/api/student/attempts?passageId=" + encodeURIComponent(passageId);
+      if (week !== undefined && week !== null && week !== "") {
+        query += "&week=" + normalizeWeek(week);
+      }
+      return request(query);
+    },
     submitStudentAttempt: function(payload) {
       return request("/api/student/attempts", { method: "POST", body: payload });
     },

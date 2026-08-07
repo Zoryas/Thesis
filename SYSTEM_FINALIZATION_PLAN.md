@@ -107,8 +107,9 @@ The system should be considered complete when these final items are met.
   - `READWISE_SECRET_KEY`
   - `READWISE_DB_HOST`, `READWISE_DB_PORT`, `READWISE_DB_USER`, `READWISE_DB_PASSWORD`, `READWISE_DB_NAME`
   - `READWISE_ALLOWED_ORIGINS`
-- [ ] Confirm `render.yaml` or deployment manifest points to `gunicorn app:app`
+- [x] Confirm `render.yaml` or deployment manifest points to `gunicorn app:app`
 - [ ] Run a final smoke test against the deployed app
+- [ ] Run `python scripts/final_publish_check.py` in the deployment environment
 - [ ] Verify login, student flow, teacher flow, and DB persistence in the deployed environment
 - [ ] Review deployment rollback/incident steps with the team
 

@@ -72,6 +72,47 @@ class Phase4FinalDeliveryTests(unittest.TestCase):
         self.assertFalse(body["ok"])
         self.assertIn("Passage is not assigned", body["error"])
 
+    def test_student_attempts_get_returns_latest_result(self):
+        token = self.login("juan.delacruz@pnhs.edu", "password123", "student")
+        passages_resp = self.client.get(
+            "/api/student/weekly-passages?week=1",
+            headers={"X-Auth-Token": token},
+        )
+        self.assertEqual(passages_resp.status_code, 200)
+        passages_body = passages_resp.get_json()
+        self.assertTrue(passages_body["ok"])
+        self.assertGreater(len(passages_body["data"]["passages"]), 0)
+        passage_id = passages_body["data"]["passages"][0]["id"]
+
+        response = self.client.post(
+            "/api/student/attempts",
+            headers={"X-Auth-Token": token},
+            json={
+                "week": 1,
+                "passageId": passage_id,
+                "score": 82,
+                "correct": 4,
+                "total": 5,
+                "difficulty": 3,
+                "shortAnswer": "",
+                "readingTime": "05:00",
+                "responses": [],
+            },
+        )
+        self.assertEqual(response.status_code, 201)
+
+        response = self.client.get(
+            "/api/student/attempts?passageId=" + passage_id,
+            headers={"X-Auth-Token": token},
+        )
+        self.assertEqual(response.status_code, 200)
+        body = response.get_json()
+        self.assertTrue(body["ok"])
+        self.assertIsNotNone(body["data"])
+        self.assertEqual(body["data"]["score"], 82)
+        self.assertEqual(body["data"]["correct"], 4)
+        self.assertEqual(body["data"]["total"], 5)
+
     def test_program_week_accessible_by_student(self):
         token = self.login("juan.delacruz@pnhs.edu", "password123", "student")
         response = self.client.get("/api/program/week", headers={"X-Auth-Token": token})
