@@ -1826,17 +1826,26 @@ def serve_frontend_file(filename):
         "avatar/",
     )
 
-    if filename in allowed_roots or any(filename.startswith(prefix) for prefix in allowed_directories):
-        if os.path.splitext(filename)[1].lower() in allowed_extensions:
-            return send_from_directory(os.getcwd(), filename)
+    normalized_filename = filename.replace("\\", "/")
+    if normalized_filename.startswith("/"):
+        normalized_filename = normalized_filename.lstrip("/")
+
+    if normalized_filename in allowed_roots or any(normalized_filename.startswith(prefix) for prefix in allowed_directories):
+        if os.path.splitext(normalized_filename)[1].lower() in allowed_extensions:
+            return send_from_directory(os.getcwd(), normalized_filename)
+
+    if os.path.splitext(normalized_filename)[1].lower() in allowed_extensions:
+        candidate = os.path.join(os.getcwd(), normalized_filename)
+        if os.path.isfile(candidate) and os.path.commonpath([os.getcwd(), candidate]) == os.getcwd():
+            return send_from_directory(os.getcwd(), normalized_filename)
 
     # Allow mapping of top-level HTML paths to the `pages/` directory.
     # e.g. a request for `/student-dashboard.html` will be served from `pages/student-dashboard.html`
-    if filename.endswith(".html"):
+    if normalized_filename.endswith(".html"):
         pages_path = os.path.join(os.getcwd(), "pages")
-        candidate = os.path.join(pages_path, filename)
+        candidate = os.path.join(pages_path, normalized_filename)
         if os.path.isfile(candidate):
-            return send_from_directory(pages_path, filename)
+            return send_from_directory(pages_path, normalized_filename)
 
     abort(404)
 
