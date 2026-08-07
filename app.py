@@ -7,6 +7,7 @@ import json
 import os
 import re
 import secrets
+import traceback
 
 import mysql.connector
 import numpy as np
@@ -659,18 +660,9 @@ def mysql_config(include_db=True):
     return cfg
 
 
-def db_pool():
-    global DB_POOL
-    if DB_POOL is None:
-        DB_POOL = mysql.connector.pooling.MySQLConnectionPool(
-            pool_name="readwise_pool", pool_size=6, autocommit=False, **mysql_config(True)
-        )
-    return DB_POOL
-
-
 @contextmanager
 def db_cursor(dictionary=False):
-    conn = db_pool().get_connection()
+    conn = mysql.connector.connect(**mysql_config(True), autocommit=False)
     cur = conn.cursor(dictionary=dictionary)
     try:
         yield conn, cur
@@ -1761,6 +1753,7 @@ def init_database():
 
     except Exception as exc:
         print(f"Database initialization failed: {exc}")
+        traceback.print_exc()
         DB_READY = False
         return False
 

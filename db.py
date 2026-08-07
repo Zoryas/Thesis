@@ -4,7 +4,6 @@ Extracted from app.py as part of Flask Blueprint modularization.
 """
 import os
 import mysql.connector
-import mysql.connector.pooling
 from contextlib import contextmanager
 
 DB_HOST = os.environ.get("READWISE_DB_HOST", "127.0.0.1")
@@ -15,9 +14,6 @@ DB_NAME = os.environ.get("READWISE_DB_NAME", "readwise_db")
 
 if not __import__("re").fullmatch(r"[A-Za-z0-9_]+", DB_NAME):
     raise RuntimeError("Invalid READWISE_DB_NAME")
-
-_DB_POOL = None
-
 
 def mysql_config(include_db=True):
     cfg = {
@@ -33,18 +29,9 @@ def mysql_config(include_db=True):
     return cfg
 
 
-def db_pool():
-    global _DB_POOL
-    if _DB_POOL is None:
-        _DB_POOL = mysql.connector.pooling.MySQLConnectionPool(
-            pool_name="readwise_pool", pool_size=6, autocommit=False, **mysql_config(True)
-        )
-    return _DB_POOL
-
-
 @contextmanager
 def db_cursor(dictionary=False):
-    conn = db_pool().get_connection()
+    conn = mysql.connector.connect(**mysql_config(True), autocommit=False)
     cur = conn.cursor(dictionary=dictionary)
     try:
         yield conn, cur
