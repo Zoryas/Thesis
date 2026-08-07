@@ -1835,6 +1835,14 @@ def serve_frontend_file(filename):
         if os.path.splitext(filename)[1].lower() in allowed_extensions:
             return send_from_directory(os.getcwd(), filename)
 
+    # Allow mapping of top-level HTML paths to the `pages/` directory.
+    # e.g. a request for `/student-dashboard.html` will be served from `pages/student-dashboard.html`
+    if filename.endswith(".html"):
+        pages_path = os.path.join(os.getcwd(), "pages")
+        candidate = os.path.join(pages_path, filename)
+        if os.path.isfile(candidate):
+            return send_from_directory(pages_path, filename)
+
     abort(404)
 
 
