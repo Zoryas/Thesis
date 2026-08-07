@@ -1,3 +1,5 @@
+import json
+
 from flask import Blueprint, request
 
 from db import db_cursor
@@ -12,12 +14,21 @@ from routes.helpers import (
     fetch_teacher_student_summaries,
     get_program_settings,
     normalize_class_level,
+    normalize_text_value,
     normalize_week,
     parse_program_start_date,
     require_auth,
     require_role,
     TOTAL_PROGRAM_WEEKS,
 )
+
+
+def _record_audit_log(user_id, student_id, action, details=None):
+    with db_cursor(True) as (_, cur):
+        cur.execute(
+            "INSERT INTO audit_logs (user_id, student_id, action, details) VALUES (%s, %s, %s, %s)",
+            (user_id, student_id, action, json.dumps(details or {}, ensure_ascii=False) if details is not None else None),
+        )
 
 teacher_bp = Blueprint("teacher_bp", __name__)
 
@@ -352,7 +363,7 @@ def teacher_score_save():
     if score not in (0, 1):
         return api_error("score must be 0 (Incorrect) or 1 (Correct).", 400)
 
-    feedback = str(payload.get("feedback") or "").strip()
+    feedback = normalize_text_value(payload.get("feedback") or "", max_length=2000)
 
     with db_cursor(True) as (_, cur):
         cur.execute("SELECT id FROM students WHERE id=%s", (student_id,))
@@ -465,6 +476,7 @@ def teacher_score_save():
         )
         saved = cur.fetchone()
 
+    _record_audit_log(user["id"], student_id, "teacher_score", {"passageId": passage_id, "attemptId": int(attempt["id"]), "score": int(score), "hasFeedback": bool(feedback)})
     return api_ok(
         {
             "attemptId": int(saved["id"]),

@@ -9,6 +9,7 @@ from routes.helpers import (
     fetch_student_progress,
     normalize_avatar_type,
     normalize_class_level,
+    normalize_text_value,
     normalize_week,
     pre_assessment_completed,
     require_role,
@@ -17,6 +18,14 @@ from routes.helpers import (
     serialize_user,
     student_row,
 )
+
+
+def _record_audit_log(user_id, student_id, action, details=None):
+    with db_cursor(True) as (_, cur):
+        cur.execute(
+            "INSERT INTO audit_logs (user_id, student_id, action, details) VALUES (%s, %s, %s, %s)",
+            (user_id, student_id, action, json.dumps(details or {}, ensure_ascii=False) if details is not None else None),
+        )
 
 student_bp = Blueprint("student_bp", __name__)
 
@@ -392,7 +401,7 @@ def student_attempts():
     if difficulty is not None:
         difficulty = max(1, min(5, difficulty))
 
-    short_answer = str(payload.get("shortAnswer") or "").strip()
+    short_answer = normalize_text_value(payload.get("shortAnswer") or "", max_length=4000)
     reading_time = str(payload.get("readingTime") or "").strip()
     responses = payload.get("responses") if isinstance(payload.get("responses"), list) else []
 
@@ -460,10 +469,11 @@ def student_attempts():
 
         cur.execute(
             """
-            INSERT INTO student_reading_progress_drafts (student_id, passage_id, week_no, reading_seconds, last_event_id, is_locked, completed_at)
-            VALUES (%s,%s,%s,0,NULL,1,NOW())
+            INSERT INTO student_reading_progress_drafts (student_id, passage_id, week_no, reading_seconds, last_event_id, is_locked, is_submitted, completed_at)
+            VALUES (%s,%s,%s,0,NULL,1,1,NOW())
             ON DUPLICATE KEY UPDATE
               is_locked=1,
+              is_submitted=1,
               completed_at=COALESCE(completed_at, NOW())
             """,
             (student["id"], passage_id, week),
@@ -564,6 +574,7 @@ def student_attempts():
         )
         completed = [row["passage_id"] for row in cur.fetchall()]
 
+    _record_audit_log(user["id"], student["id"], "student_submission", {"passageId": passage_id, "week": week, "hasShortAnswer": bool(short_answer)})
     return api_ok({"attemptId": attempt_id, "week": week, "passageId": passage_id, "completedPassageIds": completed}, 201)
 
 

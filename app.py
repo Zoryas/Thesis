@@ -30,15 +30,26 @@ if not re.fullmatch(r"[A-Za-z0-9_]+", DB_NAME):
 app = Flask(__name__)
 IS_PRODUCTION = os.environ.get("READWISE_ENV") == "production"
 
+SECRET_KEY = os.environ.get("READWISE_SECRET_KEY")
+if not SECRET_KEY:
+    if IS_PRODUCTION:
+        raise RuntimeError("READWISE_SECRET_KEY must be set when READWISE_ENV=production")
+    SECRET_KEY = "readwise-dev-secret-change-me"
+
 app.config.update(
-    SECRET_KEY=os.environ.get("READWISE_SECRET_KEY", "readwise-dev-secret"),
+    SECRET_KEY=SECRET_KEY,
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="None" if IS_PRODUCTION else "Lax",
     SESSION_COOKIE_SECURE=IS_PRODUCTION,
 )
 
-ALLOWED_ORIGINS = os.environ.get("READWISE_ALLOWED_ORIGINS", "http://localhost,http://127.0.0.1")
-origins_list = [o.strip() for o in ALLOWED_ORIGINS.split(",") if o.strip()]
+ALLOWED_ORIGINS = os.environ.get("READWISE_ALLOWED_ORIGINS", "")
+if IS_PRODUCTION:
+    origins_list = [o.strip() for o in ALLOWED_ORIGINS.split(",") if o.strip()]
+    if not origins_list:
+        raise RuntimeError("READWISE_ALLOWED_ORIGINS must be set when READWISE_ENV=production")
+else:
+    origins_list = [o.strip() for o in ALLOWED_ORIGINS.split(",") if o.strip()] or ["http://localhost", "http://127.0.0.1"]
 
 CORS(
     app,
@@ -1238,6 +1249,8 @@ def init_database():
     cur.close()
     conn.close()
 
+    run_migrations()
+
     with db_cursor(True) as (_, cur):
         schema = [
             """CREATE TABLE IF NOT EXISTS users (id INT AUTO_INCREMENT PRIMARY KEY,email VARCHAR(255) UNIQUE NOT NULL,password_hash VARCHAR(255) NOT NULL,role ENUM('teacher','student') NOT NULL,is_active TINYINT(1) NOT NULL DEFAULT 1,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
@@ -1383,6 +1396,19 @@ def init_database():
                 INDEX idx_recommendations_student_created (student_id, created_at),
                 FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
                 FOREIGN KEY (suggested_level_id) REFERENCES reading_levels(id) ON DELETE SET NULL
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
+
+            """CREATE TABLE IF NOT EXISTS audit_logs (
+                id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NULL,
+                student_id VARCHAR(20) NULL,
+                action VARCHAR(80) NOT NULL,
+                details JSON NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_audit_user_action (user_id, action),
+                INDEX idx_audit_student_created (student_id, created_at),
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+                FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
 
             # ===== ER Production relational model (questions/choices) =====
@@ -1730,12 +1756,45 @@ def handle_mysql_error(_):
     return api_error("Database operation failed. Check MySQL configuration and service.", 500)
 
 
+MIGRATION_FILES = [
+    "migrations/001_initial_schema.sql",
+    "migrations/002_add_operational_support.sql",
+]
+
+
+def run_migrations():
+    if not os.path.exists("migrations"):
+        return []
+    applied = []
+    for migration_file in MIGRATION_FILES:
+        if not os.path.exists(migration_file):
+            continue
+        with open(migration_file, "r", encoding="utf-8") as handle:
+            sql = handle.read()
+        if not sql.strip():
+            continue
+        with db_cursor() as (_, cur):
+            cur.execute(sql)
+        applied.append(migration_file)
+    return applied
+
+
 from routes.auth_routes import auth_bp
+from routes.helpers import enforce_csrf_for_state_change
 from routes.passage_routes import passage_bp
 from routes.student_routes import student_bp
 from routes.teacher_routes import teacher_bp
-from routes.status_routes import status_bp
+from routes.status_routes import configure_request_logging, status_bp
 
+
+@app.before_request
+def enforce_state_change_protection():
+    error = enforce_csrf_for_state_change()
+    if error is not None:
+        return error
+
+
+configure_request_logging(app)
 app.register_blueprint(status_bp)
 app.register_blueprint(auth_bp)
 app.register_blueprint(student_bp)

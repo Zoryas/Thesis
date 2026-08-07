@@ -1,9 +1,12 @@
+import html
 import json
 import os
 import re
 import secrets
 from datetime import datetime, timezone
 from pathlib import Path
+
+from urllib.parse import urlparse
 
 import joblib
 import numpy as np
@@ -112,6 +115,16 @@ def current_user():
     return None
 
 
+def _is_safe_origin(request_origin):
+    if not request_origin:
+        return True
+    try:
+        parsed = urlparse(request_origin)
+    except ValueError:
+        return False
+    return bool(parsed.scheme and parsed.netloc)
+
+
 def require_auth():
     user = current_user()
     if not user:
@@ -126,6 +139,55 @@ def require_role(role):
     if user["role"] != role:
         return None, api_error("Insufficient permissions.", 403)
     return user, None
+
+
+def _origin_matches_request(origin):
+    if not origin:
+        return True
+
+    try:
+        parsed_origin = urlparse(origin)
+        parsed_request = urlparse(request.host_url)
+    except ValueError:
+        return False
+
+    if not parsed_origin.scheme or not parsed_origin.hostname:
+        return False
+    if parsed_origin.scheme != parsed_request.scheme:
+        return False
+
+    origin_host = parsed_origin.hostname or ""
+    request_host = parsed_request.hostname or ""
+    if origin_host == request_host:
+        return True
+
+    localhost_variants = {"localhost", "127.0.0.1", "::1"}
+    if origin_host in localhost_variants and request_host in localhost_variants:
+        return True
+
+    return False
+
+
+def enforce_csrf_for_state_change():
+    if request.method in {"GET", "HEAD", "OPTIONS"}:
+        return None
+
+    origin = request.headers.get("Origin") or ""
+    referer = request.headers.get("Referer") or ""
+    if origin and not _origin_matches_request(origin):
+        return api_error("Cross-site request rejected.", 403)
+
+    if not origin and referer:
+        try:
+            parsed_referer = urlparse(referer)
+            parsed_request = urlparse(request.host_url)
+        except ValueError:
+            return api_error("Cross-site request rejected.", 403)
+
+        if parsed_referer.scheme != parsed_request.scheme or parsed_referer.hostname != parsed_request.hostname:
+            return api_error("Cross-site request rejected.", 403)
+
+    return None
 
 
 def serialize_user(row):
@@ -364,6 +426,17 @@ def normalize_assessment_payload(assessment, passage_label, allow_empty=False):
         raise ValueError("Add at least 1 complete assessment question.")
 
     return {"questions": normalized_questions, "shortAnswerPrompt": short_answer}
+
+
+def normalize_text_value(value, max_length=4000):
+    if value is None:
+        return ""
+    text = str(value).strip()
+    text = html.escape(text, quote=False)
+    text = re.sub(r"\s+", " ", text).strip()
+    if max_length is not None and len(text) > max_length:
+        text = text[:max_length]
+    return text
 
 
 def normalize_avatar_type(value):

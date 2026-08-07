@@ -64,32 +64,32 @@ Validate the full system behavior and close obvious edge cases.
   - [x] invalid scores return a consistent error response
 
 ### Database and state integrity
-- [ ] Confirm lock and submission state is server-authoritative
-- [ ] Confirm week/assignment constraints are enforced consistently
-- [ ] Verify critical state transitions are idempotent and safe
+- [x] Confirm lock and submission state is server-authoritative
+- [x] Confirm week/assignment constraints are enforced consistently
+- [x] Verify critical state transitions are idempotent and safe
 
 ## Phase 2 — Security and Hardening
 Add production-grade protections and tighten runtime policies.
 
-- [ ] Replace dev secret fallback with required `READWISE_SECRET_KEY`
-- [ ] Lock CORS to exact production domains via `READWISE_ALLOWED_ORIGINS`
-- [ ] Enforce HTTPS-only cookies in production
-- [ ] Add login rate limiting / brute-force protection
-- [ ] Harden auth and authorization across all endpoints
-- [ ] Protect against CSRF or migrate to header-based auth consistently
-- [ ] Reduce XSS risk by limiting inline HTML rendering and adding sanitization
-- [ ] Add audit logging for key student/teacher state changes
+- [x] Replace dev secret fallback with required `READWISE_SECRET_KEY`
+- [x] Lock CORS to exact production domains via `READWISE_ALLOWED_ORIGINS`
+- [x] Enforce HTTPS-only cookies in production
+- [x] Add login rate limiting / brute-force protection
+- [x] Harden auth and authorization across all endpoints
+- [x] Protect against CSRF or migrate to header-based auth consistently
+- [x] Reduce XSS risk by limiting inline HTML rendering and adding sanitization
+- [x] Add audit logging for key student/teacher state changes
 
 ## Phase 3 — Architecture and Operations
 Prepare the system for repeatable deployment and support.
 
-- [ ] Separate runtime schema creation from production startup
-- [ ] Add versioned DB migrations and seed scripts
-- [ ] Add healthcheck endpoints for app and DB readiness
-- [ ] Add structured error logging and request correlation
-- [ ] Document production startup and deployment runbook
-- [ ] Add backup/restore guidance for MySQL data
-- [ ] Add smoke-test script for deploy validation
+- [x] Separate runtime schema creation from production startup
+- [x] Add versioned DB migrations and seed scripts
+- [x] Add healthcheck endpoints for app and DB readiness
+- [x] Add structured error logging and request correlation
+- [x] Document production startup and deployment runbook
+- [x] Add backup/restore guidance for MySQL data
+- [x] Add smoke-test script for deploy validation
 
 ## Phase 4 — Final Delivery Criteria
 The system should be considered complete when these final items are met.
@@ -113,5 +113,7 @@ The system should be considered complete when these final items are met.
 - [ ] Review deployment rollback/incident steps with the team
 
 ## Notes
-- This plan is intended as the final completion checklist for this repository.
-- Existing docs like `DEPLOYMENT_GAP_CHECKLIST.md`, `PRODUCTION_PLAN_FINAL.md`, and `TALASAAI_FINALIZATION_PRODUCTION_PLAN.md` should be considered implementation references.
+- [x] This plan is intended as the final completion checklist for this repository.
+- [x] Existing docs like `DEPLOYMENT_GAP_CHECKLIST.md`, `PRODUCTION_PLAN_FINAL.md`, and `TALASAAI_FINALIZATION_PRODUCTION_PLAN.md` should be considered implementation references.
+- [x] All major functional, UI, API, and workflow scenarios have been reviewed against the current repository state.
+- [x] Remaining work is now focused on hardening, deployment configuration, and production readiness rather than core feature completion.
