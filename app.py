@@ -10,7 +10,7 @@ import secrets
 
 import mysql.connector
 import numpy as np
-from flask import Flask, jsonify, request, session
+from flask import Flask, jsonify, request, session, send_from_directory, abort
 from flask_cors import CORS
 from werkzeug.security import check_password_hash, generate_password_hash
 
@@ -1813,6 +1813,35 @@ app.register_blueprint(auth_bp)
 app.register_blueprint(student_bp)
 app.register_blueprint(teacher_bp)
 app.register_blueprint(passage_bp)
+
+
+def serve_frontend_file(filename):
+    allowed_extensions = (".js", ".css", ".html", ".json", ".svg", ".png", ".jpg", ".jpeg", ".gif", ".ico")
+    allowed_roots = {
+        "login.html",
+        "api.js",
+        "login.js",
+        "runtime-config.js",
+    }
+    allowed_directories = (
+        "stylesheets/",
+        "pages/",
+        "assets/",
+        "image/",
+        "avatar/",
+    )
+
+    if filename in allowed_roots or any(filename.startswith(prefix) for prefix in allowed_directories):
+        if os.path.splitext(filename)[1].lower() in allowed_extensions:
+            return send_from_directory(os.getcwd(), filename)
+
+    abort(404)
+
+
+@app.route("/<path:filename>")
+def frontend_static(filename):
+    return serve_frontend_file(filename)
+
 
 init_database()
 
