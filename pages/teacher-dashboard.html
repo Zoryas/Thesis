@@ -144,6 +144,13 @@
 </div>
 <script src="../api.js?v=20260804"></script>
 <script>
+  console.group("Teacher Dashboard Auth Debug");
+  console.debug("localStorage.readwise_user_v1", localStorage.getItem("readwise_user_v1"));
+  console.debug("localStorage.readwise_auth_token_v1", localStorage.getItem("readwise_auth_token_v1"));
+  console.debug("sessionStorage.role", sessionStorage.getItem("role"));
+  console.debug("sessionStorage.studentId", sessionStorage.getItem("studentId"));
+  console.groupEnd();
+
   function chartSurfaceBorder() {
     return getComputedStyle(document.documentElement).getPropertyValue("--surface-strong").trim() || "rgba(255,255,255,0.92)";
   }
