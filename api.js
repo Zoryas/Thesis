@@ -179,6 +179,7 @@
     getCachedUser: getCachedUser,
     request: request,
     predict: predict,
+    renderTeacherSidebar: renderTeacherSidebar,
     login: function(email, password, role) {
       clearCachedUser();
       return request("/api/auth/login", {
