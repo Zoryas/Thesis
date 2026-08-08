@@ -137,6 +137,20 @@
     return payload.data;
   }
 
+  function renderTeacherSidebar(user) {
+    if (!user || typeof user !== "object") return;
+    var teacher = user.teacher || {};
+    var nameEl = document.getElementById("sidebar-user-name");
+    var metaEl = document.getElementById("sidebar-user-meta");
+
+    if (nameEl) {
+      nameEl.textContent = teacher.fullName || user.email || "Teacher";
+    }
+    if (metaEl) {
+      metaEl.textContent = teacher.department || "Teacher Portal";
+    }
+  }
+
   async function predict(text) {
     var response = await fetch(buildUrl("/predict"), {
       method: "POST",

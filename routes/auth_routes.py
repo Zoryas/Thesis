@@ -57,8 +57,11 @@ def auth_login():
             """
             SELECT u.id,u.email,u.password_hash,u.role,u.is_active,
                    s.id AS student_id,s.full_name,s.grade,s.section,s.class_level,s.pre_score,s.pre_assessment_completed,
-                   s.avatar_type,s.avatar_value
-            FROM users u LEFT JOIN students s ON s.user_id=u.id
+                   s.avatar_type,s.avatar_value,
+                   t.id AS teacher_id,t.full_name AS teacher_full_name,t.department AS teacher_department
+            FROM users u
+            LEFT JOIN students s ON s.user_id=u.id
+            LEFT JOIN teachers t ON t.user_id=u.id
             WHERE u.email=%s
             """,
             (email,),

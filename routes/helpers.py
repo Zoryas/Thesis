@@ -76,8 +76,11 @@ def fetch_user_by_id(cur, user_id):
         """
         SELECT u.id,u.email,u.role,u.is_active,
                s.id AS student_id,s.full_name,s.grade,s.section,s.class_level,s.pre_score,s.pre_assessment_completed,
-               s.avatar_type,s.avatar_value
-        FROM users u LEFT JOIN students s ON s.user_id=u.id
+               s.avatar_type,s.avatar_value,
+               t.id AS teacher_id,t.full_name AS teacher_full_name,t.department AS teacher_department
+        FROM users u
+        LEFT JOIN students s ON s.user_id=u.id
+        LEFT JOIN teachers t ON t.user_id=u.id
         WHERE u.id=%s
         """,
         (user_id,),
@@ -100,11 +103,13 @@ def current_user():
                 """
                 SELECT u.id,u.email,u.role,u.is_active,
                        s.id AS student_id,s.full_name,s.grade,s.section,
-                       s.class_level,s.pre_score,s.pre_assessment_completed,s.avatar_type,s.avatar_value
-                FROM auth_tokens t
-                JOIN users u ON u.id=t.user_id
+                       s.class_level,s.pre_score,s.pre_assessment_completed,s.avatar_type,s.avatar_value,
+                       tch.id AS teacher_id,tch.full_name AS teacher_full_name,tch.department AS teacher_department
+                FROM auth_tokens at
+                JOIN users u ON u.id=at.user_id
                 LEFT JOIN students s ON s.user_id=u.id
-                WHERE t.token=%s
+                LEFT JOIN teachers tch ON tch.user_id=u.id
+                WHERE at.token=%s
                 """,
                 (token,),
             )
@@ -204,7 +209,16 @@ def serialize_user(row):
             "avatarType": row.get("avatar_type") or "initials",
             "avatarValue": row.get("avatar_value") or "",
         }
-    return {"id": row["id"], "email": row["email"], "role": row["role"], "student": student}
+
+    teacher = None
+    if row.get("teacher_id"):
+        teacher = {
+            "id": row["teacher_id"],
+            "fullName": row.get("teacher_full_name"),
+            "department": row.get("teacher_department"),
+        }
+
+    return {"id": row["id"], "email": row["email"], "role": row["role"], "student": student, "teacher": teacher}
 
 
 def student_row(cur, user):

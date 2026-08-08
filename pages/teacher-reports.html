@@ -26,7 +26,10 @@
       <a href="teacher-reports.html" class="active"><span class="icon" data-icon="reports"></span><span class="nav-label">Reports</span></a>
     </nav>
     <div class="sidebar-footer">
-      <div class="user-info"><strong>Ms. Ana Villanueva</strong>Grade 7 English</div>
+      <div class="user-info shell-user-info">
+        <strong id="sidebar-user-name">Ms. Ana Villanueva</strong>
+        <span id="sidebar-user-meta" class="shell-user-meta">Grade 7 English</span>
+      </div>
       <button class="logout-btn" onclick="logout()"><span class="icon" data-icon="logout"></span><span class="nav-label">Logout</span></button>
     </div>
   </aside>
@@ -511,6 +514,7 @@
     try {
       var auth = await ReadWiseAPI.me();
       if (!auth || !auth.user || auth.user.role !== "teacher") throw new Error("Unauthorized");
+      ReadWiseAPI.renderTeacherSidebar(auth.user);
 
       var activeWeek = ReadWiseAPI.getActiveWeek();
       var snapshot = await ReadWiseAPI.getTeacherReportSummary(activeWeek);
