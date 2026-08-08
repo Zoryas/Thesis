@@ -2,7 +2,7 @@ import logging
 import os
 from uuid import uuid4
 
-from flask import Blueprint, jsonify, request, session
+from flask import Blueprint, jsonify, redirect, request, session
 
 from db import db_cursor
 from routes.helpers import api_error, api_ok, build_prediction_response, current_user, get_request_token, serialize_user
@@ -23,19 +23,7 @@ def build_health_payload(request_id=None, db_status="connected"):
 
 @status_bp.get("/")
 def index():
-    return jsonify(
-        {
-            "name": "ReadWise API",
-            "status": "running",
-            "endpoints": [
-                "/health",
-                "/predict",
-                "/api/health",
-                "/api/auth/login",
-                "/api/passages",
-            ],
-        }
-    )
+    return redirect("/login.html", code=302)
 
 
 @status_bp.get("/health")
