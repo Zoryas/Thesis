@@ -145,10 +145,10 @@
 <script src="../api.js?v=20260804"></script>
 <script>
   console.group("Teacher Dashboard Auth Debug");
-  console.debug("localStorage.readwise_user_v1", localStorage.getItem("readwise_user_v1"));
-  console.debug("localStorage.readwise_auth_token_v1", localStorage.getItem("readwise_auth_token_v1"));
-  console.debug("sessionStorage.role", sessionStorage.getItem("role"));
-  console.debug("sessionStorage.studentId", sessionStorage.getItem("studentId"));
+  console.log("localStorage.readwise_user_v1", localStorage.getItem("readwise_user_v1"));
+  console.log("localStorage.readwise_auth_token_v1", localStorage.getItem("readwise_auth_token_v1"));
+  console.log("sessionStorage.role", sessionStorage.getItem("role"));
+  console.log("sessionStorage.studentId", sessionStorage.getItem("studentId"));
   console.groupEnd();
 
   function chartSurfaceBorder() {
@@ -262,6 +262,7 @@
   async function bootstrapPage() {
     try {
       const auth = await ReadWiseAPI.me({ forceRefresh: true });
+      console.log("Teacher dashboard auth response", auth);
       if (!auth || !auth.user || auth.user.role !== "teacher") throw new Error("Unauthorized");
       ReadWiseAPI.renderTeacherSidebar(auth.user);
       const dashboard = await ReadWiseAPI.getTeacherDashboard();
@@ -336,6 +337,7 @@
       document.getElementById("save-week-settings-btn").addEventListener("click", saveWeekSettings);
       document.getElementById("clear-week-override-btn").addEventListener("click", clearWeekOverride);
     } catch (error) {
+      console.error("Teacher dashboard bootstrap error", error);
       window.location.href = "../login.html";
     }
   }

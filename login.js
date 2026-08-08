@@ -45,14 +45,17 @@ loginBtn.addEventListener("click", async () => {
   loginBtn.classList.add("is-loading");
   loginBtn.textContent = "Signing in...";
   loginError.hidden = true;
-  console.debug("login attempt", { email: email, role: role });
+  console.log("login attempt", { email: email, role: role });
 
   try {
     const result = await ReadWiseAPI.login(email, password, role);
-    console.debug("login result:", result);
-    console.debug("login token stored", localStorage.getItem("readwise_auth_token_v1"));
+    console.log("login result:", result);
+    console.log("login token stored", localStorage.getItem("readwise_auth_token_v1"));
     const user = result && result.user ? result.user : null;
     if (!user) throw new Error("Invalid login response.");
+
+    await ReadWiseAPI.me({ forceRefresh: true });
+    console.log("login auth verified for user", user.email, user.role);
 
     sessionStorage.setItem("role", user.role);
     if (user.student && user.student.id) {

@@ -123,7 +123,7 @@
       if (response.status === 401) {
         clearCachedUser();
       }
-      console.debug("ReadWiseAPI.request failed", {
+      console.log("ReadWiseAPI.request failed", {
         path: path,
         status: response.status,
         payload: payload,
@@ -180,6 +180,7 @@
     request: request,
     predict: predict,
     login: function(email, password, role) {
+      clearCachedUser();
       return request("/api/auth/login", {
         method: "POST",
         body: { email: email, password: password, role: role }
@@ -201,20 +202,20 @@
       var settings = options || {};
       var cachedUser = settings.forceRefresh ? null : getCachedUser();
       var token = getCachedToken();
-      console.debug("ReadWiseAPI.me() start", { cachedUser: cachedUser, token: token, forceRefresh: settings.forceRefresh });
+      console.log("ReadWiseAPI.me() start", { cachedUser: cachedUser, token: token, forceRefresh: settings.forceRefresh });
       if (cachedUser) {
         request("/api/auth/me").then(function(data) {
-          console.debug("ReadWiseAPI.me() refresh response", data);
+          console.log("ReadWiseAPI.me() refresh response", data);
           if (data && data.user) cacheUser(data.user, getCachedToken());
         }).catch(function(error) {
-          console.debug("ReadWiseAPI.me() refresh failed", error);
+          console.log("ReadWiseAPI.me() refresh failed", error);
           // keep cached user as temporary fallback if refresh fails
         });
-        console.debug("ReadWiseAPI.me() returning cached user", cachedUser);
+        console.log("ReadWiseAPI.me() returning cached user", cachedUser);
         return Promise.resolve({ user: cachedUser, cached: true });
       }
       return request("/api/auth/me").then(function(data) {
-        console.debug("ReadWiseAPI.me() server response", data);
+        console.log("ReadWiseAPI.me() server response", data);
         if (data && data.user) cacheUser(data.user, getCachedToken());
         return data;
       });
