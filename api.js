@@ -123,6 +123,13 @@
       if (response.status === 401) {
         clearCachedUser();
       }
+      console.debug("ReadWiseAPI.request failed", {
+        path: path,
+        status: response.status,
+        payload: payload,
+        headers: headers,
+        body: body
+      });
       var errorMessage = (payload && payload.error) || ("Request failed (" + response.status + ")");
       var error = new Error(errorMessage);
       error.status = response.status;
@@ -203,6 +210,7 @@
           console.debug("ReadWiseAPI.me() refresh failed", error);
           // keep cached user as temporary fallback if refresh fails
         });
+        console.debug("ReadWiseAPI.me() returning cached user", cachedUser);
         return Promise.resolve({ user: cachedUser, cached: true });
       }
       return request("/api/auth/me").then(function(data) {
