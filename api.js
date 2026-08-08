@@ -193,15 +193,20 @@
     me: function(options) {
       var settings = options || {};
       var cachedUser = settings.forceRefresh ? null : getCachedUser();
+      var token = getCachedToken();
+      console.debug("ReadWiseAPI.me() start", { cachedUser: cachedUser, token: token, forceRefresh: settings.forceRefresh });
       if (cachedUser) {
         request("/api/auth/me").then(function(data) {
+          console.debug("ReadWiseAPI.me() refresh response", data);
           if (data && data.user) cacheUser(data.user, getCachedToken());
-        }).catch(function() {
+        }).catch(function(error) {
+          console.debug("ReadWiseAPI.me() refresh failed", error);
           // keep cached user as temporary fallback if refresh fails
         });
         return Promise.resolve({ user: cachedUser, cached: true });
       }
       return request("/api/auth/me").then(function(data) {
+        console.debug("ReadWiseAPI.me() server response", data);
         if (data && data.user) cacheUser(data.user, getCachedToken());
         return data;
       });

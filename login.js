@@ -48,6 +48,7 @@ loginBtn.addEventListener("click", async () => {
 
   try {
     const result = await ReadWiseAPI.login(email, password, role);
+    console.debug("login result:", result);
     const user = result && result.user ? result.user : null;
     if (!user) throw new Error("Invalid login response.");
 
