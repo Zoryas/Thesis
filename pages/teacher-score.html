@@ -214,7 +214,7 @@
 
   async function bootstrapPage() {
     try {
-      var auth = await ReadWiseAPI.me();
+      var auth = await ReadWiseAPI.me({ forceRefresh: true });
       if (!auth || !auth.user || auth.user.role !== "teacher") throw new Error("Unauthorized");
       ReadWiseAPI.renderTeacherSidebar(auth.user);
       if (!selectedStudentId) throw new Error("Missing student");

@@ -419,7 +419,7 @@
 
   async function bootstrapPage() {
     try {
-      const auth = await ReadWiseAPI.me();
+      const auth = await ReadWiseAPI.me({ forceRefresh: true });
       if (!auth || !auth.user || auth.user.role !== "teacher") throw new Error("Unauthorized");
       ReadWiseAPI.renderTeacherSidebar(auth.user);
     } catch (error) {
