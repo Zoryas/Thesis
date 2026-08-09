@@ -174,11 +174,24 @@
         { type: "sequence", label: "Sequence" }
       ],
       DIFFICULT: [
-        { type: "fill_blank", label: "Fill in the Blanks" },
+        { type: "fill_in_the_blanks", label: "Fill in the Blanks" },
         { type: "identification", label: "Identification" },
         { type: "enumeration", label: "Enumeration" }
       ]
     };
+  }
+
+  function normalizeQuestionType(type) {
+    const raw = String(type || "").trim();
+    if (raw === "fill_blank") return "fill_in_the_blanks";
+    return raw;
+  }
+
+  function normalizeQuestionDifficulty(level) {
+    const raw = String(level || "").trim().toUpperCase();
+    if (raw === "HARD") return "DIFFICULT";
+    if (LEVELS.includes(raw)) return raw;
+    return "EASY";
   }
 
   const TYPE_CATALOG = getQuestionTypeCatalog();
@@ -354,7 +367,7 @@
   }
 
   function getQuestionTypesForDifficulty(level) {
-    const normalizedLevel = LEVELS.includes(String(level || "").toUpperCase()) ? String(level).toUpperCase() : "EASY";
+    const normalizedLevel = normalizeQuestionDifficulty(level);
     const entries = TYPE_CATALOG[normalizedLevel] || TYPE_CATALOG.EASY || [];
     return entries.map(function(entry) {
       return {
@@ -365,11 +378,12 @@
   }
 
   function createQuestionTemplate(level, type) {
-    const selectedLevel = LEVELS.includes(String(level || "").toUpperCase()) ? String(level).toUpperCase() : "EASY";
+    const selectedLevel = normalizeQuestionDifficulty(level);
+    const selectedType = normalizeQuestionType(type);
     const allowed = getQuestionTypesForDifficulty(selectedLevel).map(function(entry) { return entry.value; });
-    const selectedType = allowed.includes(type) ? type : allowed[0];
-    const q = normalizeAssessmentQuestion({ difficulty: selectedLevel, type: selectedType, prompt: "" });
-    if (selectedType === "multiple_choice" || selectedType === "multiple_choice_harder" || selectedType === "sequence") {
+    const chosenType = allowed.includes(selectedType) ? selectedType : allowed[0];
+    const q = normalizeAssessmentQuestion({ difficulty: selectedLevel, type: chosenType, prompt: "" });
+    if (chosenType === "multiple_choice" || chosenType === "multiple_choice_harder" || chosenType === "sequence") {
       q.options = Array.isArray(q.options) ? q.options.slice(0, 4) : [];
       while (q.options.length < 4) q.options.push("");
     }
@@ -379,9 +393,16 @@
 
   function cloneQuestion(question) {
     const normalized = normalizeAssessmentQuestion(question || {});
+    normalized.difficulty = normalizeQuestionDifficulty(normalized.difficulty);
+    normalized.type = normalizeQuestionType(normalized.type);
     const q = createQuestionTemplate(normalized.difficulty, normalized.type);
     q.prompt = normalized.prompt;
-    q.options = Array.isArray(normalized.options) ? normalized.options.slice() : q.options;
+    if (Array.isArray(normalized.options)) {
+      q.options = normalized.options.slice();
+      if ((q.type === "multiple_choice" || q.type === "multiple_choice_harder") && q.options.length < 4) {
+        while (q.options.length < 4) q.options.push("");
+      }
+    }
     q.answerIndex = Number.isInteger(normalized.answerIndex) ? normalized.answerIndex : q.answerIndex;
     q.answerKey = normalized.answerKey || q.answerKey;
     q.answerKeys = Array.isArray(normalized.answerKeys) ? normalized.answerKeys.slice() : q.answerKeys;
@@ -448,7 +469,7 @@
       };
       body.appendChild(l);
       body.appendChild(select);
-      if (q.type === "true_false_modified") {
+      if (q.type === "true_false_modified" && q.answerKey === "false") {
         addInput(
           "Correct Statement If False",
           q.answerKeys.join(" | "),
@@ -457,13 +478,15 @@
             q.answerKeys = next.split("|").map(function(x) { return x.trim(); }).filter(Boolean);
           }
         );
-        const note = document.createElement("p");
-        note.className = "micro-copy";
-        note.textContent = q.answerKey === "false"
-          ? "Students who choose False must type the corrected statement."
-          : "If the statement is True, students only need to choose True.";
-        body.appendChild(note);
       }
+      const note = document.createElement("p");
+      note.className = "micro-copy";
+      note.textContent = q.type === "true_false_modified"
+        ? (q.answerKey === "false"
+            ? "Students who choose False must type the corrected statement."
+            : "If the statement is True, students only need to choose True.")
+        : "";
+      if (note.textContent) body.appendChild(note);
       return;
     }
 
@@ -585,7 +608,10 @@
   }
 
   function addQuestionField() {
-    assessmentDraft.push(createQuestionTemplate("EASY"));
+    const override = document.getElementById("override-label");
+    const selectedLabel = override && override.value ? override.value : (lastPrediction && lastPrediction.label ? lastPrediction.label : "EASY");
+    const defaultDifficulty = getExpectedQuestionDifficultyForLabel(selectedLabel);
+    assessmentDraft.push(createQuestionTemplate(defaultDifficulty));
     renderAssessmentBuilder();
   }
 
@@ -690,7 +716,7 @@
   }
 
   function renderResult(data, options) {
-    const settings = options || {};
+    const settings = Object.assign({ preserveAssessment: false }, options || {});
     const label = escapeHtml(getClassDisplayName(data.label));
     const features = data.features || {};
     const confidenceText = typeof data.confidence === "number" ? Number(data.confidence).toFixed(1) + "%" : "Saved";
@@ -724,7 +750,9 @@
       '<select class="form-control" id="override-label"><option value="">Use ' + (settings.saved ? "Current" : "Predicted") + ': ' + label + '</option><option value="EASY">EASY</option><option value="MODERATE">MODERATE</option><option value="HARD">DIFFICULT</option></select></div>' +
       '<button class="btn btn-success btn-block" onclick="saveToLibrary()">' + saveLabel + '</button>';
 
-    alignAssessmentToPassageLabel(data.label);
+    if (!settings.saved && !settings.preserveAssessment) {
+      alignAssessmentToPassageLabel(data.label);
+    }
     bindOverrideLabelSync(data.label);
   }
 
@@ -756,7 +784,7 @@
       features: calculateSurfaceFeatures(existingPassage.text)
     };
     lastAnalyzedText = existingPassage.text;
-    renderResult(lastPrediction, { saved: true });
+    renderResult(lastPrediction, { saved: true, preserveAssessment: true });
   }
 
   async function analyzePassage() {

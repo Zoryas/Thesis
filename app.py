@@ -1855,9 +1855,9 @@ def frontend_static(filename):
     return serve_frontend_file(filename)
 
 
-if os.environ.get("READWISE_SKIP_AUTO_INIT") != "1":
-    init_database()
-
+# Database initialization is explicit and should be performed by a separate bootstrap step,
+# such as running `python seed_db.py` locally. This keeps app startup lightweight and avoids
+# accidental schema changes on every run.
 
 if __name__ == "__main__":
     print(f"Connected to MySQL database '{DB_NAME}' on {DB_HOST}:{DB_PORT}")
