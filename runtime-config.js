@@ -3,8 +3,29 @@
   var segments = pathname.split("/").filter(Boolean);
   var firstSegment = segments.length ? segments[0] : "";
   var isFileSegment = firstSegment.indexOf(".") !== -1;
+  var knownStaticRoots = ["pages", "stylesheets", "image", "avatar", "assets"];
+  var knownPageRoutes = [
+    "login",
+    "student-dashboard",
+    "student-reading",
+    "student-profile",
+    "student-progress",
+    "student-results",
+    "student-passage",
+    "student-pre-assessment",
+    "student-questions",
+    "teacher-dashboard",
+    "teacher-passages",
+    "teacher-submit",
+    "teacher-recommendations",
+    "teacher-reports",
+    "teacher-score",
+    "teacher-student-detail",
+    "teacher-student-pending",
+    "teacher-students"
+  ];
   var computedBasePath = "";
-  if (firstSegment && !isFileSegment && firstSegment.toLowerCase() !== "pages") {
+  if (firstSegment && !isFileSegment && knownStaticRoots.indexOf(firstSegment.toLowerCase()) === -1 && knownPageRoutes.indexOf(firstSegment.toLowerCase()) === -1) {
     computedBasePath = "/" + firstSegment;
   }
   if (typeof global.READWISE_BASE_PATH === "undefined") {

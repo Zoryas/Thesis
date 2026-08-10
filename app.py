@@ -11,7 +11,7 @@ import traceback
 
 import mysql.connector
 import numpy as np
-from flask import Flask, jsonify, request, session, send_from_directory, abort
+from flask import Flask, jsonify, redirect, request, session, send_from_directory, abort
 from flask_cors import CORS
 from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -1848,6 +1848,47 @@ def serve_frontend_file(filename):
             return send_from_directory(pages_path, normalized_filename)
 
     abort(404)
+
+
+CLEAN_PAGE_ROUTES = {
+    "login": "login.html",
+    "student-dashboard": "pages/student-dashboard.html",
+    "student-reading": "pages/student-reading.html",
+    "student-profile": "pages/student-profile.html",
+    "student-progress": "pages/student-progress.html",
+    "student-results": "pages/student-results.html",
+    "student-passage": "pages/student-passage.html",
+    "student-pre-assessment": "pages/student-pre-assessment.html",
+    "student-questions": "pages/student-questions.html",
+    "teacher-dashboard": "pages/teacher-dashboard.html",
+    "teacher-passages": "pages/teacher-passages.html",
+    "teacher-submit": "pages/teacher-submit.html",
+    "teacher-reports": "pages/teacher-reports.html",
+    "teacher-students": "pages/teacher-students.html",
+    "teacher-score": "pages/teacher-score.html",
+    "teacher-student-detail": "pages/teacher-student-detail.html",
+    "teacher-student-pending": "pages/teacher-student-pending.html",
+    "teacher-recommendations": "pages/teacher-recommendations.html",
+}
+
+
+def register_clean_page_alias(route_name, file_path):
+    def route_alias():
+        return send_from_directory(os.getcwd(), file_path)
+
+    def legacy_route_alias():
+        query_string = request.query_string.decode("utf-8")
+        target = f"/{route_name}"
+        if query_string:
+            target = f"{target}?{query_string}"
+        return redirect(target, code=301)
+
+    app.add_url_rule(f"/{route_name}", endpoint=f"clean_{route_name}", view_func=route_alias)
+    app.add_url_rule(f"/{route_name}.html", endpoint=f"legacy_{route_name}", view_func=legacy_route_alias)
+
+
+for route_name, file_path in CLEAN_PAGE_ROUTES.items():
+    register_clean_page_alias(route_name, file_path)
 
 
 @app.route("/<path:filename>")

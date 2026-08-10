@@ -8,13 +8,13 @@
   <link rel="stylesheet" href="../stylesheets/shared.css?v=20260316b">
 </head>
 <body>
-<div class="demo-banner">TalaSaAI System</div>
+<div class="demo-banner">TalaSaAi</div>
 <div class="layout">
   <aside class="sidebar">
-    <a class="sidebar-logo sidebar-logo-link" href="student-profile.html" title="Open my profile" aria-label="Open my profile">
+    <div class="sidebar-logo" aria-label="Student profile section">
       <h2>TalaSaAI</h2>
       <p>Student Portal</p>
-    </a>
+    </div>
     <nav>
       <a href="student-profile.html"><span class="icon" data-icon="profile"></span><span class="nav-label">My Profile</span></a>
       <a href="student-dashboard.html"><span class="icon" data-icon="dashboard"></span><span class="nav-label">Dashboard</span></a>
@@ -110,8 +110,8 @@
           ? '<span class="badge badge-easy">See Score</span>'
           : '<span class="badge badge-moderate">Pending</span>';
         const actionButton = done
-          ? '<a href="student-results.html?id=' + passage.id + '" class="btn btn-outline btn-sm">See Score</a>'
-          : '<a href="student-reading.html?id=' + passage.id + '" class="btn btn-primary">Start Reading</a>';
+          ? '<a href="/student-results?id=' + encodeURIComponent(passage.id) + '" class="btn btn-outline btn-sm">See Score</a>'
+          : '<a href="/student-reading?id=' + encodeURIComponent(passage.id) + '" class="btn btn-primary">Start Reading</a>';
         const preview = passage.text.split("\n")[0].slice(0, 260).trim() + "...";
         return (
           '<div class="passage-list-card">' +

@@ -67,10 +67,10 @@ loginBtn.addEventListener("click", async () => {
     if (user.role === "student") {
       const needsPreAssessment = !(user.student && user.student.preAssessmentCompleted);
       window.location.href = needsPreAssessment
-        ? "pages/student-pre-assessment.html"
-        : "pages/student-dashboard.html";
+        ? "/student-pre-assessment"
+        : "/student-dashboard";
     } else {
-      window.location.href = "pages/teacher-dashboard.html";
+      window.location.href = "/teacher-dashboard";
     }
   } catch (error) {
     showError(error.message || "Invalid credentials. Try again.");

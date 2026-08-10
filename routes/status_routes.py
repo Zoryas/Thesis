@@ -23,7 +23,7 @@ def build_health_payload(request_id=None, db_status="connected"):
 
 @status_bp.get("/")
 def index():
-    return redirect("/login.html", code=302)
+    return redirect("/login", code=302)
 
 
 @status_bp.get("/health")

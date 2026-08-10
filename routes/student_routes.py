@@ -420,6 +420,43 @@ def student_attempts():
         if not cur.fetchone():
             return api_error("Passage is not assigned to this student for the selected week.", 400)
 
+        if not reading_time:
+            cur.execute(
+                """
+                SELECT reading_seconds, formatted_time
+                FROM student_reading_sessions
+                WHERE student_id=%s AND passage_id=%s AND week_no=%s
+                ORDER BY created_at DESC, id DESC
+                LIMIT 1
+                """,
+                (student["id"], passage_id, week),
+            )
+            session_row = cur.fetchone()
+            if session_row and session_row.get("formatted_time"):
+                reading_time = str(session_row["formatted_time"]).strip()
+            elif session_row and session_row.get("reading_seconds") is not None:
+                seconds = int(session_row["reading_seconds"] or 0)
+                minutes = seconds // 60
+                secs = seconds % 60
+                reading_time = f"{minutes}:{secs:02d}"
+            else:
+                cur.execute(
+                    """
+                    SELECT reading_seconds, is_locked, is_submitted
+                    FROM student_reading_progress_drafts
+                    WHERE student_id=%s AND passage_id=%s AND week_no=%s
+                    ORDER BY updated_at DESC, id DESC
+                    LIMIT 1
+                    """,
+                    (student["id"], passage_id, week),
+                )
+                draft_row = cur.fetchone()
+                if draft_row and draft_row.get("reading_seconds") is not None:
+                    seconds = int(draft_row["reading_seconds"] or 0)
+                    minutes = seconds // 60
+                    secs = seconds % 60
+                    reading_time = f"{minutes}:{secs:02d}"
+
         cur.execute(
             """
             INSERT INTO quiz_attempts (

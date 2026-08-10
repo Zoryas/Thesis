@@ -4,18 +4,19 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Student Dashboard - TalaSaAI</title>
+  <link rel="icon" type="image/png" href="../image/talasaai-logo.png">
   <link rel="stylesheet" href="../stylesheets/shared.css?v=20260316b">
     <script src="../runtime-config.js?v=20260316c"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-<div class="demo-banner">TalaSaAI System</div>
+<div class="demo-banner">TalaSaAi</div>
 <div class="layout">
   <aside class="sidebar">
-    <a class="sidebar-logo sidebar-logo-link" href="student-profile.html" title="Open my profile" aria-label="Open my profile">
+    <div class="sidebar-logo" aria-label="Student profile section">
       <h2>TalaSaAI</h2>
       <p>Student Portal</p>
-    </a>
+    </div>
     <nav>
       <a href="student-profile.html"><span class="icon" data-icon="profile"></span><span class="nav-label">My Profile</span></a>
       <a href="student-dashboard.html" class="active"><span class="icon" data-icon="dashboard"></span><span class="nav-label">Dashboard</span></a>
@@ -207,8 +208,8 @@
               '<span class="library-card-fact">~' + passage.time + ' min</span>' +
             "</div>" +
             (done
-              ? '<a class="btn btn-outline btn-sm" href="student-results.html?id=' + passage.id + '">See Score</a>'
-              : '<a class="btn btn-primary btn-sm" href="student-reading.html?id=' + passage.id + '">Open Passage</a>') +
+              ? '<a class="btn btn-outline btn-sm" href="/student-results?id=' + encodeURIComponent(passage.id) + '">See Score</a>'
+              : '<a class="btn btn-primary btn-sm" href="/student-reading?id=' + encodeURIComponent(passage.id) + '">Open Passage</a>') +
           "</div>"
         );
       }).join("");

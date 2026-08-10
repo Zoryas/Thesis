@@ -4,17 +4,18 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>My Profile - TalaSaAI</title>
+  <link rel="icon" type="image/png" href="../image/talasaai-logo.png">
   <link rel="stylesheet" href="../stylesheets/shared.css?v=20260316b">
   <script src="../runtime-config.js?v=20260316c"></script>
 </head>
 <body class="student-profile-page">
-<div class="demo-banner">TalaSaAI System</div>
+<div class="demo-banner">TalaSaAi System</div>
 <div class="layout">
   <aside class="sidebar">
-    <a class="sidebar-logo sidebar-logo-link" href="student-profile.html" title="Open my profile" aria-label="Open my profile">
+    <div class="sidebar-logo" aria-label="Student profile section">
       <h2>TalaSaAI</h2>
       <p>Student Portal</p>
-    </a>
+    </div>
     <nav>
       <a href="student-profile.html" class="active"><span class="icon" data-icon="profile"></span><span class="nav-label">My Profile</span></a>
       <a href="student-dashboard.html"><span class="icon" data-icon="dashboard"></span><span class="nav-label">Dashboard</span></a>
@@ -59,7 +60,6 @@
             </div>
             <input type="file" id="avatar-file-input" accept="image/*" hidden>
             <span class="profile-avatar-status" id="avatar-status">Using initials</span>
-            <p class="profile-avatar-hint">Open the avatar picker to upload a photo, choose one of your SVG avatars, or go back to initials.</p>
           </div>
 
           <div class="profile-hero-copy">
@@ -151,20 +151,6 @@
       </div>
     </div>
 
-    <section class="card profile-demo-card">
-      <div class="section-title">Demo Credentials</div>
-      <div class="micro-copy">Login credentials are shown here for demo purposes only.</div>
-      <div class="profile-demo-grid">
-        <div>
-          <span class="profile-detail-label">Email</span><br>
-          <code id="demo-email">-</code>
-        </div>
-        <div>
-          <span class="profile-detail-label">Password</span><br>
-          <code>password123</code>
-        </div>
-      </div>
-    </section>
   </main>
 </div>
 
@@ -172,8 +158,7 @@
   <div class="modal avatar-modal" role="dialog" aria-modal="true" aria-labelledby="avatar-modal-title">
     <div class="avatar-modal-copy">
       <h3 id="avatar-modal-title">Choose your avatar</h3>
-      <p>Select one of your SVG avatars or upload a personal photo. The choice will be saved to the database and reused across your student pages.</p>
-      <span class="meta-pill" id="avatar-modal-status"><strong>Avatar</strong> Using initials</span>
+      <span class="meta-pill" id="avatar-modal-status">Using initials</span>
     </div>
     <div class="avatar-gallery" id="avatar-gallery"></div>
     <div class="modal-footer">
@@ -227,12 +212,6 @@
     return (AVATAR_BASE_PATH ? AVATAR_BASE_PATH : "") + "/avatar/" + fileName;
   });
 
-  const DEMO_EMAILS = {
-    s1: "juan.delacruz@pnhs.edu",
-    s2: "maria.santos@pnhs.edu",
-    s3: "carlo.reyes@pnhs.edu"
-  };
-
   let activeStudent = null;
   let currentAvatarType = "initials";
   let currentAvatarValue = "";
@@ -277,8 +256,8 @@
   }
 
   function getAvatarStateLabel() {
-    if (currentAvatarType === "upload" && currentAvatarValue) return "Using uploaded photo";
-    if (currentAvatarType === "preset" && currentAvatarValue) return "Using built-in SVG avatar";
+    if (currentAvatarType === "upload" && currentAvatarValue) return "Using photo";
+    if (currentAvatarType === "preset" && currentAvatarValue) return "Using selected avatar";
     return "Using initials";
   }
 
@@ -320,7 +299,7 @@
     }
 
     statusEl.textContent = getAvatarStateLabel();
-    modalStatusEl.innerHTML = "<strong>Avatar</strong> " + getAvatarStateLabel();
+    modalStatusEl.textContent = getAvatarStateLabel();
 
     galleryButtons.forEach(function(button) {
       const isActive = currentAvatarType === "preset" && button.dataset.avatarSrc === currentAvatarValue;
@@ -403,7 +382,6 @@
       "Grade " + (activeStudent.grade || activeStudent.class_level || "7"),
       activeStudent.section || activeStudent.school || ""
     ].filter(Boolean).join(" | ");
-    document.getElementById("demo-email").textContent = DEMO_EMAILS[activeStudent.id] || "student@example.com";
     document.getElementById("program-week").textContent =
       "Week " + (latest ? latest.week : 1) + " of " + TOTAL_PROGRAM_WEEKS;
 

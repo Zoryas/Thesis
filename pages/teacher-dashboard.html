@@ -4,12 +4,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Teacher Dashboard - TalaSaAI</title>
+  <link rel="icon" type="image/png" href="../image/talasaai-logo.png">
   <link rel="stylesheet" href="../stylesheets/shared.css?v=20260316b">
   <script src="../runtime-config.js?v=20260316c"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="teacher-dashboard-page">
-<div class="demo-banner">TalaSaAI System</div>
+<div class="demo-banner">TalaSaAi</div>
 <div class="layout">
   <aside class="sidebar">
     <div class="sidebar-logo">
@@ -144,13 +145,6 @@
 </div>
 <script src="../api.js?v=20260804"></script>
 <script>
-  console.group("Teacher Dashboard Auth Debug");
-  console.log("localStorage.readwise_user_v1", localStorage.getItem("readwise_user_v1"));
-  console.log("localStorage.readwise_auth_token_v1", localStorage.getItem("readwise_auth_token_v1"));
-  console.log("sessionStorage.role", sessionStorage.getItem("role"));
-  console.log("sessionStorage.studentId", sessionStorage.getItem("studentId"));
-  console.groupEnd();
-
   function chartSurfaceBorder() {
     return getComputedStyle(document.documentElement).getPropertyValue("--surface-strong").trim() || "rgba(255,255,255,0.92)";
   }
