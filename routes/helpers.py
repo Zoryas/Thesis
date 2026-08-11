@@ -146,6 +146,15 @@ def require_role(role):
     return user, None
 
 
+def require_roles(*roles):
+    user, err = require_auth()
+    if err:
+        return None, err
+    if user["role"] not in roles:
+        return None, api_error("Insufficient permissions.", 403)
+    return user, None
+
+
 def _origin_matches_request(origin):
     if not origin:
         return True

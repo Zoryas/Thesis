@@ -328,6 +328,58 @@
     saveTeacherScore: function(payload) {
       return request("/api/teacher/score", { method: "POST", body: payload || {} });
     },
+    getAdminStudents: function() {
+      return request("/api/admin/students");
+    },
+    createAdminStudent: function(payload) {
+      return request("/api/admin/students", { method: "POST", body: payload });
+    },
+    updateAdminStudent: function(studentId, payload) {
+      return request("/api/admin/students/" + encodeURIComponent(studentId), { method: "PUT", body: payload });
+    },
+    deleteAdminStudent: function(studentId) {
+      return request("/api/admin/students/" + encodeURIComponent(studentId), { method: "DELETE" });
+    },
+    getAdminTeachers: function() {
+      return request("/api/admin/teachers");
+    },
+    createAdminTeacher: function(payload) {
+      return request("/api/admin/teachers", { method: "POST", body: payload });
+    },
+    updateAdminTeacher: function(teacherId, payload) {
+      return request("/api/admin/teachers/" + encodeURIComponent(teacherId), { method: "PUT", body: payload });
+    },
+    deleteAdminTeacher: function(teacherId) {
+      return request("/api/admin/teachers/" + encodeURIComponent(teacherId), { method: "DELETE" });
+    },
+    getAdminUsers: function(role) {
+      var url = "/api/admin/users";
+      if (role) {
+        url += "?role=" + encodeURIComponent(role);
+      }
+      return request(url);
+    },
+    createAdminUser: function(payload) {
+      return request("/api/admin/users", { method: "POST", body: payload });
+    },
+    updateAdminUser: function(userId, payload) {
+      return request("/api/admin/users/" + encodeURIComponent(userId), { method: "PUT", body: payload });
+    },
+    deleteAdminUser: function(userId) {
+      return request("/api/admin/users/" + encodeURIComponent(userId), { method: "DELETE" });
+    },
+    getAdminPassages: function() {
+      return request("/api/admin/passages");
+    },
+    createAdminPassage: function(payload) {
+      return request("/api/admin/passages", { method: "POST", body: payload });
+    },
+    updateAdminPassage: function(passageId, payload) {
+      return request("/api/admin/passages/" + encodeURIComponent(passageId), { method: "PUT", body: payload });
+    },
+    deleteAdminPassage: function(passageId) {
+      return request("/api/admin/passages/" + encodeURIComponent(passageId), { method: "DELETE" });
+    },
     importPassagesCsv: function(file) {
       var form = new FormData();
       form.append("file", file);

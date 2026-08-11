@@ -22,7 +22,13 @@
     "teacher-score",
     "teacher-student-detail",
     "teacher-student-pending",
-    "teacher-students"
+    "teacher-students",
+    "admin-login",
+    "admin-dashboard",
+    "admin-students",
+    "admin-teachers",
+    "admin-passages",
+    "admin-admins"
   ];
   var computedBasePath = "";
   if (firstSegment && !isFileSegment && knownStaticRoots.indexOf(firstSegment.toLowerCase()) === -1 && knownPageRoutes.indexOf(firstSegment.toLowerCase()) === -1) {

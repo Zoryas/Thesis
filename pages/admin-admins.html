@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Admins - TalaSaAI</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="../image/logo-final.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="../image/logo-final.png">
+  <link rel="manifest" href="../image/site.webmanifest">
+  <link rel="stylesheet" href="../stylesheets/shared.css?v=20260316b">
+  <link rel="stylesheet" href="../stylesheets/admin-enhancements.css?v=20260811">
+  <style>
+    .admin-admins-page .card { margin-bottom: 20px; }
+    .admin-admins-page .form-grid { display: grid; grid-template-columns: repeat(2, minmax(260px, 1fr)); gap: 18px; align-items: start; }
+    .admin-admins-page .field-group { display: flex; flex-direction: column; gap: 10px; }
+    .admin-admins-page .field-label { font-size: 13px; font-weight: 700; color: var(--admin-muted-color); }
+    .admin-admins-page .input { width: 100%; min-width: 0; padding: 14px 16px; border-radius: 16px; font-size: 14px; box-sizing: border-box; border: 1px solid var(--admin-input-border); background: var(--admin-input-bg); color: var(--admin-text-color); }
+    .admin-admins-page .admin-form-footer { display:flex; justify-content:flex-end; gap:10px; margin-top:16px; }
+    .admin-admins-page .table-wrap { margin-top: 0; }
+    .admin-admins-page .admin-actions { display:flex; flex-wrap:wrap; gap:10px; justify-content:flex-end; }
+    .admin-admins-page .admin-actions .btn { min-width: 160px; }
+    .admin-admins-page .admin-form-card + .card { margin-top: 24px; }
+    @media (max-width: 1080px) {
+      .admin-admins-page .form-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+  <script src="../runtime-config.js?v=20260316c"></script>
+</head>
+<body class="admin-admins-page">
+<div class="layout admin-panel">
+  <aside class="sidebar">
+    <div class="sidebar-logo" aria-label="Admin portal">
+      <h2>TalaSaAI</h2>
+      <p>Admin Portal</p>
+    </div>
+    <nav>
+      <a href="admin-dashboard.html"><span class="icon" data-icon="dashboard"></span><span class="nav-label">Dashboard</span></a>
+      <a href="admin-students.html"><span class="icon" data-icon="students"></span><span class="nav-label">Students</span></a>
+      <a href="admin-teachers.html"><span class="icon" data-icon="teacher"></span><span class="nav-label">Teachers</span></a>
+      <a href="admin-passages.html"><span class="icon" data-icon="library"></span><span class="nav-label">Passages</span></a>
+      <a href="admin-admins.html" class="active"><span class="icon" data-icon="settings"></span><span class="nav-label">Admins</span></a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="logout-btn" onclick="logout()" type="button"><span class="icon" data-icon="logout"></span><span class="nav-label">Logout</span></button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="page-header page-header-split">
+      <div class="page-header-copy">
+        <p class="eyebrow">Administration</p>
+        <h1>Admin Accounts</h1>
+        <p>Create, edit, and remove admin users who can access the admin portal.</p>
+      </div>
+      <div class="header-meta admin-actions">
+        <button class="btn btn-primary" type="button" onclick="openAdminModal()">Create Admin</button>
+      </div>
+    </div>
+
+    <div class="card admin-form-card hidden" id="admin-form-card">
+      <div class="card-header">
+        <div class="card-header-copy">
+          <p class="eyebrow">Admin form</p>
+          <h3 id="admin-modal-title">Create Admin</h3>
+        </div>
+      </div>
+      <div class="form-grid admin-form-grid">
+        <label class="field-group">
+          <span class="field-label">Email</span>
+          <input id="admin-email" class="input" type="email" placeholder="admin@example.com" autocomplete="username">
+        </label>
+        <label class="field-group">
+          <span class="field-label">Password</span>
+          <input id="admin-password" class="input" type="password" placeholder="Enter password" autocomplete="new-password">
+        </label>
+        <label class="field-group">
+          <span class="field-label">Role</span>
+          <select id="admin-role" class="input">
+            <option value="admin">Admin</option>
+            <option value="teacher">Teacher</option>
+            <option value="student">Student</option>
+          </select>
+        </label>
+        <label class="field-group">
+          <span class="field-label">Active</span>
+          <div class="input-wrap">
+            <input id="admin-active" type="checkbox" checked>
+          </div>
+        </label>
+      </div>
+      <p id="admin-modal-error" class="login-error" hidden></p>
+      <div class="admin-form-footer">
+        <button class="btn btn-outline" type="button" onclick="closeAdminModal()">Cancel</button>
+        <button class="btn btn-primary" type="button" id="admin-save-btn">Save admin</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Email</th>
+              <th>Role</th>
+              <th>Active</th>
+              <th>Created</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="admins-table"></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="../api.js?v=20260804"></script>
+<script src="../admin-admins.js?v=20260810"></script>
+</body>
+</html>

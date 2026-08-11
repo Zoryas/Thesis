@@ -60,6 +60,10 @@ CORS(
 DB_POOL = None
 DB_READY = False
 
+SEED_ADMINS = [
+    {"email": "admin@pnhs.edu", "password": "admin123"},
+]
+
 SEED_TEACHERS = [
     {"email": "ms.villanueva@pnhs.edu", "password": "teacher123"},
     {"email": "teacher@example.com", "password": "abcd"},
@@ -1252,7 +1256,8 @@ def init_database():
 
         with db_cursor(True) as (_, cur):
             schema = [
-            """CREATE TABLE IF NOT EXISTS users (id INT AUTO_INCREMENT PRIMARY KEY,email VARCHAR(255) UNIQUE NOT NULL,password_hash VARCHAR(255) NOT NULL,role ENUM('teacher','student') NOT NULL,is_active TINYINT(1) NOT NULL DEFAULT 1,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
+            """CREATE TABLE IF NOT EXISTS users (id INT AUTO_INCREMENT PRIMARY KEY,email VARCHAR(255) UNIQUE NOT NULL,password_hash VARCHAR(255) NOT NULL,role ENUM('teacher','student','admin') NOT NULL,is_active TINYINT(1) NOT NULL DEFAULT 1,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
+            """ALTER TABLE users MODIFY COLUMN role ENUM('teacher','student','admin') NOT NULL""",
             """CREATE TABLE IF NOT EXISTS program_settings (id TINYINT PRIMARY KEY,program_start_date DATE NOT NULL,manual_override_week TINYINT NULL,updated_by INT NULL,updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,CONSTRAINT chk_program_settings_id CHECK (id=1),FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
             """CREATE TABLE IF NOT EXISTS auth_tokens (id BIGINT AUTO_INCREMENT PRIMARY KEY,user_id INT NOT NULL,token VARCHAR(128) UNIQUE NOT NULL,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,INDEX idx_auth_tokens_user (user_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
             """CREATE TABLE IF NOT EXISTS students (id VARCHAR(20) PRIMARY KEY,user_id INT UNIQUE NOT NULL,full_name VARCHAR(255) NOT NULL,grade VARCHAR(20) NOT NULL,section VARCHAR(100) NOT NULL,class_level ENUM('EASY','MODERATE','HARD') NOT NULL DEFAULT 'EASY',pre_score INT NOT NULL DEFAULT 0,pre_assessment_completed TINYINT(1) NOT NULL DEFAULT 0,pre_assessment_completed_at TIMESTAMP NULL,avatar_type ENUM('initials','preset','upload') NOT NULL DEFAULT 'initials',avatar_value MEDIUMTEXT NULL,FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
@@ -1679,6 +1684,9 @@ def init_database():
             cur.execute("INSERT INTO users (email,password_hash,role,is_active) VALUES (%s,%s,%s,1)", (email, hashed, role))
             return cur.lastrowid
 
+        for admin in SEED_ADMINS:
+            upsert_user(admin["email"], admin["password"], "admin")
+
         for teacher in SEED_TEACHERS:
             upsert_user(teacher["email"], teacher["password"], "teacher")
 
@@ -1792,6 +1800,7 @@ from routes.helpers import enforce_csrf_for_state_change
 from routes.passage_routes import passage_bp
 from routes.student_routes import student_bp
 from routes.teacher_routes import teacher_bp
+from routes.admin_routes import admin_bp
 from routes.status_routes import configure_request_logging, status_bp
 
 
@@ -1808,10 +1817,11 @@ app.register_blueprint(auth_bp)
 app.register_blueprint(student_bp)
 app.register_blueprint(teacher_bp)
 app.register_blueprint(passage_bp)
+app.register_blueprint(admin_bp)
 
 
 def serve_frontend_file(filename):
-    allowed_extensions = (".js", ".css", ".html", ".json", ".svg", ".png", ".jpg", ".jpeg", ".gif", ".ico")
+    allowed_extensions = (".js", ".css", ".html", ".json", ".webmanifest", ".svg", ".png", ".jpg", ".jpeg", ".gif", ".ico")
     allowed_roots = {
         "login.html",
         "api.js",
@@ -1869,6 +1879,11 @@ CLEAN_PAGE_ROUTES = {
     "teacher-student-detail": "pages/teacher-student-detail.html",
     "teacher-student-pending": "pages/teacher-student-pending.html",
     "teacher-recommendations": "pages/teacher-recommendations.html",
+    "admin-login": "admin-login.html",
+    "admin-dashboard": "pages/admin-dashboard.html",
+    "admin-students": "pages/admin-students.html",
+    "admin-teachers": "pages/admin-teachers.html",
+    "admin-passages": "pages/admin-passages.html",
 }
 
 

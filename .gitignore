@@ -33,6 +33,9 @@ Thumbs.db
 # Temporary verification probes
 temp_*_probe.py
 temp_probe.py
+check_huckfinn.py
+debug_admin_create.py
+replace_demo_banner.py
 __pycache__/
 
 # Dataset / generated data files (not needed to push)

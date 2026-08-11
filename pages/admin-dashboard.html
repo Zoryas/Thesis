@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard - TalaSaAI</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="../image/logo-final.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="../image/logo-final.png">
+  <link rel="manifest" href="../image/site.webmanifest">
+  <link rel="stylesheet" href="../stylesheets/shared.css?v=20260316b">
+  <link rel="stylesheet" href="../stylesheets/admin-enhancements.css?v=20260810">
+  <style>
+    .admin-dashboard-page .page-header-split { gap: 20px; align-items: flex-start; }
+    .admin-dashboard-page .page-header-copy h1 { margin-bottom: 8px; }
+    .admin-dashboard-page .page-header-copy p { max-width: 640px; color: var(--admin-muted-color); }
+    .admin-dashboard-page .card-grid { grid-template-columns: repeat(2, minmax(280px, 1fr)); gap: 20px; margin-top: 20px; }
+    .admin-dashboard-page .admin-summary-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+    .admin-dashboard-page .admin-summary-item { padding: 18px; border-radius: 18px; background: var(--surface-2); text-align: center; }
+    .admin-dashboard-page .admin-summary-item span { display: block; font-size: 30px; font-weight: 700; color: var(--admin-primary); margin-bottom: 6px; }
+    .admin-dashboard-page .admin-summary-item p { margin: 0; color: var(--admin-muted-color); }
+    .admin-dashboard-page .admin-actions-list { display: grid; gap: 12px; }
+    .admin-dashboard-page .admin-actions-list .btn { width: 100%; justify-content: center; }
+    .admin-dashboard-page .admin-callout { margin-top: 20px; padding: 18px; border-radius: 18px; background: var(--surface-2); color: var(--admin-muted-color); line-height: 1.6; }
+    .admin-dashboard-page .section-title { font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--admin-muted-color); margin-bottom: 16px; }
+    @media (max-width: 900px) {
+      .admin-dashboard-page .card-grid { grid-template-columns: 1fr; }
+      .admin-dashboard-page .admin-summary-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 640px) {
+      .admin-dashboard-page .admin-summary-list { grid-template-columns: 1fr; }
+    }
+  </style>
+  <script src="../runtime-config.js?v=20260316c"></script>
+</head>
+<body class="admin-dashboard-page">
+<div class="layout admin-panel">
+  <aside class="sidebar">
+    <div class="sidebar-logo" aria-label="Admin portal">
+      <h2>TalaSaAI</h2>
+      <p>Admin Portal</p>
+    </div>
+    <nav>
+      <a href="admin-dashboard.html" class="active"><span class="icon" data-icon="dashboard"></span><span class="nav-label">Dashboard</span></a>
+      <a href="admin-students.html"><span class="icon" data-icon="students"></span><span class="nav-label">Students</span></a>
+      <a href="admin-teachers.html"><span class="icon" data-icon="teacher"></span><span class="nav-label">Teachers</span></a>
+      <a href="admin-passages.html"><span class="icon" data-icon="library"></span><span class="nav-label">Passages</span></a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="logout-btn" onclick="logout()" type="button"><span class="icon" data-icon="logout"></span><span class="nav-label">Logout</span></button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="page-header page-header-split">
+      <div class="page-header-copy">
+        <p class="eyebrow">Administration</p>
+        <h1>Admin Dashboard</h1>
+        <p>See the core totals and move directly to the student, teacher, or passage management pages from one clean overview.</p>
+      </div>
+      <div class="header-meta"></div>
+    </div>
+
+    <div class="card-grid card-grid-2">
+      <section class="card">
+        <div class="section-title">Quick actions</div>
+        <div class="admin-actions-list">
+          <button class="btn btn-primary" onclick="window.location.href='admin-students.html'">Manage Students</button>
+          <button class="btn btn-primary" onclick="window.location.href='admin-teachers.html'">Manage Teachers</button>
+          <button class="btn btn-primary" onclick="window.location.href='admin-passages.html'">Manage Passages</button>
+          <button class="btn btn-primary" onclick="window.location.href='admin-admins.html'">Manage Admins</button>
+        </div>
+      </section>
+      <section class="card">
+        <div class="section-title">Library totals</div>
+        <div class="admin-summary-list">
+          <div class="admin-summary-item"><span id="student-count">-</span><p>Students</p></div>
+          <div class="admin-summary-item"><span id="teacher-count">-</span><p>Teachers</p></div>
+          <div class="admin-summary-item"><span id="passage-count">-</span><p>Passages</p></div>
+        </div>
+      </section>
+    </div>
+
+  </main>
+</div>
+
+<script src="../api.js?v=20260804"></script>
+<script src="../admin-dashboard.js?v=20260810"></script>
+</body>
+</html>

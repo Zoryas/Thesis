@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Login - TalaSaAI</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="image/logo-final.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="image/logo-final.png">
+  <link rel="manifest" href="image/site.webmanifest">
+  <script src="runtime-config.js?v=20260316c"></script>
+  <link rel="stylesheet" href="stylesheets/login.css?v=20260327h">
+</head>
+<body>
+  <div class="background">
+    <div class="auth-shell">
+      <div class="login-card">
+        <section class="login-form-panel" aria-label="Admin sign in">
+          <div class="card-intro">
+            <div class="school-brand">
+              <div class="school-brand-word">TalaSaAI</div>
+            </div>
+            <p class="subtitle">Admin Portal</p>
+          </div>
+
+          <label class="field-group" for="admin-email">
+            <span class="field-label">Admin Email</span>
+            <div class="input-wrap">
+              <input type="email" id="admin-email" class="input" placeholder="admin@pnhs.edu" autocomplete="username" inputmode="email">
+            </div>
+          </label>
+          <label class="field-group" for="admin-password">
+            <span class="field-label">Password</span>
+            <div class="input-wrap">
+              <input type="password" id="admin-password" class="input" placeholder="Enter password" autocomplete="current-password">
+              <button id="adminTogglePasswordBtn" class="password-toggle" type="button" aria-label="Show password">Show</button>
+            </div>
+          </label>
+          <p id="adminLoginError" class="login-error" hidden></p>
+
+          <button id="adminLoginBtn" class="button">Sign In</button>
+
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <script src="api.js?v=20260804"></script>
+  <script src="admin-login.js?v=20260810"></script>
+</body>
+</html>

@@ -4,7 +4,7 @@ from werkzeug.security import generate_password_hash
 
 os.environ.setdefault("READWISE_SKIP_AUTO_INIT", "1")
 
-from app import DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME, SEED_TEACHERS, SEED_STUDENTS
+from app import DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME, SEED_ADMINS, SEED_TEACHERS, SEED_STUDENTS
 
 
 def connect(database=None, autocommit=False):
@@ -37,10 +37,11 @@ def ensure_schema():
             id INT AUTO_INCREMENT PRIMARY KEY,
             email VARCHAR(255) UNIQUE NOT NULL,
             password_hash VARCHAR(255) NOT NULL,
-            role ENUM('teacher','student') NOT NULL,
+            role ENUM('teacher','student','admin') NOT NULL,
             is_active TINYINT(1) NOT NULL DEFAULT 1,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
+        """ALTER TABLE users MODIFY COLUMN role ENUM('teacher','student','admin') NOT NULL""",
         """CREATE TABLE IF NOT EXISTS program_settings (
             id TINYINT PRIMARY KEY,
             program_start_date DATE NOT NULL,
@@ -80,18 +81,6 @@ def ensure_schema():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
-        """CREATE TABLE IF NOT EXISTS audit_logs (
-            id BIGINT AUTO_INCREMENT PRIMARY KEY,
-            user_id INT NULL,
-            student_id VARCHAR(20) NULL,
-            action VARCHAR(80) NOT NULL,
-            details JSON NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            INDEX idx_audit_user_action (user_id, action),
-            INDEX idx_audit_student_created (student_id, created_at),
-            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
-            FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
     ]
     for sql in statements:
         cur.execute(sql)
@@ -109,6 +98,15 @@ def seed_users_and_students():
         cur.execute("SELECT CURRENT_DATE() AS today")
         today = cur.fetchone()["today"]
         cur.execute("INSERT INTO program_settings (id, program_start_date, manual_override_week, updated_by) VALUES (1, %s, NULL, NULL)", (today,))
+
+    for admin in SEED_ADMINS:
+        password_hash = generate_password_hash(admin["password"])
+        cur.execute("SELECT id FROM users WHERE email=%s", (admin["email"],))
+        row = cur.fetchone()
+        if row:
+            cur.execute("UPDATE users SET password_hash=%s, role='admin', is_active=1 WHERE id=%s", (password_hash, row["id"]))
+        else:
+            cur.execute("INSERT INTO users (email, password_hash, role, is_active) VALUES (%s, %s, 'admin', 1)", (admin["email"], password_hash))
 
     for teacher in SEED_TEACHERS:
         password_hash = generate_password_hash(teacher["password"])

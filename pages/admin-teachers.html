@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Teachers - TalaSaAI</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="../image/logo-final.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="../image/logo-final.png">
+  <link rel="manifest" href="../image/site.webmanifest">
+  <link rel="stylesheet" href="../stylesheets/shared.css?v=20260316b">
+  <link rel="stylesheet" href="../stylesheets/admin-enhancements.css?v=20260811">
+  <style>
+    #teacher-form-card.hidden { display: none !important; }
+    #teacher-form-card .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(260px, 1fr));
+      gap: 18px;
+      align-items: start;
+    }
+    #teacher-form-card .field-group {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-width: 0;
+    }
+    #teacher-form-card .field-group .field-label {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--admin-muted-color);
+    }
+    #teacher-form-card .field-group .input,
+    #teacher-form-card .field-group select {
+      width: 100%;
+      min-width: 0;
+      padding: 14px 16px;
+      border-radius: 16px;
+      font-size: 14px;
+      box-sizing: border-box;
+      border: 1px solid var(--admin-input-border);
+      background: var(--admin-input-bg);
+      color: var(--admin-text-color);
+    }
+    #teacher-form-card .field-group.inline-toggle {
+      display: grid;
+      align-items: center;
+      grid-template-columns: auto 1fr;
+      grid-column: span 2;
+      gap: 12px;
+    }
+    #teacher-form-card .admin-form-footer { display:flex; justify-content:flex-end; gap:10px; margin-top:16px; }
+    #teacher-form-card .field-group.field-span-2 { grid-column: span 2; }
+    #teacher-form-card .field-note {
+      display: block;
+      width: 100%;
+      margin-top: 6px;
+      font-size: 12px;
+      line-height: 1.4;
+      color: var(--admin-muted-color);
+      grid-column: 1 / -1;
+      margin-left: 0;
+    }
+    @media (max-width: 1080px) {
+      #teacher-form-card .form-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      #teacher-form-card .field-group.inline-toggle {
+        grid-column: span 2;
+      }
+      #teacher-form-card .field-note {
+        margin-left: 0;
+      }
+    }
+    @media (max-width: 1080px) {
+      #teacher-form-card .form-grid,
+      #teacher-form-card .field-group {
+        width: 100%;
+        max-width: 100%;
+        flex: 1 1 100%;
+      }
+      #teacher-form-card .field-group .field-label {
+        width: auto;
+      }
+      #teacher-form-card .field-note {
+        margin-left: 0;
+      }
+    }
+    .admin-form-card + .card {
+      margin-top: 24px;
+    }
+  </style>
+  <script src="../runtime-config.js?v=20260316c"></script>
+</head>
+<body class="admin-teachers-page">
+<div class="layout admin-panel">
+  <aside class="sidebar">
+    <div class="sidebar-logo" aria-label="Admin portal">
+      <h2>TalaSaAI</h2>
+      <p>Admin Portal</p>
+    </div>
+    <nav>
+      <a href="admin-dashboard.html"><span class="icon" data-icon="dashboard"></span><span class="nav-label">Dashboard</span></a>
+      <a href="admin-students.html"><span class="icon" data-icon="students"></span><span class="nav-label">Students</span></a>
+      <a href="admin-teachers.html" class="active"><span class="icon" data-icon="teacher"></span><span class="nav-label">Teachers</span></a>
+      <a href="admin-passages.html"><span class="icon" data-icon="library"></span><span class="nav-label">Passages</span></a>
+      <a href="admin-admins.html"><span class="icon" data-icon="settings"></span><span class="nav-label">Admins</span></a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="logout-btn" onclick="logout()" type="button"><span class="icon" data-icon="logout"></span><span class="nav-label">Logout</span></button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="page-header page-header-split">
+      <div class="page-header-copy">
+        <p class="eyebrow">Administration</p>
+        <h1>Teacher Accounts</h1>
+        <p>Manage teacher access, department assignments, and credentials.</p>
+      </div>
+      <div class="header-meta">
+        <button class="btn btn-primary" type="button" onclick="openTeacherModal()">Create Teacher</button>
+      </div>
+    </div>
+
+    <div class="card admin-form-card hidden" id="teacher-form-card">
+      <div class="card-header">
+        <div class="card-header-copy">
+          <p class="eyebrow">Teacher form</p>
+          <h3 id="teacher-modal-title">Create Teacher</h3>
+        </div>
+      </div>
+      <div class="form-grid admin-form-grid">
+        <label class="field-group">
+          <span class="field-label">Email</span>
+          <input id="teacher-email" class="input" type="email" placeholder="teacher@example.com" autocomplete="username">
+        </label>
+        <label class="field-group">
+          <span class="field-label">Password</span>
+          <input id="teacher-password" class="input" type="password" placeholder="Password">
+        </label>
+        <label class="field-group">
+          <span class="field-label">Full Name</span>
+          <input id="teacher-name" class="input" type="text" placeholder="Teacher Name">
+        </label>
+        <label class="field-group">
+          <span class="field-label">Department</span>
+          <input id="teacher-department" class="input" type="text" placeholder="English">
+        </label>
+        <label class="field-group inline-toggle">
+          <input id="teacher-active" type="checkbox" checked>
+          <span class="field-label" style="margin:0">Active account</span>
+        </label>
+      </div>
+      <div class="admin-form-footer" id="teacher-form-footer">
+        <button class="btn btn-outline" type="button" onclick="closeTeacherModal()">Cancel</button>
+        <button class="btn btn-primary" type="button" id="teacher-save-btn">Save teacher</button>
+      </div>
+      <p id="teacher-modal-error" class="login-error" hidden></p>
+    </div>
+
+    <div class="card">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Email</th>
+              <th>Name</th>
+              <th>Department</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="teachers-table"></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="../api.js?v=20260804"></script>
+<script src="../admin-teachers.js?v=20260810"></script>
+</body>
+</html>
