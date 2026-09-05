@@ -13,6 +13,18 @@ async function enforceAdminSession() {
   return true;
 }
 
+async function logout() {
+  try {
+    if (window.ReadWiseAPI && typeof ReadWiseAPI.logout === "function") {
+      await ReadWiseAPI.logout();
+    }
+  } catch (error) {
+    console.warn("Logout request failed:", error);
+  }
+  sessionStorage.clear();
+  window.location.href = "/admin-login";
+}
+
 function resetAdminForm() {
   document.getElementById("admin-email").value = "";
   document.getElementById("admin-password").value = "";

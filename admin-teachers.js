@@ -63,6 +63,30 @@ function setTeacherError(message) {
   err.hidden = false;
 }
 
+function downloadTeacherTemplate() {
+  const csv = "fullName,email,password,department\nTeacher Name,teacher@example.com,Password123!,English\n";
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = "teacher-import-template.csv";
+  link.click();
+  URL.revokeObjectURL(link.href);
+}
+
+async function importTeachers(file) {
+  if (!file) return;
+  try {
+    const result = await ReadWiseAPI.bulkCreateAdminTeachers(file);
+    const message = result.errorCount
+      ? result.createdCount + " teachers imported; " + result.errorCount + " rows failed."
+      : result.createdCount + " teachers imported successfully.";
+    window.alert(message);
+    await loadTeacherRoster();
+  } catch (error) {
+    window.alert(error.message || "Unable to import teachers.");
+  }
+}
+
 async function saveTeacher() {
   const data = getTeacherFormState();
   if (!data.email) {
@@ -170,5 +194,9 @@ async function logout() {
 }
 
 document.getElementById("teacher-save-btn").addEventListener("click", saveTeacher);
+document.getElementById("teacher-bulk-file").addEventListener("change", function(event) {
+  importTeachers(event.target.files[0]);
+  event.target.value = "";
+});
 
 loadTeacherRoster();

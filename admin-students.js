@@ -88,6 +88,30 @@ function showToast(message, type) {
   }
 }
 
+function downloadStudentTemplate() {
+  const csv = "fullName,email,password,grade,section,classLevel,preScore\nStudent Name,student@example.com,Password123!,7,MAKADIYOS,,\n";
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = "student-import-template.csv";
+  link.click();
+  URL.revokeObjectURL(link.href);
+}
+
+async function importStudents(file) {
+  if (!file) return;
+  try {
+    const result = await ReadWiseAPI.bulkCreateAdminStudents(file);
+    const message = result.errorCount
+      ? result.createdCount + " students imported; " + result.errorCount + " rows failed."
+      : result.createdCount + " students imported successfully.";
+    showToast(message, result.errorCount ? "error" : "success");
+    await loadStudentRoster();
+  } catch (error) {
+    showToast(error.message || "Unable to import students.", "error");
+  }
+}
+
 async function saveStudent() {
   console.debug("admin-students: saveStudent clicked");
   const saveBtn = document.getElementById("student-save-btn");
@@ -176,6 +200,35 @@ async function deleteStudent(studentId) {
   }
 }
 
+function getSelectedStudentIds() {
+  return Array.from(document.querySelectorAll(".student-select:checked")).map(function(input) {
+    return input.value;
+  });
+}
+
+function updateStudentSelectionState() {
+  const selected = getSelectedStudentIds();
+  const deleteButton = document.getElementById("bulk-delete-students-btn");
+  const checkboxes = Array.from(document.querySelectorAll(".student-select"));
+  const selectAll = document.getElementById("select-all-students");
+  deleteButton.disabled = selected.length === 0;
+  selectAll.checked = checkboxes.length > 0 && selected.length === checkboxes.length;
+  selectAll.indeterminate = selected.length > 0 && selected.length < checkboxes.length;
+}
+
+async function deleteSelectedStudents() {
+  const studentIds = getSelectedStudentIds();
+  if (!studentIds.length) return;
+  if (!window.confirm("Delete " + studentIds.length + " selected student account(s)? This action cannot be undone.")) return;
+  try {
+    const result = await ReadWiseAPI.bulkDeleteAdminStudents(studentIds);
+    showToast((result.deleted || studentIds.length) + " student account(s) deleted.", "success");
+    await loadStudentRoster();
+  } catch (error) {
+    showToast(error.message || "Unable to delete selected students.", "error");
+  }
+}
+
 function openStudentModalFromButton(button) {
   try {
     const payload = button.dataset.student ? JSON.parse(decodeURIComponent(button.dataset.student)) : null;
@@ -190,6 +243,7 @@ function openStudentModalFromButton(button) {
 function renderStudentRow(student, index) {
   var encoded = encodeURIComponent(JSON.stringify(student));
   return '<tr>' +
+    '<td><input class="student-select" type="checkbox" value="' + escapeHtml(student.id) + '" aria-label="Select ' + escapeHtml(student.fullName) + '"></td>' +
     '<td>' + (index + 1) + '</td>' +
     '<td class="col-email" title="' + escapeHtml(student.email) + '">' + escapeHtml(student.email) + '</td>' +
     '<td class="col-name">' + escapeHtml(student.fullName) + '</td>' +
@@ -211,10 +265,14 @@ async function loadStudentRoster() {
     const students = Array.isArray(response.students) ? response.students : [];
     const tbody = document.getElementById("students-table");
     if (!students.length) {
-      tbody.innerHTML = '<tr><td colspan="8">No student records found.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="9">No student records found.</td></tr>';
       return;
     }
     tbody.innerHTML = students.map(renderStudentRow).join("");
+    Array.from(document.querySelectorAll(".student-select")).forEach(function(input) {
+      input.addEventListener("change", updateStudentSelectionState);
+    });
+    updateStudentSelectionState();
   } catch (error) {
     console.error(error);
     window.location.replace("/admin-login");
@@ -236,6 +294,17 @@ function initAdminStudentsPage() {
   if (saveBtn) {
     saveBtn.addEventListener("click", saveStudent);
   }
+  document.getElementById("student-bulk-file").addEventListener("change", function(event) {
+    importStudents(event.target.files[0]);
+    event.target.value = "";
+  });
+  document.getElementById("select-all-students").addEventListener("change", function(event) {
+    Array.from(document.querySelectorAll(".student-select")).forEach(function(input) {
+      input.checked = event.target.checked;
+    });
+    updateStudentSelectionState();
+  });
+  document.getElementById("bulk-delete-students-btn").addEventListener("click", deleteSelectedStudents);
   loadStudentRoster();
 }
 

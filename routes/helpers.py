@@ -251,9 +251,9 @@ def classify_pre_assessment_level(score):
     except (TypeError, ValueError):
         normalized_score = 0
     normalized_score = max(0, min(100, normalized_score))
-    if normalized_score >= 70:
+    if normalized_score >= 80:
         return "HARD"
-    if normalized_score >= 55:
+    if normalized_score >= 60:
         return "MODERATE"
     return "EASY"
 
@@ -462,6 +462,79 @@ def normalize_text_value(value, max_length=4000):
     return text
 
 
+def _normalized_answer(value):
+    return re.sub(r"\s+", " ", str(value or "").strip().lower())
+
+
+def _answer_list(value):
+    if isinstance(value, list):
+        values = value
+    else:
+        values = str(value or "").split(",")
+    return [_normalized_answer(item) for item in values if _normalized_answer(item)]
+
+
+def evaluate_assessment_responses(cur, passage_id, responses):
+    cur.execute(
+        """
+        SELECT aq.type,aq.answer_index,aq.answer_key,aq.answer_keys_json
+        FROM assessment_questions aq
+        JOIN assessments a ON a.id=aq.assessment_id
+        WHERE a.passage_id=%s
+        ORDER BY aq.sort_order,aq.id
+        """,
+        (passage_id,),
+    )
+    questions = cur.fetchall()
+    submitted = responses if isinstance(responses, list) else []
+    earned = 0
+    possible = 0
+    fully_correct = 0
+
+    for index, question in enumerate(questions):
+        response = submitted[index].get("value") if index < len(submitted) and isinstance(submitted[index], dict) else ""
+        question_type = question["type"]
+        answer_key = _normalized_answer(question.get("answer_key"))
+        answer_keys = json.loads(question.get("answer_keys_json") or "[]")
+        expected = _answer_list(answer_keys or question.get("answer_key"))
+        current_earned = 0
+        current_possible = 1
+
+        if question_type in {"multiple_choice", "multiple_choice_harder"}:
+            current_earned = int(str(response).strip() == str(question.get("answer_index") or 0))
+        elif question_type == "true_false":
+            current_earned = int(_normalized_answer(response) == answer_key)
+        elif question_type == "true_false_modified":
+            choice = response.get("choice") if isinstance(response, dict) else ""
+            correction = response.get("correction") if isinstance(response, dict) else ""
+            current_earned = int(_normalized_answer(choice) == answer_key)
+            if current_earned and answer_key == "false":
+                current_earned = int(not expected or _normalized_answer(correction) in expected)
+        elif question_type == "sequence":
+            actual = _answer_list(response)
+            current_earned = int(bool(expected) and actual == expected)
+        elif question_type == "enumeration":
+            actual = set(_answer_list(response))
+            current_possible = len(expected)
+            current_earned = len([item for item in expected if item in actual])
+        else:
+            current_earned = int(_normalized_answer(response) in expected)
+
+        earned += current_earned
+        possible += current_possible
+        if current_earned == current_possible:
+            fully_correct += 1
+
+    score = int(round((earned / possible) * 100)) if possible else 0
+    return {
+        "score": score,
+        "correct": fully_correct,
+        "total": len(questions),
+        "earned": earned,
+        "possible": possible,
+    }
+
+
 def normalize_avatar_type(value):
     v = str(value or "initials").strip().lower()
     return v if v in {"initials", "preset", "upload"} else None
@@ -611,16 +684,133 @@ def build_prediction_response(text):
 
 def recommendation_for_score(score):
     normalized_score = int(score or 0)
-    if normalized_score >= 75:
-        return "Step UP", "HARD"
+    if normalized_score >= 80:
+        return "HARD", "HARD"
     if normalized_score >= 60:
-        return "Maintain", "MODERATE"
-    return "Step DOWN", "EASY"
+        return "MODERATE", "MODERATE"
+    return "EASY", "EASY"
+
+
+def next_class_level(current_level, target_level):
+    levels = ["EASY", "MODERATE", "HARD"]
+    current = normalize_class_level(current_level)
+    target = normalize_class_level(target_level)
+    current_index = levels.index(current)
+    target_index = levels.index(target)
+    if target_index > current_index:
+        return levels[current_index + 1]
+    if target_index < current_index:
+        return levels[current_index - 1]
+    return current
+
+
+def apply_weekly_level_progression(cur, student_id, week):
+    cur.execute(
+        """
+        SELECT previous_level,new_level,average_score,recommendation
+        FROM student_level_progressions
+        WHERE student_id=%s AND week_no=%s
+        """,
+        (student_id, week),
+    )
+    existing = cur.fetchone()
+    if existing:
+        return {
+            "week": int(week),
+            "averageScore": int(existing["average_score"]),
+            "recommendation": existing["recommendation"],
+            "previousLevel": existing["previous_level"],
+            "classLevel": existing["new_level"],
+            "changed": existing["previous_level"] != existing["new_level"],
+            "alreadyApplied": True,
+        }
+
+    cur.execute("SELECT class_level FROM students WHERE id=%s", (student_id,))
+    student = cur.fetchone()
+    if not student:
+        return None
+
+    current_level = normalize_class_level(student["class_level"])
+    cur.execute(
+        "SELECT COUNT(*) AS total FROM weekly_assignments WHERE week_no=%s AND class_level=%s",
+        (week, current_level),
+    )
+    assigned_count = int((cur.fetchone() or {}).get("total") or 0)
+    if not assigned_count:
+        return None
+
+    cur.execute(
+        "SELECT COUNT(DISTINCT passage_id) AS total FROM passage_completions WHERE student_id=%s AND week_no=%s",
+        (student_id, week),
+    )
+    completed_count = int((cur.fetchone() or {}).get("total") or 0)
+    if completed_count < assigned_count:
+        return None
+
+    cur.execute(
+        """
+        SELECT COUNT(*) AS total
+        FROM quiz_attempts
+        WHERE student_id=%s AND week_no=%s
+          AND short_answer_text IS NOT NULL
+          AND TRIM(short_answer_text) <> ''
+          AND teacher_score IS NULL
+        """,
+        (student_id, week),
+    )
+    if int((cur.fetchone() or {}).get("total") or 0):
+        return None
+
+    cur.execute(
+        """
+        SELECT COALESCE(sc.total_score_pct, qa.score_pct) AS score
+        FROM quiz_attempts qa
+        LEFT JOIN scores sc ON sc.legacy_quiz_attempt_id=qa.id
+        WHERE qa.student_id=%s AND qa.week_no=%s
+        """,
+        (student_id, week),
+    )
+    scores = [int(row["score"] or 0) for row in cur.fetchall()]
+    if not scores:
+        return None
+
+    average_score = int(round(sum(scores) / len(scores)))
+    recommendation, _ = recommendation_for_score(average_score)
+    next_level = next_class_level(current_level, recommendation)
+    if next_level != current_level:
+        cur.execute("UPDATE students SET class_level=%s WHERE id=%s", (next_level, student_id))
+    cur.execute(
+        """
+        INSERT INTO student_level_progressions
+            (student_id,week_no,previous_level,new_level,average_score,recommendation)
+        VALUES (%s,%s,%s,%s,%s,%s)
+        """,
+        (student_id, week, current_level, next_level, average_score, recommendation),
+    )
+
+    return {
+        "week": int(week),
+        "averageScore": average_score,
+        "recommendation": recommendation,
+        "previousLevel": current_level,
+        "classLevel": next_level,
+        "changed": next_level != current_level,
+    }
 
 
 def fetch_student_progress(cur, student_id):
     cur.execute(
-        "SELECT week_no, ROUND(AVG(score_pct)) AS score FROM quiz_attempts WHERE student_id=%s GROUP BY week_no ORDER BY week_no",
+        """
+                SELECT qa.week_no, ROUND(AVG(COALESCE(sc.total_score_pct, qa.score_pct))) AS score,
+                             COUNT(slp.id) AS progression_applied
+        FROM quiz_attempts qa
+        LEFT JOIN scores sc ON sc.legacy_quiz_attempt_id=qa.id
+                LEFT JOIN student_level_progressions slp
+                    ON slp.student_id=qa.student_id AND slp.week_no=qa.week_no
+        WHERE qa.student_id=%s
+        GROUP BY qa.week_no
+        ORDER BY qa.week_no
+        """,
         (student_id,),
     )
     rows = cur.fetchall()
@@ -634,6 +824,7 @@ def fetch_student_progress(cur, student_id):
                 "score": score,
                 "difficulty": difficulty,
                 "recommendation": recommendation,
+                "applied": bool(int(row.get("progression_applied") or 0)),
             }
         )
 
@@ -762,7 +953,16 @@ def fetch_student_progress(cur, student_id):
             {"week": 6, "score": 60, "difficulty": "EASY", "recommendation": "Step UP to MODERATE"},
         ],
     }
-    return fallback_progress.get(str(student_id), [])
+    fallback = fallback_progress.get(str(student_id), [])
+    return [
+        dict(
+            item,
+            difficulty=recommendation_for_score(item["score"])[1],
+            recommendation=recommendation_for_score(item["score"])[0],
+            applied=False,
+        )
+        for item in fallback
+    ]
 
 
 def fetch_teacher_student_summaries(cur):
@@ -834,9 +1034,36 @@ def build_report_status(student, is_stagnant):
 
 
 def build_teacher_report_summary(cur, active_week):
+    active_week = normalize_week(active_week)
     students = fetch_teacher_student_summaries(cur)
     report_rows = []
+    completion_ratios = []
     for student in students:
+        cur.execute(
+            """
+            SELECT week_no,previous_level
+            FROM student_level_progressions
+            WHERE student_id=%s AND week_no BETWEEN 1 AND %s
+            """,
+            (student["id"], active_week),
+        )
+        level_by_week = {int(row["week_no"]): row["previous_level"] for row in cur.fetchall()}
+        cur.execute(
+            "SELECT COUNT(*) AS total FROM passage_completions WHERE student_id=%s AND week_no BETWEEN 1 AND %s",
+            (student["id"], active_week),
+        )
+        completed_count = int((cur.fetchone() or {}).get("total") or 0)
+        assigned_count = 0
+        fallback_level = normalize_class_level(student["classLevel"])
+        for week_no in range(1, active_week + 1):
+            level = level_by_week.get(week_no, fallback_level)
+            cur.execute(
+                "SELECT COUNT(*) AS total FROM weekly_assignments WHERE class_level=%s AND week_no=%s",
+                (level, week_no),
+            )
+            assigned_count += int((cur.fetchone() or {}).get("total") or 0)
+        completion_ratios.append(min(completed_count / assigned_count, 1) if assigned_count else 0)
+
         is_stagnant, stagnant_reason = get_stagnation_details(student["progress"])
         pre_score = int(student["preScore"] or 0) if student["preAssessmentCompleted"] else None
         latest_score = student["latestScore"]
@@ -867,14 +1094,12 @@ def build_teacher_report_summary(cur, active_week):
             }
         )
 
-    completion_base = max(1, len(report_rows) * TOTAL_PROGRAM_WEEKS)
-    completion_value = sum(min(TOTAL_PROGRAM_WEEKS, int(student["latestWeek"] or 0)) for student in report_rows)
-    completion_percent = int(round((completion_value / completion_base) * 100)) if report_rows else 0
+    completion_percent = int(round((sum(completion_ratios) / len(completion_ratios)) * 100)) if completion_ratios else 0
     stagnant_students = [student for student in report_rows if student["isStagnant"]]
 
     return {
         "generatedAt": datetime.now(timezone.utc).isoformat(),
-        "activeWeek": normalize_week(active_week),
+        "activeWeek": active_week,
         "studentCount": len(report_rows),
         "preAverage": average_numbers(
             student["preScore"] for student in report_rows if student["preAssessmentCompleted"]

@@ -64,9 +64,9 @@
         <div class="micro-copy">Students with completed pre-assessment only.</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">Class Average (Current)</div>
+        <div class="stat-label">Latest Weekly Average</div>
         <div class="stat-val" style="color:var(--primary)" id="report-current-avg">Pending</div>
-        <div class="micro-copy" id="report-current-copy">Updates after weekly passage submissions.</div>
+        <div class="micro-copy" id="report-current-copy">Updates after finalized weekly scores.</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">Program Completion</div>
@@ -318,8 +318,8 @@
     document.getElementById("report-pre-avg").textContent = (snapshot.preAverage === null || snapshot.preAverage === undefined) ? "--" : (snapshot.preAverage + "%");
     document.getElementById("report-current-avg").textContent = (snapshot.currentAverage === null || snapshot.currentAverage === undefined) ? "Pending" : (snapshot.currentAverage + "%");
     document.getElementById("report-current-copy").textContent = (snapshot.currentAverage === null || snapshot.currentAverage === undefined)
-      ? "Updates after weekly passage submissions."
-      : "Based on the latest scored passage for each student.";
+      ? "Updates after finalized weekly scores."
+      : "Based on each student's latest recorded week.";
     document.getElementById("report-completion").textContent = String(snapshot.completionPercent || 0) + "%";
     document.getElementById("report-completion-copy").textContent = "Display context set to Week " + snapshot.activeWeek + " of " + TOTAL_PROGRAM_WEEKS + ".";
     document.getElementById("report-stagnant-badge").textContent = stagnantStudents.length + " stagnant alert" + (stagnantStudents.length === 1 ? "" : "s");
@@ -516,7 +516,7 @@
       if (!auth || !auth.user || auth.user.role !== "teacher") throw new Error("Unauthorized");
       ReadWiseAPI.renderTeacherSidebar(auth.user);
 
-      var activeWeek = ReadWiseAPI.getActiveWeek();
+      var activeWeek = await ReadWiseAPI.getActiveWeek();
       var snapshot = await ReadWiseAPI.getTeacherReportSummary(activeWeek);
       renderReport(snapshot || {});
     } catch (error) {

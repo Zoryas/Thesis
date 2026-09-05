@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Pre-Assessment - TalaSaAI</title>
+  <link rel="stylesheet" href="../stylesheets/shared.css?v=20260316b">
+  <link rel="stylesheet" href="../stylesheets/admin-enhancements.css?v=20260811">
+  <script src="../runtime-config.js?v=20260316c"></script>
+  <style>
+    .pre-assessment-header-actions { display:flex; align-items:flex-end; gap:12px; min-width:360px; }
+    #pre-assessment-library .library-card { flex-wrap: nowrap; align-items: flex-start; }
+    #pre-assessment-library .library-card-copy { min-width: 0; }
+    #pre-assessment-library .library-card-actions { flex: 0 0 230px; justify-content: flex-end; }
+    #pre-assessment-library .library-card-actions .btn { width: 100%; }
+    @media (max-width: 760px) {
+      .pre-assessment-header-actions { min-width:0; width:100%; flex-wrap:wrap; }
+      #pre-assessment-library .library-card { display: grid; grid-template-columns: minmax(0, 1fr) minmax(170px, 32%); gap: 14px; }
+      #pre-assessment-library .library-card-actions { width: auto; }
+    }
+  </style>
+</head>
+<body class="admin-panel">
+<div class="layout admin-panel">
+  <aside class="sidebar">
+    <div class="sidebar-logo" aria-label="Admin portal"><h2>TalaSaAI</h2><p>Admin Portal</p></div>
+    <nav>
+      <a href="admin-dashboard.html"><span class="icon" data-icon="dashboard"></span><span class="nav-label">Dashboard</span></a>
+      <a href="admin-students.html"><span class="icon" data-icon="students"></span><span class="nav-label">Students</span></a>
+      <a href="admin-teachers.html"><span class="icon" data-icon="teacher"></span><span class="nav-label">Teachers</span></a>
+      <a href="admin-passages.html"><span class="icon" data-icon="library"></span><span class="nav-label">Passages</span></a>
+      <a href="admin-pre-assessment.html" class="active"><span class="icon" data-icon="assessment"></span><span class="nav-label">Pre-Assessment</span></a>
+      <a href="admin-admins.html"><span class="icon" data-icon="settings"></span><span class="nav-label">Admins</span></a>
+    </nav>
+    <div class="sidebar-footer"><button class="logout-btn" onclick="logout()" type="button"><span class="icon" data-icon="logout"></span><span class="nav-label">Logout</span></button></div>
+  </aside>
+  <main class="main">
+    <div class="page-header page-header-split">
+      <div class="page-header-copy"><p class="eyebrow">Administration</p><h1>Pre-Assessment</h1><p>Set the passages and questions students complete before their reading level is assigned.</p></div>
+    </div>
+    <section class="card">
+      <div class="card-header"><div class="card-header-copy"><div class="section-title">Choose From Passage Library</div><p class="micro-copy">Choose one passage for each reading level. The selected passage must already have assessment questions in the Passage Library.</p></div><div class="pre-assessment-header-actions"><div style="min-width:220px"><label class="form-label" for="difficulty-filter">Difficulty View</label><select class="form-control" id="difficulty-filter"><option value="ALL">All Difficulties</option><option value="EASY">Easy</option><option value="MODERATE">Moderate</option><option value="HARD">Difficult</option></select></div><button class="btn btn-primary" type="button" id="save-config-btn" disabled>Save Pre-Assessment</button></div></div>
+      <div id="selection-summary" class="surface-note surface-note-accent" style="margin-bottom:16px">Select one available passage for each level, then save the pre-assessment.</div>
+      <div id="pre-assessment-library" class="library-list"></div>
+      <p id="pre-assessment-message" class="login-error" hidden></p>
+    </section>
+  </main>
+</div>
+<script src="../api.js?v=20260804"></script>
+<script src="../admin-pre-assessment.js?v=20260905"></script>
+</body>
+</html>

@@ -99,6 +99,7 @@
   const weekSelectorOptions = document.getElementById("week-selector-options");
 
   let passages = [];
+  let preAssessmentPassageIds = new Set();
   let weeklyAssignments = { EASY: [], MODERATE: [], HARD: [] };
   let currentActiveWeek = 1; // true program week from dashboard/server
   let selectedAssignmentWeek = 1; // local week context for assignment planning
@@ -267,14 +268,17 @@
       const classLevel = mapPassageLabelToClassLevel(passage.label);
       const classDisplay = getClassDisplayName(classLevel);
       const isAssigned = getAssignmentsFor(classLevel).includes(passage.id);
+      const isPreAssessment = preAssessmentPassageIds.has(passage.id);
       const usedWeeks = Array.isArray(passage.usedWeeks) ? passage.usedWeeks.map(function(value) { return Number(value); }).filter(Boolean) : [];
       const usedThisWeek = usedWeeks.includes(week);
       const usedPastWeeks = usedWeeks.filter(function(usedWeek) { return usedWeek < week; });
       const usedWeekText = isDraft
         ? "Draft passages cannot be assigned until published."
         : (usedPastWeeks.length ? ("Used in Week " + usedPastWeeks.join(", ")) : "Not used in previous weeks");
-      const disabled = (isAssigned || isDraft) ? "disabled" : "";
-      const assignText = isDraft
+      const disabled = (isAssigned || isDraft || isPreAssessment) ? "disabled" : "";
+      const assignText = isPreAssessment
+        ? "Assigned to Pre-Assessment"
+        : isDraft
         ? "Complete assessment to assign"
         : (isAssigned ? "Assigned to " + classDisplay : "Assign to " + classDisplay + " Class");
 
@@ -294,8 +298,8 @@
               '<span class="library-card-fact">Target class: ' + classDisplay + '</span>' +
             "</div>" +
             '<div class="surface-note">Assessment: <strong>' + escapeHtml(assessmentText) + "</strong></div>" +
-            '<div class="surface-note ' + ((usedThisWeek || isDraft) ? "surface-note-warn" : "") + '">' +
-              (usedThisWeek ? ("Already assigned this Week " + week + ".") : escapeHtml(usedWeekText)) +
+            '<div class="surface-note ' + ((usedThisWeek || isDraft || isPreAssessment) ? "surface-note-warn" : "") + '">' +
+              (isPreAssessment ? "Assigned to the Pre-Assessment. It cannot be assigned to a weekly assessment." : usedThisWeek ? ("Already assigned this Week " + week + ".") : escapeHtml(usedWeekText)) +
             "</div>" +
             '<p class="library-card-preview">' + escapeHtml(preview) + "</p>" +
           "</div>" +
@@ -311,6 +315,9 @@
 
   async function loadPassages() {
     passages = await ReadWiseAPI.getPassages();
+    const configResponse = await ReadWiseAPI.getPreAssessmentConfig();
+    const config = configResponse && configResponse.config;
+    preAssessmentPassageIds = new Set(Array.isArray(config) ? config.map(function(step) { return step.id; }).filter(Boolean) : []);
   }
 
   async function loadAssignments() {
@@ -328,6 +335,10 @@
     }
     if (passage.isDraft) {
       showToast("Complete the assessment before assigning this draft passage.", "#c0392b");
+      return;
+    }
+    if (preAssessmentPassageIds.has(passage.id)) {
+      showToast("This passage is assigned to the pre-assessment and cannot be assigned weekly.", "#c0392b");
       return;
     }
     const targetClass = mapPassageLabelToClassLevel(passage.label);

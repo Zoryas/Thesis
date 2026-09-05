@@ -334,17 +334,30 @@
     createAdminStudent: function(payload) {
       return request("/api/admin/students", { method: "POST", body: payload });
     },
+    bulkCreateAdminStudents: function(file) {
+      var form = new FormData();
+      form.append("file", file);
+      return request("/api/admin/students/bulk", { method: "POST", body: form });
+    },
     updateAdminStudent: function(studentId, payload) {
       return request("/api/admin/students/" + encodeURIComponent(studentId), { method: "PUT", body: payload });
     },
     deleteAdminStudent: function(studentId) {
       return request("/api/admin/students/" + encodeURIComponent(studentId), { method: "DELETE" });
     },
+    bulkDeleteAdminStudents: function(studentIds) {
+      return request("/api/admin/students/bulk-delete", { method: "POST", body: { studentIds: studentIds } });
+    },
     getAdminTeachers: function() {
       return request("/api/admin/teachers");
     },
     createAdminTeacher: function(payload) {
       return request("/api/admin/teachers", { method: "POST", body: payload });
+    },
+    bulkCreateAdminTeachers: function(file) {
+      var form = new FormData();
+      form.append("file", file);
+      return request("/api/admin/teachers/bulk", { method: "POST", body: form });
     },
     updateAdminTeacher: function(teacherId, payload) {
       return request("/api/admin/teachers/" + encodeURIComponent(teacherId), { method: "PUT", body: payload });
@@ -370,6 +383,15 @@
     },
     getAdminPassages: function() {
       return request("/api/admin/passages");
+    },
+    getPreAssessmentConfig: function() {
+      return request("/api/pre-assessment/config");
+    },
+    savePreAssessmentConfig: function(config) {
+      return request("/api/pre-assessment/config", { method: "PUT", body: { config: config } });
+    },
+    savePreAssessmentPassages: function(passageIds) {
+      return request("/api/pre-assessment/config", { method: "PUT", body: { passageIds: passageIds } });
     },
     createAdminPassage: function(payload) {
       return request("/api/admin/passages", { method: "POST", body: payload });

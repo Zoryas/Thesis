@@ -48,9 +48,7 @@
             <tr>
               <th>Student</th>
               <th>Current Level</th>
-              <th>Latest Score</th>
-              <th>Self-Rating</th>
-              <th>Task Completion</th>
+              <th>Latest Progress</th>
               <th>System Recommendation</th>
               <th>Action</th>
             </tr>
@@ -64,10 +62,11 @@
       <div style="font-size:13px;color:var(--secondary)">
         <strong>How Recommendations Work</strong>
         <div style="color:var(--muted);margin-top:8px;display:grid;gap:6px">
-          <div>The engine uses quiz score, task completion, and self-reported difficulty for each session.</div>
-          <div>Two consecutive scores below 60% with <strong>DIFFICULT</strong> self-ratings: <strong style="color:var(--hard)">Step Down</strong> one level.</div>
-          <div>Score above 80% with an <strong>EASY</strong> self-rating: <strong style="color:var(--easy)">Step Up</strong> one level.</div>
-          <div>All other signal combinations: <strong style="color:var(--accent)">Maintain</strong> current level.</div>
+          <div>The engine assigns a target level from the student's average assessment percentage.</div>
+          <div><strong>0–59%</strong>: target <strong style="color:var(--hard)">EASY</strong>.</div>
+          <div><strong>60–79%</strong>: target <strong style="color:var(--accent)">MODERATE</strong>.</div>
+          <div><strong>80–100%</strong>: target <strong style="color:var(--easy)">DIFFICULT</strong>.</div>
+          <div>The student moves one level only when the score crosses into a different band. Teachers can confirm or override the target level.</div>
           <div>Teachers can confirm the recommendation or override it before applying.</div>
         </div>
       </div>
@@ -121,14 +120,27 @@
     return { color: "var(--accent)", background: "#fff3cd" };
   }
 
+  function transitionLabel(currentLevel, targetLevel) {
+    var levels = ["EASY", "MODERATE", "HARD"];
+    var current = normalizeClassLevel(currentLevel);
+    var target = normalizeClassLevel(targetLevel);
+    var currentIndex = levels.indexOf(current);
+    var targetIndex = levels.indexOf(target);
+    if (targetIndex > currentIndex) return "Step Up";
+    if (targetIndex < currentIndex) return "Step Down";
+    return "Maintain";
+  }
+
   function getLatestSummary(student) {
     var progress = Array.isArray(student.progress) ? student.progress : [];
     if (!progress.length) return null;
     var latest = progress[progress.length - 1];
+    var targetLevel = latest.recommendedLevel || latest.recommendation || latest.difficulty || student.classLevel || "MODERATE";
     return {
       latest: latest,
-      recommendation: latest.recommendation || "Maintain",
-      recommendedLevel: latest.recommendedLevel || latest.difficulty || student.classLevel || "MODERATE"
+      recommendation: transitionLabel(student.classLevel || "MODERATE", targetLevel),
+      recommendedLevel: targetLevel,
+      applied: Boolean(latest.applied)
     };
   }
 
@@ -147,7 +159,7 @@
           : "No students are available yet.";
 
       if (!students.length) {
-        tbody.innerHTML = '<tr><td colspan="7">No student records yet.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5">No student records yet.</td></tr>';
         return;
       }
 
@@ -158,7 +170,7 @@
           return '<tr id="' + rowId + '">' +
             '<td><strong>' + escapeHtml(student.name) + '</strong><div class="micro-copy">No completed sessions yet</div></td>' +
             '<td><span class="badge ' + badgeClass(student.classLevel || "MODERATE") + '">' + escapeHtml(getClassDisplayName(student.classLevel || "MODERATE")) + '</span></td>' +
-            '<td colspan="3"><span class="muted-copy">Not enough student progress yet</span></td>' +
+            '<td><span class="muted-copy">Not enough student progress yet</span></td>' +
             '<td><span class="badge badge-primary">Pending</span></td>' +
             '<td style="display:flex;gap:6px;flex-wrap:wrap">' +
               '<button class="btn btn-success btn-sm" disabled style="opacity:.55">Confirm</button>' +
@@ -172,11 +184,9 @@
           '<td><strong>' + escapeHtml(student.name) + '</strong><div class="micro-copy">Latest session: Week ' + escapeHtml(summary.latest.week) + '</div></td>' +
           '<td><span class="badge ' + badgeClass(student.classLevel || "MODERATE") + '">' + escapeHtml(getClassDisplayName(student.classLevel || "MODERATE")) + '</span></td>' +
           '<td>' + escapeHtml(summary.latest.score) + '%</td>' +
-          '<td><strong>' + escapeHtml(getClassDisplayName(summary.latest.selfRating || "MODERATE")) + '</strong></td>' +
-          '<td>' + (summary.latest.taskCompleted ? '<span class="badge badge-easy">Completed</span>' : '<span class="badge badge-hard">Not completed</span>') + '</td>' +
-          '<td><span style="font-weight:800;color:' + styles.color + ';background:' + styles.background + ';padding:4px 12px;border-radius:20px;font-size:13px">' + escapeHtml(summary.recommendation) + '</span><div class="micro-copy">Target: ' + escapeHtml(getClassDisplayName(summary.recommendedLevel)) + '</div></td>' +
+          '<td><span style="font-weight:800;color:' + styles.color + ';background:' + styles.background + ';padding:4px 12px;border-radius:20px;font-size:13px">' + escapeHtml(summary.recommendation) + '</span></td>' +
           '<td style="display:flex;gap:6px;flex-wrap:wrap">' +
-            '<button class="btn btn-success btn-sm" onclick="confirmRec(\'' + escapeHtml(student.id) + '\',\'' + escapeHtml(student.name).replace(/'/g, "\\'") + '\')">Confirm</button>' +
+            '<button class="btn btn-success btn-sm" ' + (summary.applied ? 'disabled style="opacity:.55"' : 'onclick="confirmRec(\'' + escapeHtml(student.id) + '\',\'' + escapeHtml(student.name).replace(/'/g, "\\'") + '\')"') + '>' + (summary.applied ? 'Confirmed' : 'Confirm') + '</button>' +
             '<button class="btn btn-outline btn-sm" onclick="openModal(\'' + escapeHtml(student.id) + '\',\'' + escapeHtml(student.name).replace(/'/g, "\\'") + '\')">Override</button>' +
           '</td>' +
         '</tr>';
@@ -187,6 +197,9 @@
   }
 
   async function confirmRec(sid, name) {
+    if (!window.confirm("Confirm this recommendation for " + name + "? It can only be confirmed once for this week.")) {
+      return;
+    }
     var btn = document.querySelector("#row-" + sid + " .btn-success");
     if (btn) {
       btn.disabled = true;

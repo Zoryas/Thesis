@@ -5,7 +5,9 @@ from db import db_cursor
 from routes.helpers import (
     api_error,
     api_ok,
+    apply_weekly_level_progression,
     classify_pre_assessment_level,
+    evaluate_assessment_responses,
     fetch_student_progress,
     normalize_avatar_type,
     normalize_class_level,
@@ -390,16 +392,29 @@ def student_attempts():
     if not passage_id:
         return api_error("passageId is required.", 400)
 
-    score = int(payload.get("score") or 0)
-    correct = int(payload.get("correct") or 0)
-    total = int(payload.get("total") or 0)
+    numeric_values = {}
+    for field in ("score", "correct", "total"):
+        raw_value = payload.get(field)
+        if raw_value in (None, "") or isinstance(raw_value, bool):
+            return api_error(f"{field} is required and must be a number.", 400)
+        try:
+            numeric_values[field] = int(raw_value)
+        except (TypeError, ValueError):
+            return api_error(f"{field} must be a whole number.", 400)
+
+    score = numeric_values["score"]
+    correct = numeric_values["correct"]
+    total = numeric_values["total"]
+    if score < 0 or score > 100 or correct < 0 or total < 0 or correct > total:
+        return api_error("score, correct, and total values are inconsistent.", 400)
     difficulty = payload.get("difficulty")
     try:
         difficulty = int(difficulty) if difficulty not in (None, "") else None
     except (TypeError, ValueError):
-        difficulty = None
+        return api_error("difficulty must be a whole number between 1 and 5.", 400)
     if difficulty is not None:
-        difficulty = max(1, min(5, difficulty))
+        if difficulty < 1 or difficulty > 5:
+            return api_error("difficulty must be a whole number between 1 and 5.", 400)
 
     short_answer = normalize_text_value(payload.get("shortAnswer") or "", max_length=4000)
     reading_time = str(payload.get("readingTime") or "").strip()
@@ -419,6 +434,10 @@ def student_attempts():
         )
         if not cur.fetchone():
             return api_error("Passage is not assigned to this student for the selected week.", 400)
+
+        grading = evaluate_assessment_responses(cur, passage_id, responses)
+        if grading["total"] != total or grading["score"] != score or grading["correct"] != correct:
+            return api_error("Submitted score data does not match the assessment answers.", 400)
 
         if not reading_time:
             cur.execute(
@@ -477,9 +496,9 @@ def student_attempts():
                 student["id"],
                 passage_id,
                 week,
-                max(0, min(100, score)),
-                max(0, correct),
-                max(0, total),
+                grading["score"],
+                grading["correct"],
+                grading["total"],
                 difficulty,
                 short_answer or None,
                 reading_time or None,
@@ -573,7 +592,7 @@ def student_attempts():
         else:
             cur.execute("DELETE FROM short_answer_responses WHERE legacy_quiz_attempt_id=%s", (attempt_id,))
 
-        objective_score_pct = max(0, min(100, score))
+        objective_score_pct = grading["score"]
         cur.execute(
             """
             INSERT INTO scores
@@ -605,6 +624,8 @@ def student_attempts():
                 (student["id"], session_id, json.dumps(history_summary, ensure_ascii=False)),
             )
 
+        progression = apply_weekly_level_progression(cur, student["id"], week)
+
         cur.execute(
             "SELECT passage_id FROM passage_completions WHERE student_id=%s AND week_no=%s ORDER BY completed_at",
             (student["id"], week),
@@ -612,7 +633,7 @@ def student_attempts():
         completed = [row["passage_id"] for row in cur.fetchall()]
 
     _record_audit_log(user["id"], student["id"], "student_submission", {"passageId": passage_id, "week": week, "hasShortAnswer": bool(short_answer)})
-    return api_ok({"attemptId": attempt_id, "week": week, "passageId": passage_id, "completedPassageIds": completed}, 201)
+    return api_ok({"attemptId": attempt_id, "week": week, "passageId": passage_id, "completedPassageIds": completed, "progression": progression}, 201)
 
 
 @student_bp.get("/api/student/attempts")
@@ -634,10 +655,13 @@ def student_attempts_get():
 
         cur.execute(
             """
-            SELECT qa.score_pct, qa.correct_count, qa.total_count,
+                 SELECT COALESCE(sc.total_score_pct, sc.objective_score_pct, qa.score_pct) AS score_pct,
+                     qa.correct_count, qa.total_count,
                    qa.difficulty_rating, qa.short_answer_text,
-                   qa.reading_time, qa.week_no, qa.teacher_score
+                     qa.reading_time, qa.week_no, qa.teacher_score,
+                     sc.total_score_pct
             FROM quiz_attempts qa
+                 LEFT JOIN scores sc ON sc.legacy_quiz_attempt_id=qa.id
             WHERE qa.student_id=%s AND qa.passage_id=%s
             ORDER BY qa.submitted_at DESC, qa.id DESC
             LIMIT 1

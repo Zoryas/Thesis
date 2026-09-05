@@ -19,6 +19,12 @@ class AppConfigTests(unittest.TestCase):
         origins = get_allowed_origins(False, env=env)
         self.assertEqual(origins, ["https://a.example.com", "https://b.example.com"])
 
+    def test_localhost_aliases_expand_to_127_0_0_1_and_localhost(self):
+        env = {"READWISE_ALLOWED_ORIGINS": "http://localhost:5000"}
+        origins = get_allowed_origins(False, env=env)
+        self.assertIn("http://localhost:5000", origins)
+        self.assertIn("http://127.0.0.1:5000", origins)
+
 
 if __name__ == "__main__":
     unittest.main()

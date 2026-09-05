@@ -6,6 +6,7 @@ from db import db_cursor
 from routes.helpers import (
     api_error,
     api_ok,
+    apply_weekly_level_progression,
     average_numbers,
     build_teacher_report_summary,
     fetch_pending_short_answer,
@@ -31,6 +32,51 @@ def _record_audit_log(user_id, student_id, action, details=None):
         )
 
 teacher_bp = Blueprint("teacher_bp", __name__)
+
+
+@teacher_bp.post("/api/teacher/students/<student_id>/apply-recommendation")
+def apply_teacher_recommendation(student_id):
+    user, err = require_role("teacher")
+    if err:
+        return err
+
+    with db_cursor(True) as (_, cur):
+        cur.execute("SELECT id FROM students WHERE id=%s", (student_id,))
+        if not cur.fetchone():
+            return api_error("Student not found.", 404)
+        cur.execute("SELECT MAX(week_no) AS week FROM quiz_attempts WHERE student_id=%s", (student_id,))
+        latest = cur.fetchone()
+        week = int(latest["week"] or 0) if latest else 0
+        if not week:
+            return api_error("No completed student week is available for recommendation.", 400)
+        progression = apply_weekly_level_progression(cur, student_id, week)
+        if not progression:
+            return api_error("The selected week is not complete or still needs teacher scoring.", 400)
+        if progression.get("alreadyApplied"):
+            return api_error("This recommendation has already been confirmed for the week.", 409)
+
+    _record_audit_log(user["id"], student_id, "teacher_confirm_recommendation", progression)
+    return api_ok({"studentId": student_id, "progression": progression, "message": "Recommendation confirmed."})
+
+
+@teacher_bp.post("/api/teacher/students/<student_id>/override-level")
+def override_student_level(student_id):
+    user, err = require_role("teacher")
+    if err:
+        return err
+
+    payload = request.get_json(silent=True) or {}
+    level = normalize_class_level(payload.get("level"))
+    reason = normalize_text_value(payload.get("reason") or "", max_length=1000)
+
+    with db_cursor(True) as (_, cur):
+        cur.execute("SELECT id FROM students WHERE id=%s", (student_id,))
+        if not cur.fetchone():
+            return api_error("Student not found.", 404)
+        cur.execute("UPDATE students SET class_level=%s WHERE id=%s", (level, student_id))
+
+    _record_audit_log(user["id"], student_id, "teacher_override_level", {"level": level, "reason": reason})
+    return api_ok({"studentId": student_id, "classLevel": level, "message": "Student level overridden."})
 
 
 @teacher_bp.get("/api/teacher/dashboard")
@@ -433,6 +479,8 @@ def teacher_score_save():
                 (attempt["id"], int(sar["id"]), user["id"], 1 if score == 1 else 0, feedback or None),
             )
 
+        progression = None
+
         # compute and persist short-answer percent and total percent into scores (when a reading session exists)
         cur.execute("SELECT correct_count,total_count,score_pct,short_answer_text FROM quiz_attempts WHERE id=%s", (attempt["id"],))
         qa_row = cur.fetchone()
@@ -464,6 +512,8 @@ def teacher_score_save():
                     (attempt["id"], session_id, objective_pct, short_answer_pct, total_pct),
                 )
 
+                progression = apply_weekly_level_progression(cur, student_id, attempt["week_no"])
+
         cur.execute(
             """
             SELECT qa.id,qa.student_id,qa.passage_id,qa.week_no,qa.teacher_score,qa.teacher_feedback,
@@ -487,5 +537,6 @@ def teacher_score_save():
             "feedback": saved.get("teacher_feedback") or "",
             "scoredBy": saved.get("scorer_name"),
             "scoredAt": saved["teacher_scored_at"].isoformat() if saved.get("teacher_scored_at") else None,
+            "progression": progression,
         }
     )

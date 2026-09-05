@@ -20,6 +20,28 @@ from routes.helpers import (
 passage_bp = Blueprint("passage_bp", __name__)
 
 
+def _pre_assessment_passage_ids(cur):
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS pre_assessment_config (
+          id TINYINT PRIMARY KEY,
+          config_json LONGTEXT NOT NULL,
+          updated_by INT NULL,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        """
+    )
+    cur.execute("SELECT config_json FROM pre_assessment_config WHERE id=1")
+    row = cur.fetchone()
+    if not row:
+        return set()
+    try:
+        config = json.loads(row["config_json"])
+    except (TypeError, ValueError):
+        return set()
+    return {str(step.get("id")) for step in config if isinstance(step, dict) and step.get("id")}
+
+
 def serialize_passage(row):
     confidence = float(row["confidence"]) if row.get("confidence") is not None else None
     return {
@@ -372,6 +394,8 @@ def assignments_post():
             return api_error("Complete the assessment before assigning this passage.", 400)
         if normalize_class_level(row["label"]) != class_level:
             return api_error("Passage label does not match class level.", 400)
+        if passage_id in _pre_assessment_passage_ids(cur):
+            return api_error("This passage is assigned to the pre-assessment and cannot be assigned to a weekly assessment.", 400)
 
         cur.execute("SELECT 1 FROM weekly_assignments WHERE week_no=%s AND class_level=%s AND passage_id=%s", (week, class_level, passage_id))
         if cur.fetchone():

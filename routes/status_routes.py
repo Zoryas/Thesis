@@ -5,7 +5,7 @@ from uuid import uuid4
 from flask import Blueprint, jsonify, redirect, request, session
 
 from db import db_cursor
-from routes.helpers import api_error, api_ok, build_prediction_response, current_user, get_request_token, serialize_user
+from routes.helpers import api_error, api_ok, build_prediction_response, current_user, require_role, serialize_user
 
 status_bp = Blueprint("status_bp", __name__)
 
@@ -48,21 +48,17 @@ def api_health():
 
 @status_bp.get("/api/debug/session")
 def api_debug_session():
-    user = current_user()
-    raw_cookie = request.headers.get("Cookie") or ""
-    raw_token = get_request_token() or ""
+    user, err = require_role("admin")
+    if err:
+        return err
     return api_ok(
         {
-            "hasCookieHeader": bool(raw_cookie),
-            "cookieHeaderPreview": raw_cookie[:200],
-            "hasTokenHeader": bool(raw_token),
-            "tokenPreview": raw_token[:24],
             "sessionKeys": sorted(list(session.keys())),
             "sessionUserId": session.get("user_id"),
             "sessionRole": session.get("role"),
             "sessionStudentId": session.get("student_id"),
-            "isAuthenticated": bool(user),
-            "currentUser": serialize_user(user) if user else None,
+            "isAuthenticated": True,
+            "currentUser": serialize_user(user),
             "origin": request.headers.get("Origin"),
             "referer": request.headers.get("Referer"),
         }

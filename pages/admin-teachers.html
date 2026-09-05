@@ -102,6 +102,7 @@
       <a href="admin-students.html"><span class="icon" data-icon="students"></span><span class="nav-label">Students</span></a>
       <a href="admin-teachers.html" class="active"><span class="icon" data-icon="teacher"></span><span class="nav-label">Teachers</span></a>
       <a href="admin-passages.html"><span class="icon" data-icon="library"></span><span class="nav-label">Passages</span></a>
+      <a href="admin-pre-assessment.html"><span class="icon" data-icon="assessment"></span><span class="nav-label">Pre-Assessment</span></a>
       <a href="admin-admins.html"><span class="icon" data-icon="settings"></span><span class="nav-label">Admins</span></a>
     </nav>
     <div class="sidebar-footer">
@@ -117,6 +118,9 @@
         <p>Manage teacher access, department assignments, and credentials.</p>
       </div>
       <div class="header-meta">
+        <button class="btn btn-outline" type="button" onclick="downloadTeacherTemplate()">Excel Template</button>
+        <label class="btn btn-outline" for="teacher-bulk-file">Import Excel</label>
+        <input id="teacher-bulk-file" type="file" accept=".csv,text/csv" hidden>
         <button class="btn btn-primary" type="button" onclick="openTeacherModal()">Create Teacher</button>
       </div>
     </div>

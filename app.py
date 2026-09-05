@@ -70,17 +70,17 @@ SEED_TEACHERS = [
 ]
 
 SEED_STUDENTS = [
-    {"id": "s1", "email": "juan.delacruz@pnhs.edu", "password": "password123", "name": "Juan Dela Cruz", "grade": "7", "section": "Sampaguita", "class": "HARD", "pre": 58},
-    {"id": "s2", "email": "maria.santos@pnhs.edu", "password": "password123", "name": "Maria Santos", "grade": "7", "section": "Sampaguita", "class": "MODERATE", "pre": 72},
-    {"id": "s3", "email": "carlo.reyes@pnhs.edu", "password": "password123", "name": "Carlo Reyes", "grade": "7", "section": "Sampaguita", "class": "EASY", "pre": 45},
-    {"id": "s4", "email": "new.student@pnhs.edu", "password": "password123", "name": "New Student", "grade": "7", "section": "Sampaguita", "class": "EASY", "pre": 0},
+    {"id": "s1", "email": "juan.delacruz@pnhs.edu", "password": "password123", "name": "Juan Dela Cruz", "grade": "7", "section": "MAKADIYOS", "class": "HARD", "pre": 58},
+    {"id": "s2", "email": "maria.santos@pnhs.edu", "password": "password123", "name": "Maria Santos", "grade": "7", "section": "MAKADIYOS", "class": "MODERATE", "pre": 72},
+    {"id": "s3", "email": "carlo.reyes@pnhs.edu", "password": "password123", "name": "Carlo Reyes", "grade": "7", "section": "MAKADIYOS", "class": "EASY", "pre": 45},
+    {"id": "s4", "email": "new.student@pnhs.edu", "password": "password123", "name": "New Student", "grade": "7", "section": "MAKADIYOS", "class": "EASY", "pre": 0},
     {"id": "s5", "email": "lea.garcia@pnhs.edu", "password": "password123", "name": "Lea Garcia", "grade": "7", "section": "Rosal", "class": "MODERATE", "pre": 64},
     {"id": "s6", "email": "paolo.mendoza@pnhs.edu", "password": "password123", "name": "Paolo Mendoza", "grade": "7", "section": "Rosal", "class": "HARD", "pre": 81},
     {"id": "s7", "email": "trisha.navarro@pnhs.edu", "password": "password123", "name": "Trisha Navarro", "grade": "7", "section": "Rosal", "class": "EASY", "pre": 43},
     {"id": "s8", "email": "adrian.lopez@pnhs.edu", "password": "password123", "name": "Adrian Lopez", "grade": "7", "section": "Makahiya", "class": "MODERATE", "pre": 59},
     {"id": "s9", "email": "bea.cortez@pnhs.edu", "password": "password123", "name": "Bea Cortez", "grade": "7", "section": "Makahiya", "class": "HARD", "pre": 74},
     {"id": "s10", "email": "noah.flores@pnhs.edu", "password": "password123", "name": "Noah Flores", "grade": "7", "section": "Makahiya", "class": "EASY", "pre": 0},
-    {"id": "s11", "email": "jamie.ong@pnhs.edu", "password": "password123", "name": "Jamie Ong", "grade": "7", "section": "Sampaguita", "class": "EASY", "pre": 0},
+    {"id": "s11", "email": "jamie.ong@pnhs.edu", "password": "password123", "name": "Jamie Ong", "grade": "7", "section": "MAKADIYOS", "class": "EASY", "pre": 0},
     {
         "id": "s12",
         "email": "ella.mendoza@pnhs.edu",
@@ -363,9 +363,9 @@ def classify_pre_assessment_level(score):
     except (TypeError, ValueError):
         normalized_score = 0
     normalized_score = max(0, min(100, normalized_score))
-    if normalized_score >= 70:
+    if normalized_score >= 80:
         return "HARD"
-    if normalized_score >= 55:
+    if normalized_score >= 60:
         return "MODERATE"
     return "EASY"
 
@@ -900,11 +900,11 @@ def pre_assessment_completed(student):
 
 def recommendation_for_score(score):
     normalized_score = int(score or 0)
-    if normalized_score >= 75:
-        return "Step UP", "HARD"
+    if normalized_score >= 80:
+        return "HARD", "HARD"
     if normalized_score >= 60:
-        return "Maintain", "MODERATE"
-    return "Step DOWN", "EASY"
+        return "MODERATE", "MODERATE"
+    return "EASY", "EASY"
 
 
 def fetch_student_progress(cur, student_id):
@@ -1261,6 +1261,7 @@ def init_database():
             """CREATE TABLE IF NOT EXISTS program_settings (id TINYINT PRIMARY KEY,program_start_date DATE NOT NULL,manual_override_week TINYINT NULL,updated_by INT NULL,updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,CONSTRAINT chk_program_settings_id CHECK (id=1),FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
             """CREATE TABLE IF NOT EXISTS auth_tokens (id BIGINT AUTO_INCREMENT PRIMARY KEY,user_id INT NOT NULL,token VARCHAR(128) UNIQUE NOT NULL,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,INDEX idx_auth_tokens_user (user_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
             """CREATE TABLE IF NOT EXISTS students (id VARCHAR(20) PRIMARY KEY,user_id INT UNIQUE NOT NULL,full_name VARCHAR(255) NOT NULL,grade VARCHAR(20) NOT NULL,section VARCHAR(100) NOT NULL,class_level ENUM('EASY','MODERATE','HARD') NOT NULL DEFAULT 'EASY',pre_score INT NOT NULL DEFAULT 0,pre_assessment_completed TINYINT(1) NOT NULL DEFAULT 0,pre_assessment_completed_at TIMESTAMP NULL,avatar_type ENUM('initials','preset','upload') NOT NULL DEFAULT 'initials',avatar_value MEDIUMTEXT NULL,FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
+            """CREATE TABLE IF NOT EXISTS student_level_progressions (id BIGINT AUTO_INCREMENT PRIMARY KEY,student_id VARCHAR(20) NOT NULL,week_no TINYINT NOT NULL,previous_level ENUM('EASY','MODERATE','HARD') NOT NULL,new_level ENUM('EASY','MODERATE','HARD') NOT NULL,average_score INT NOT NULL,recommendation VARCHAR(30) NOT NULL,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,UNIQUE KEY uniq_student_progression_week (student_id,week_no),FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
             """CREATE TABLE IF NOT EXISTS passages (id VARCHAR(20) PRIMARY KEY,title VARCHAR(255) NOT NULL,genre VARCHAR(100) NOT NULL,text MEDIUMTEXT NOT NULL,label ENUM('EASY','MODERATE','HARD') NOT NULL,words INT NOT NULL,est_minutes INT NOT NULL,confidence DECIMAL(5,2) NULL,is_draft TINYINT(1) NOT NULL DEFAULT 0,created_by INT NULL,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
             """CREATE TABLE IF NOT EXISTS assessments (id INT AUTO_INCREMENT PRIMARY KEY,passage_id VARCHAR(20) UNIQUE NOT NULL,short_answer_prompt TEXT NULL,FOREIGN KEY (passage_id) REFERENCES passages(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
             """CREATE TABLE IF NOT EXISTS assessment_questions (id INT AUTO_INCREMENT PRIMARY KEY,assessment_id INT NOT NULL,sort_order INT NOT NULL DEFAULT 0,difficulty ENUM('EASY','MODERATE','DIFFICULT','CUSTOM') NOT NULL DEFAULT 'EASY',type VARCHAR(60) NOT NULL,prompt TEXT NOT NULL,options_json JSON NULL,answer_index INT NULL,answer_key VARCHAR(255) NULL,answer_keys_json JSON NULL,FOREIGN KEY (assessment_id) REFERENCES assessments(id) ON DELETE CASCADE,INDEX idx_q_sort (assessment_id, sort_order)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
@@ -1884,6 +1885,7 @@ CLEAN_PAGE_ROUTES = {
     "admin-students": "pages/admin-students.html",
     "admin-teachers": "pages/admin-teachers.html",
     "admin-passages": "pages/admin-passages.html",
+    "admin-pre-assessment": "pages/admin-pre-assessment.html",
 }
 
 

@@ -1,13 +1,120 @@
+import csv
+import io
 import json
 
 from flask import Blueprint, request
 from werkzeug.security import generate_password_hash
 
 from db import db_cursor
-from routes.helpers import api_error, api_ok, require_role
-from routes.passage_routes import save_passage, serialize_passage
+from routes.helpers import api_error, api_ok, require_auth, require_role
+from routes.passage_routes import fetch_assessment, save_passage, serialize_passage
 
 admin_bp = Blueprint("admin_bp", __name__)
+
+
+def _ensure_pre_assessment_config(cur):
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS pre_assessment_config (
+          id TINYINT PRIMARY KEY,
+          config_json LONGTEXT NOT NULL,
+          updated_by INT NULL,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        """
+    )
+
+
+@admin_bp.get("/api/pre-assessment/config")
+def get_pre_assessment_config():
+    user, err = require_auth()
+    if err:
+        return err
+    del user
+    with db_cursor(True) as (_, cur):
+        _ensure_pre_assessment_config(cur)
+        cur.execute("SELECT config_json FROM pre_assessment_config WHERE id=1")
+        row = cur.fetchone()
+    return api_ok({"config": json.loads(row["config_json"]) if row else None})
+
+
+@admin_bp.put("/api/pre-assessment/config")
+def save_pre_assessment_config():
+    user, err = require_role("admin")
+    if err:
+        return err
+    payload = request.get_json(silent=True) or {}
+    config = payload.get("config")
+    passage_ids = payload.get("passageIds")
+    if isinstance(passage_ids, list):
+        if len(passage_ids) != 3 or len(set(passage_ids)) != 3:
+            return api_error("Choose three different passages.", 400)
+        config = []
+        with db_cursor(True) as (_, cur):
+            for passage_id in passage_ids:
+                cur.execute("SELECT id,title,genre,text,label FROM passages WHERE id=%s", (str(passage_id),))
+                passage = cur.fetchone()
+                if not passage:
+                    return api_error("One selected passage was not found.", 404)
+                cur.execute("SELECT 1 FROM weekly_assignments WHERE passage_id=%s LIMIT 1", (str(passage_id),))
+                if cur.fetchone():
+                    return api_error(f"Passage '{passage['title']}' is already assigned to a weekly assessment.", 400)
+                assessment = fetch_assessment(cur, passage["id"])
+                if not assessment["questions"]:
+                    return api_error(f"Passage '{passage['title']}' needs assessment questions first.", 400)
+                config.append({
+                    "id": passage["id"],
+                    "level": passage["label"],
+                    "label": f"{passage['label']} Pre-Assessment",
+                    "title": passage["title"],
+                    "genre": passage["genre"],
+                    "text": passage["text"],
+                    "questions": assessment["questions"],
+                })
+    if not isinstance(config, list) or not config:
+        return api_error("config must be a non-empty list of assessment steps.", 400)
+    for step in config:
+        if not isinstance(step, dict) or not step.get("title") or not step.get("text") or not isinstance(step.get("questions"), list) or not step["questions"]:
+            return api_error("Each step needs a title, passage text, and at least one question.", 400)
+    with db_cursor(True) as (_, cur):
+        for step in config:
+            passage_id = step.get("id")
+            if passage_id:
+                cur.execute("SELECT 1 FROM weekly_assignments WHERE passage_id=%s LIMIT 1", (str(passage_id),))
+                if cur.fetchone():
+                    return api_error("A selected pre-assessment passage is already assigned to a weekly assessment.", 400)
+        _ensure_pre_assessment_config(cur)
+        cur.execute(
+            """
+            INSERT INTO pre_assessment_config (id,config_json,updated_by)
+            VALUES (1,%s,%s)
+            ON DUPLICATE KEY UPDATE config_json=VALUES(config_json),updated_by=VALUES(updated_by)
+            """,
+            (json.dumps(config, ensure_ascii=False), user["id"]),
+        )
+    return api_ok({"config": config, "message": "Pre-assessment saved."})
+
+
+def _read_bulk_csv():
+    uploaded = request.files.get("file")
+    if not uploaded or not uploaded.filename:
+        return None, "Choose a CSV file to upload."
+    try:
+        text = uploaded.read().decode("utf-8-sig")
+    except UnicodeDecodeError:
+        return None, "The template must be saved as UTF-8 CSV."
+    reader = csv.DictReader(io.StringIO(text))
+    if not reader.fieldnames:
+        return None, "The CSV file must include a header row."
+    return list(reader), None
+
+
+def _bulk_value(row, *names):
+    for name in names:
+        if name in row:
+            return str(row.get(name) or "").strip()
+    return ""
 
 
 def _record_audit_log(user_id, student_id, action, details=None, cur=None):
@@ -424,6 +531,58 @@ def admin_update_student(student_id):
     })
 
 
+@admin_bp.post("/api/admin/students/bulk")
+def admin_bulk_create_students():
+    user, err = require_role("admin")
+    if err:
+        return err
+    rows, error = _read_bulk_csv()
+    if error:
+        return api_error(error, 400)
+
+    created = []
+    errors = []
+    with db_cursor(True) as (_, cur):
+        for index, row in enumerate(rows, start=2):
+            email = _bulk_value(row, "email", "Email").lower()
+            password = _bulk_value(row, "password", "Password")
+            full_name = _bulk_value(row, "fullName", "fullname", "full_name", "Full Name")
+            grade = _bulk_value(row, "grade", "Grade") or "7"
+            section = _bulk_value(row, "section", "Section")
+            class_level = _bulk_value(row, "classLevel", "class_level", "Reading Level").upper() or "EASY"
+            pre_score_raw = _bulk_value(row, "preScore", "pre_score", "Pre-Score")
+            if not email or not password or not full_name:
+                errors.append({"row": index, "error": "email, password, and full name are required."})
+                continue
+            if class_level not in {"EASY", "MODERATE", "HARD"}:
+                errors.append({"row": index, "error": "classLevel must be EASY, MODERATE, or HARD."})
+                continue
+            try:
+                pre_score = int(pre_score_raw) if pre_score_raw else 0
+            except ValueError:
+                errors.append({"row": index, "error": "preScore must be a number."})
+                continue
+            if not 0 <= pre_score <= 100:
+                errors.append({"row": index, "error": "preScore must be between 0 and 100."})
+                continue
+            if not _ensure_unique_email(cur, email):
+                errors.append({"row": index, "error": "Email is already in use."})
+                continue
+            cur.execute(
+                "INSERT INTO users (email,password_hash,role,is_active) VALUES (%s,%s,'student',1)",
+                (email, generate_password_hash(password)),
+            )
+            user_id = cur.lastrowid
+            student_id = _next_student_id(cur)
+            cur.execute(
+                "INSERT INTO students (id,user_id,full_name,grade,section,class_level,pre_score,pre_assessment_completed) VALUES (%s,%s,%s,%s,%s,%s,%s,%s)",
+                (student_id, user_id, full_name, grade, section, class_level, pre_score, 1 if pre_score_raw else 0),
+            )
+            _record_audit_log(user["id"], student_id, "admin:bulk_create_student", {"email": email}, cur=cur)
+            created.append({"row": index, "id": student_id, "email": email})
+    return api_ok({"created": created, "errors": errors, "createdCount": len(created), "errorCount": len(errors)})
+
+
 @admin_bp.delete("/api/admin/students/<student_id>")
 def admin_delete_student(student_id):
     user, err = require_role("admin")
@@ -442,6 +601,34 @@ def admin_delete_student(student_id):
         _record_audit_log(user["id"], student_id, "admin:delete_student", {})
 
     return api_ok({"deleted": True, "id": student_id})
+
+
+@admin_bp.post("/api/admin/students/bulk-delete")
+def admin_bulk_delete_students():
+    user, err = require_role("admin")
+    if err:
+        return err
+
+    payload = request.get_json(silent=True) or {}
+    student_ids = payload.get("studentIds")
+    if not isinstance(student_ids, list) or not student_ids:
+        return api_error("Select at least one student to delete.", 400)
+    student_ids = list(dict.fromkeys(str(student_id).strip() for student_id in student_ids if str(student_id).strip()))
+    if not student_ids:
+        return api_error("Select at least one student to delete.", 400)
+
+    placeholders = ",".join(["%s"] * len(student_ids))
+    with db_cursor(True) as (_, cur):
+        cur.execute(f"SELECT id,user_id FROM students WHERE id IN ({placeholders})", tuple(student_ids))
+        rows = cur.fetchall()
+        if not rows:
+            return api_error("No matching students were found.", 404)
+        user_ids = [row["user_id"] for row in rows]
+        cur.execute(f"DELETE FROM users WHERE id IN ({','.join(['%s'] * len(user_ids))})", tuple(user_ids))
+        for row in rows:
+            _record_audit_log(user["id"], row["id"], "admin:bulk_delete_student", {}, cur=cur)
+
+    return api_ok({"deleted": len(rows), "requested": len(student_ids), "ids": [row["id"] for row in rows]})
 
 
 @admin_bp.get("/api/admin/teachers")
@@ -505,6 +692,44 @@ def admin_create_teacher():
         _record_audit_log(user["id"], None, "admin:create_teacher", {"email": email, "department": department})
 
     return api_ok({"id": teacher_id, "userId": user_id, "email": email, "fullName": full_name, "department": department, "isActive": is_active})
+
+
+@admin_bp.post("/api/admin/teachers/bulk")
+def admin_bulk_create_teachers():
+    user, err = require_role("admin")
+    if err:
+        return err
+    rows, error = _read_bulk_csv()
+    if error:
+        return api_error(error, 400)
+
+    created = []
+    errors = []
+    with db_cursor(True) as (_, cur):
+        for index, row in enumerate(rows, start=2):
+            email = _bulk_value(row, "email", "Email").lower()
+            password = _bulk_value(row, "password", "Password")
+            full_name = _bulk_value(row, "fullName", "fullname", "full_name", "Full Name")
+            department = _bulk_value(row, "department", "Department")
+            if not email or not password or not full_name:
+                errors.append({"row": index, "error": "email, password, and full name are required."})
+                continue
+            if not _ensure_unique_email(cur, email):
+                errors.append({"row": index, "error": "Email is already in use."})
+                continue
+            cur.execute(
+                "INSERT INTO users (email,password_hash,role,is_active) VALUES (%s,%s,'teacher',1)",
+                (email, generate_password_hash(password)),
+            )
+            user_id = cur.lastrowid
+            cur.execute(
+                "INSERT INTO teachers (user_id,full_name,department) VALUES (%s,%s,%s)",
+                (user_id, full_name, department or None),
+            )
+            teacher_id = cur.lastrowid
+            _record_audit_log(user["id"], None, "admin:bulk_create_teacher", {"email": email}, cur=cur)
+            created.append({"row": index, "id": teacher_id, "email": email})
+    return api_ok({"created": created, "errors": errors, "createdCount": len(created), "errorCount": len(errors)})
 
 
 @admin_bp.put("/api/admin/teachers/<int:teacher_id>")
@@ -609,6 +834,9 @@ def admin_list_passages():
     with db_cursor(True) as (_, cur):
         cur.execute("SELECT id,title,genre,text,label,words,est_minutes,confidence,is_draft FROM passages ORDER BY created_at DESC,id DESC")
         passages = [serialize_passage(row) for row in cur.fetchall()]
+        for passage in passages:
+            cur.execute("SELECT week_no FROM weekly_assignments WHERE passage_id=%s ORDER BY week_no", (passage["id"],))
+            passage["usedWeeks"] = [int(row["week_no"]) for row in cur.fetchall()]
     return api_ok(passages)
 
 

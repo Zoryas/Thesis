@@ -253,45 +253,72 @@ This plan provides a full production-grade review and roadmap.
 
 ---
 
-## 6. Production-Ready API Design (Sample)
+## 6. Production-Ready API Design
 
-Base: `/api/v1`
+Base: `/api`
 
-### Auth
-- `POST /auth/login`
-- `POST /auth/refresh`
-- `POST /auth/logout`
-- `POST /auth/forgot-password`
-- `POST /auth/reset-password`
-- `GET /auth/me`
+### Authentication Endpoints
+- `POST /api/auth/login` — Login with email/password/role
+- `POST /api/auth/logout` — Logout and clear session
+- `GET /api/auth/me` — Get current authenticated user
 
-### Teacher
-- `GET /teachers/dashboard`
-- `GET /teachers/students`
-- `GET /teachers/students/{id}`
-- `GET /teachers/students/{id}/pending-short-answers`
-- `POST /teachers/score-short-answer`
+### Student Endpoints (Reading & Progress)
+- `GET /api/student/weekly-passages?week={week}` — Get assigned passages for student in week
+- `GET /api/student/completions?week={week}` — Get completed passages for week
+- `GET /api/student/attempts?passageId={id}&week={week}` — Get student's quiz attempt for passage
+- `POST /api/student/attempts` — Submit quiz attempt/answers
+- `POST /api/student/reading-time` — Log reading time for passage
+- `GET /api/student/reading-progress?week={week}&passageId={id}` — Get reading progress (scroll position, time spent)
+- `POST /api/student/reading-progress` — Save reading progress while reading
+- `POST /api/student/reading-lock` — Lock reading section (prevent returning to read)
+- `POST /api/student/pre-assessment` — Submit pre-assessment answers for adaptive level
+- `GET /api/student/progress` — Get overall student progress dashboard
+- `PUT /api/student/profile/avatar` — Update student avatar/profile picture
 
-### Student
-- `GET /students/dashboard`
-- `GET /students/assignments`
-- `POST /students/sessions`
-- `POST /students/answers`
-- `GET /students/progress`
+### Teacher Endpoints (Dashboard & Scoring)
+- `GET /api/teacher/dashboard` — Get teacher dashboard summary
+- `GET /api/teacher/students` — Get list of teacher's students with metrics
+- `GET /api/teacher/students/{studentId}` — Get individual student detail and performance
+- `GET /api/teacher/students/{studentId}/pending-short-answers` — Get pending short-answer queue for student
+- `POST /api/teacher/score` — Submit score and feedback for short-answer question
+- `GET /api/teacher/reports/summary?activeWeek={week}` — Get summary report (by week or all-time)
+- `POST /api/teacher/students/{studentId}/apply-recommendation` — Auto-adjust student level based on ML recommendation
+- `POST /api/teacher/students/{studentId}/override-level` — Manually override student reading level with reason
 
-### Passages / Questions
-- `GET /passages`
-- `POST /passages`
-- `PUT /passages/{id}`
-- `DELETE /passages/{id}`
-- `GET /passages/{id}/questions`
-- `POST /passages/{id}/questions`
+### Admin Endpoints (User Management)
+- `GET /api/admin/students` — Get all students
+- `POST /api/admin/students` — Create new student
+- `PUT /api/admin/students/{studentId}` — Update student (name, email, grade, etc.)
+- `DELETE /api/admin/students/{studentId}` — Delete student
+- `GET /api/admin/teachers` — Get all teachers
+- `POST /api/admin/teachers` — Create new teacher
+- `PUT /api/admin/teachers/{teacherId}` — Update teacher info
+- `DELETE /api/admin/teachers/{teacherId}` — Delete teacher
+- `GET /api/admin/users?role={role}` — Get all users, optionally filtered by role (student/teacher/admin)
+- `POST /api/admin/users` — Create new user with role
+- `PUT /api/admin/users/{userId}` — Update user details
+- `DELETE /api/admin/users/{userId}` — Delete user
 
-### Recommendations / Reports / Analytics
-- `GET /recommendations/students/{id}`
-- `GET /reports/summary`
-- `GET /analytics/engagement`
-- `GET /analytics/performance-trends`
+### Passage Management Endpoints
+- `GET /api/passages` — Get all passages (with difficulty, reading time, metadata)
+- `POST /api/passages` — Create new passage
+- `PUT /api/passages/{passageId}` — Update passage content/metadata
+- `DELETE /api/passages/{passageId}` — Delete passage
+- `POST /api/passages/import-csv` — Bulk import passages from CSV
+
+### Admin Passage Management
+- `GET /api/admin/passages` — Get all passages (admin view with additional metadata)
+- `POST /api/admin/passages` — Create passage (admin)
+- `PUT /api/admin/passages/{passageId}` — Update passage (admin)
+- `DELETE /api/admin/passages/{passageId}` — Delete passage (admin)
+
+### Assignments & Program Settings Endpoints
+- `GET /api/assignments?week={week}` — Get assignments for week (passage → class level mappings)
+- `POST /api/assignments` — Assign passage to class level for specific week
+- `DELETE /api/assignments` — Remove assignment
+- `GET /api/program/week` — Get current active week
+- `GET /api/program/week/settings` — Get week settings (manual override, start date, etc.)
+- `PUT /api/program/week/settings` — Update week settings (e.g., manually override active week)
 
 ### Standard Response Envelope
 ```json
@@ -302,6 +329,347 @@ Base: `/api/v1`
     "requestId": "..."
   }
 }
+```
+
+### Error Response Format
+```json
+{
+  "ok": false,
+  "error": "Description of error",
+  "meta": {
+    "requestId": "..."
+  }
+}
+```
+
+### Authentication & Authorization
+- JWT access token stored in localStorage and sent in `Authorization: Bearer <token>` header
+- Fallback `X-Auth-Token` header support
+- Credentials included in all requests (httpOnly cookies for refresh token support)
+- Role-based access control: `student`, `teacher`, `admin`
+- 401 responses automatically clear cached user and redirect to login
+
+---
+
+## 6.1 Functional Design
+
+### System Class Diagram
+
+```mermaid
+classDiagram
+    class User {
+        +String id
+        +String email
+        +String password_hash
+        +String role
+        +DateTime created_at
+        +authenticate()
+        +change_password()
+        +reset_password()
+    }
+
+    class Teacher {
+        +String user_id
+        +String department
+        +int student_count
+        +get_dashboard()
+        +get_students()
+        +score_answer()
+    }
+
+    class Student {
+        +String user_id
+        +int grade_level
+        +String learning_level
+        +get_dashboard()
+        +get_assignments()
+        +submit_answers()
+    }
+
+    class Passage {
+        +String id
+        +String title
+        +String text
+        +String difficulty
+        +int reading_time
+        +get_questions()
+        +validate_content()
+    }
+
+    class Question {
+        +String id
+        +String passage_id
+        +String question_text
+        +String type
+        +List choices
+        +get_passage()
+    }
+
+    class Quiz {
+        +String id
+        +String student_id
+        +String passage_id
+        +DateTime started_at
+        +DateTime completed_at
+        +start()
+        +submit()
+        +calculate_score()
+    }
+
+    class QuizAttempt {
+        +String id
+        +String quiz_id
+        +String question_id
+        +String answer
+        +int score
+        +String teacher_feedback
+        +DateTime scored_at
+    }
+
+    class Assessment {
+        +String id
+        +String student_id
+        +String passage_id
+        +int pre_score
+        +int post_score
+        +DateTime assessment_date
+        +calculate_progress()
+    }
+
+    class MLModel {
+        +String model_id
+        +String version
+        +float accuracy
+        +predict()
+        +get_confidence()
+    }
+
+    class Report {
+        +String id
+        +String teacher_id
+        +DateTime generated_at
+        +generate_summary()
+        +export_data()
+    }
+
+    class Recommendation {
+        +String id
+        +String student_id
+        +String recommendation_text
+        +String priority
+        +DateTime created_at
+        +generate_from_assessment()
+    }
+
+    User <|-- Teacher
+    User <|-- Student
+    Student "1" --> "*" Quiz : takes
+    Passage "1" --> "*" Question : contains
+    Quiz "1" --> "*" QuizAttempt : has
+    Question "1" --> "*" QuizAttempt : answered_in
+    Student "1" --> "*" Assessment : completes
+    Passage "1" --> "*" Assessment : involves
+    MLModel --> Assessment : analyzes
+    Teacher "1" --> "*" Report : generates
+    Assessment "1" --> "*" Recommendation : creates
+```
+
+### Use Case Diagram - Teacher Workflow
+
+```mermaid
+graph LR
+    Teacher["👨‍🏫 Teacher"]
+    
+    subgraph Teacher_Actions["Teacher Use Cases"]
+        Login["Login to System"]
+        ViewDash["View Dashboard"]
+        StudentList["View Student List"]
+        StudentDetail["View Student Details"]
+        PendingQueue["View Pending Queue"]
+        ScoreAnswer["Score Short Answer"]
+        GenerateReport["Generate Report"]
+        ViewAnalytics["View Analytics"]
+    end
+    
+    subgraph Teacher_Results["Results"]
+        Dashboard["Dashboard Data"]
+        StudentData["Student Performance Data"]
+        PendingCount["Pending Items Count"]
+        ScoredItems["Scored Items"]
+        ReportData["Report Generated"]
+        TrendData["Trend Analytics"]
+    end
+    
+    Teacher --> Login
+    Teacher --> ViewDash
+    Teacher --> StudentList
+    Teacher --> StudentDetail
+    Teacher --> PendingQueue
+    Teacher --> ScoreAnswer
+    Teacher --> GenerateReport
+    Teacher --> ViewAnalytics
+    
+    Login --> Dashboard
+    ViewDash --> Dashboard
+    StudentList --> StudentData
+    StudentDetail --> StudentData
+    PendingQueue --> PendingCount
+    ScoreAnswer --> ScoredItems
+    GenerateReport --> ReportData
+    ViewAnalytics --> TrendData
+```
+
+### Use Case Diagram - Student Workflow
+
+```mermaid
+graph LR
+    Student["👨‍🎓 Student"]
+    
+    subgraph Student_Actions["Student Use Cases"]
+        Login["Login to System"]
+        ViewDash["View Dashboard"]
+        ViewAssign["View Assignments"]
+        ReadPassage["Read Passage"]
+        AnswerQuestions["Answer Questions"]
+        ViewProgress["View Progress"]
+        ViewResults["View Results"]
+    end
+    
+    subgraph Student_Results["Results"]
+        Dashboard["Dashboard"]
+        AssignList["Assignment List"]
+        PassageContent["Passage Content"]
+        QuizSubmit["Quiz Submitted"]
+        ProgressData["Progress Metrics"]
+        ScoreData["Score Data"]
+    end
+    
+    Student --> Login
+    Student --> ViewDash
+    Student --> ViewAssign
+    Student --> ReadPassage
+    Student --> AnswerQuestions
+    Student --> ViewProgress
+    Student --> ViewResults
+    
+    Login --> Dashboard
+    ViewDash --> Dashboard
+    ViewAssign --> AssignList
+    ReadPassage --> PassageContent
+    AnswerQuestions --> QuizSubmit
+    ViewProgress --> ProgressData
+    ViewResults --> ScoreData
+```
+
+### Activity Diagram - Student Quiz Flow
+
+```mermaid
+graph TD
+    Start(["🎯 Student Starts Quiz"]) --> Auth{{"Authenticated?"}}
+    Auth -->|No| Login["Redirect to Login"]
+    Login --> End1(["❌ Session Ended"])
+    
+    Auth -->|Yes| LoadQ["Load Passage & Questions"]
+    LoadQ --> Display["Display Reading Section"]
+    Display --> ReadTime["Track Reading Time"]
+    ReadTime --> ReadDone{{"Finished\nReading?"}}
+    
+    ReadDone -->|No| Display
+    ReadDone -->|Yes| ShowQues["Display Quiz Questions"]
+    ShowQues --> Answer["Student Answers Question"]
+    Answer --> Validate{{"All Questions\nAnswered?"}}
+    
+    Validate -->|No| ShowQues
+    Validate -->|Yes| Preview["Show Answer Preview"]
+    Preview --> ConfReview{{"Confirm\nSubmit?"}}
+    
+    ConfReview -->|No| Edit["Edit Answers"]
+    Edit --> ShowQues
+    ConfReview -->|Yes| Submit["Submit Quiz"]
+    Submit --> CalcScore["Calculate Score"]
+    CalcScore --> Store["Store Attempt"]
+    Store --> MLInfer["ML Model Inference for Level"]
+    MLInfer --> SaveAss["Save Assessment"]
+    SaveAss --> Redirect["Redirect to Results"]
+    Redirect --> End2(["✅ Quiz Complete"])
+```
+
+### Activity Diagram - Teacher Scoring Flow
+
+```mermaid
+graph TD
+    Start(["🎯 Teacher Opens Pending Queue"]) --> Auth{{"Authenticated?"}}
+    Auth -->|No| Login["Redirect to Login"]
+    Login --> End1(["❌ Session Ended"])
+    
+    Auth -->|Yes| Fetch["Fetch Student's Pending Items"]
+    Fetch --> Query["Query: NULL teacher_score"]
+    Query --> Display["Display Pending Queue"]
+    Display --> Count["Show Count: N Pending"]
+    Count --> Select["Teacher Selects Item"]
+    
+    Select --> LoadReview["Load Answer Review View"]
+    LoadReview --> ShowAns["Display Student Answer"]
+    ShowAns --> ShowOrig["Display Original Question"]
+    ShowOrig --> Review["Teacher Reviews"]
+    Review --> Decision{{"Assign\nScore?"}}
+    
+    Decision -->|No - Save Draft| SaveDraft["Save as Draft"]
+    SaveDraft --> Display
+    Decision -->|Yes| EnterScore["Enter Score & Feedback"]
+    EnterScore --> Validate{{"Valid\nScore?"}}
+    
+    Validate -->|No| Error["Show Error Message"]
+    Error --> EnterScore
+    Validate -->|Yes| Save["POST /score"]
+    Save --> UpdateDB["Update quiz_attempts table"]
+    UpdateDB --> Notify["Notify Student"]
+    Notify --> ReturnQueue["Return to Pending Queue"]
+    ReturnQueue --> Refresh["Refresh Queue List"]
+    Refresh --> ItemGone{{"Item\nRemoved?"}}
+    
+    ItemGone -->|Yes| End2(["✅ Score Saved"])
+    ItemGone -->|No| Error2["Retry or Contact Admin"]
+    Error2 --> End3(["⚠️ Partial Complete"])
+```
+
+### Activity Diagram - Authentication & Session Flow
+
+```mermaid
+graph TD
+    Start(["🔐 User Accesses App"]) --> Check{{"Valid JWT\nin Cookie?"}}
+    Check -->|Yes| Validate{{"Token\nExpired?"}}
+    Validate -->|No| Allow["✅ Grant Access"]
+    Validate -->|Yes| Refresh["Attempt Refresh"]
+    
+    Refresh --> RefreshValid{{"Refresh\nValid?"}}
+    RefreshValid -->|Yes| NewToken["Issue New JWT"]
+    NewToken --> Allow
+    RefreshValid -->|No| Logout["Clear Session"]
+    Logout --> Redirect1["Redirect to Login"]
+    
+    Check -->|No| Redirect2["Redirect to Login"]
+    Redirect1 --> LoginForm["Display Login Form"]
+    Redirect2 --> LoginForm
+    LoginForm --> Submit["User Submits Credentials"]
+    Submit --> Verify{{"Credentials\nValid?"}}
+    
+    Verify -->|No| Error["Show Error Message"]
+    Error --> LoginForm
+    Verify -->|Yes| CheckRole{{"User\nRole?"}}
+    
+    CheckRole -->|Student| StudentRoute["Redirect to Student Dashboard"]
+    CheckRole -->|Teacher| TeacherRoute["Redirect to Teacher Dashboard"]
+    CheckRole -->|Admin| AdminRoute["Redirect to Admin Dashboard"]
+    
+    StudentRoute --> AllowS["Issue JWT + Set HttpOnly Cookie"]
+    TeacherRoute --> AllowT["Issue JWT + Set HttpOnly Cookie"]
+    AdminRoute --> AllowA["Issue JWT + Set HttpOnly Cookie"]
+    
+    AllowS --> Allow
+    AllowT --> Allow
+    AllowA --> Allow
+    Allow --> End(["✅ User Authenticated"])
 ```
 
 ---

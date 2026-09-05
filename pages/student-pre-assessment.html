@@ -591,8 +591,8 @@
 
   function classifyPreAssessmentLevel(score) {
     const normalized = Math.max(0, Math.min(100, Number(score || 0)));
-    if (normalized >= 70) return "HARD";
-    if (normalized >= 55) return "MODERATE";
+    if (normalized >= 80) return "HARD";
+    if (normalized >= 60) return "MODERATE";
     return "EASY";
   }
 
@@ -640,6 +640,27 @@
             '</div>' +
           '</div>';
         return;
+      }
+      try {
+        const configResponse = await ReadWiseAPI.getPreAssessmentConfig();
+        const savedSteps = configResponse && configResponse.config;
+        if (Array.isArray(savedSteps) && savedSteps.length) {
+          assessmentSteps = savedSteps.map(function(step) {
+            return {
+              id: step.id || "pre-step",
+              level: normalizeClassLevel(step.level || "EASY"),
+              label: step.label || "Assessment Step",
+              title: step.title,
+              genre: step.genre || "Expository",
+              text: step.text,
+              questions: (step.questions || []).map(function(question) {
+                return normalizeAssessmentQuestion(question);
+              })
+            };
+          });
+        }
+      } catch (configError) {
+        console.warn("Using default pre-assessment configuration:", configError);
       }
       currentPhase = "reading";
       renderStep();

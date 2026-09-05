@@ -15,6 +15,19 @@ class Phase4FinalDeliveryTests(unittest.TestCase):
         self.assertTrue(body["ok"])
         return body["data"]["token"]
 
+    def valid_objective_responses(self, token, passage_id):
+        response = self.client.get(
+            "/api/passages/" + passage_id,
+            headers={"X-Auth-Token": token},
+        )
+        self.assertEqual(response.status_code, 200)
+        questions = response.get_json()["data"]["assessment"]["questions"]
+        answers = []
+        for question in questions:
+            value = question["answerIndex"] if question["type"] in {"multiple_choice", "multiple_choice_harder"} else question["answerKey"]
+            answers.append({"type": question["type"], "value": value})
+        return answers, len(questions)
+
     def test_student_login_and_weekly_passages(self):
         token = self.login("juan.delacruz@pnhs.edu", "password123", "student")
         response = self.client.get(
@@ -90,13 +103,13 @@ class Phase4FinalDeliveryTests(unittest.TestCase):
             json={
                 "week": 1,
                 "passageId": passage_id,
-                "score": 82,
-                "correct": 4,
+                "score": 100,
+                "correct": 5,
                 "total": 5,
                 "difficulty": 3,
                 "shortAnswer": "",
                 "readingTime": "05:00",
-                "responses": [],
+                "responses": self.valid_objective_responses(token, passage_id)[0],
             },
         )
         self.assertEqual(response.status_code, 201)
@@ -109,8 +122,8 @@ class Phase4FinalDeliveryTests(unittest.TestCase):
         body = response.get_json()
         self.assertTrue(body["ok"])
         self.assertIsNotNone(body["data"])
-        self.assertEqual(body["data"]["score"], 82)
-        self.assertEqual(body["data"]["correct"], 4)
+        self.assertEqual(body["data"]["score"], 100)
+        self.assertEqual(body["data"]["correct"], 5)
         self.assertEqual(body["data"]["total"], 5)
 
     def test_student_attempt_falls_back_to_reading_session_time(self):
@@ -141,12 +154,12 @@ class Phase4FinalDeliveryTests(unittest.TestCase):
             json={
                 "week": 1,
                 "passageId": passage_id,
-                "score": 67,
-                "correct": 2,
-                "total": 3,
+                "score": 100,
+                "correct": 5,
+                "total": 5,
                 "difficulty": 3,
                 "shortAnswer": "",
-                "responses": [],
+                "responses": self.valid_objective_responses(token, passage_id)[0],
             },
         )
         self.assertEqual(response.status_code, 201)
@@ -159,6 +172,30 @@ class Phase4FinalDeliveryTests(unittest.TestCase):
         body = get_response.get_json()
         self.assertTrue(body["ok"])
         self.assertEqual(body["data"]["readingTime"], "05:20")
+
+    def test_student_attempt_rejects_forged_score(self):
+        token = self.login("juan.delacruz@pnhs.edu", "password123", "student")
+        passages_resp = self.client.get(
+            "/api/student/weekly-passages?week=1",
+            headers={"X-Auth-Token": token},
+        )
+        passage_id = passages_resp.get_json()["data"]["passages"][0]["id"]
+        responses, total = self.valid_objective_responses(token, passage_id)
+        response = self.client.post(
+            "/api/student/attempts",
+            headers={"X-Auth-Token": token},
+            json={
+                "week": 1,
+                "passageId": passage_id,
+                "score": 99,
+                "correct": total,
+                "total": total,
+                "difficulty": 3,
+                "responses": responses,
+            },
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("does not match", response.get_json()["error"])
 
     def test_program_week_accessible_by_student(self):
         token = self.login("juan.delacruz@pnhs.edu", "password123", "student")

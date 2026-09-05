@@ -531,11 +531,11 @@ def backfill_questions_and_choices():
 
 def recommendation_for_score(score):
     normalized_score = int(round(score or 0))
-    if normalized_score >= 75:
-        return "Step UP", "HARD"
+    if normalized_score >= 80:
+        return "HARD", "HARD"
     if normalized_score >= 60:
-        return "Maintain", "MODERATE"
-    return "Step DOWN", "EASY"
+        return "MODERATE", "MODERATE"
+    return "EASY", "EASY"
 
 
 def backfill_recommendations_weekly():
