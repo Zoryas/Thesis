@@ -1,0 +1,20 @@
+CREATE TABLE IF NOT EXISTS program_settings (
+  id TINYINT PRIMARY KEY,
+  program_start_date DATE NOT NULL,
+  manual_override_week TINYINT NULL,
+  updated_by INT NULL,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+INSERT INTO program_settings (id, program_start_date)
+SELECT 1, CURDATE()
+WHERE NOT EXISTS (SELECT 1 FROM program_settings WHERE id=1);
+
+CREATE TABLE IF NOT EXISTS pre_assessment_config (
+  id TINYINT PRIMARY KEY,
+  config_json LONGTEXT NOT NULL,
+  updated_by INT NULL,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

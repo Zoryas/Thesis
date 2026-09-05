@@ -595,6 +595,20 @@ def compute_active_week_from_start(program_start_date):
 
 def get_program_settings(cur):
     cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS program_settings (
+          id TINYINT PRIMARY KEY,
+          program_start_date DATE NOT NULL,
+          manual_override_week TINYINT NULL,
+          updated_by INT NULL,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        """
+    )
+    cur.execute("SELECT id FROM program_settings WHERE id=1")
+    if not cur.fetchone():
+        cur.execute("INSERT INTO program_settings (id,program_start_date) VALUES (1,CURDATE())")
+    cur.execute(
         "SELECT id, program_start_date, manual_override_week, updated_by, updated_at FROM program_settings WHERE id=1"
     )
     row = cur.fetchone()

@@ -1776,6 +1776,7 @@ def handle_mysql_error(_):
 MIGRATION_FILES = [
     "migrations/001_initial_schema.sql",
     "migrations/002_add_operational_support.sql",
+    "migrations/003_add_program_and_pre_assessment.sql",
 ]
 
 

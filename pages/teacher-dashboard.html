@@ -334,7 +334,12 @@
       document.getElementById("clear-week-override-btn").addEventListener("click", clearWeekOverride);
     } catch (error) {
       console.error("Teacher dashboard bootstrap error", error);
-      window.location.href = "../login.html";
+      if (error && (error.isAuthError || error.message === "Unauthorized")) {
+        window.location.href = "../login.html";
+        return;
+      }
+      document.getElementById("dashboard-summary-copy").textContent =
+        (error && error.message) || "Unable to load the teacher dashboard.";
     }
   }
 

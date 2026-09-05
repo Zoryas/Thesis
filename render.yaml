@@ -3,7 +3,7 @@ services:
     name: readwise-api
     runtime: python
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app
+    startCommand: python seed_db.py && gunicorn app:app
     envVars:
       - key: READWISE_ENV
         value: production

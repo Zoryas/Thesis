@@ -117,9 +117,10 @@
     let weeklyPassages = [];
     let completedIds = [];
     let progress = [];
-    const week = await ReadWiseAPI.getActiveWeek();
+    let week = 1;
 
     try {
+      week = await ReadWiseAPI.getActiveWeek();
       const cachedUser = ReadWiseAPI.getCachedUser();
       auth = cachedUser ? { user: cachedUser, cached: true } : await ReadWiseAPI.me();
       if (!auth || !auth.user || auth.user.role !== "student" || !auth.user.student) {
