@@ -1,4 +1,5 @@
 import os
+import sys
 import mysql.connector
 from werkzeug.security import generate_password_hash
 
@@ -152,7 +153,9 @@ def seed_users_and_students():
 
 
 if __name__ == "__main__":
-    print("Running minimal database seeding...")
+    seed_demo_data = "--schema-only" not in sys.argv
+    print("Ensuring database schema..." + ("" if not seed_demo_data else " seeding demo data..."))
     ensure_schema()
-    seed_users_and_students()
-    print("Database seeding completed successfully.")
+    if seed_demo_data:
+        seed_users_and_students()
+    print("Database bootstrap completed successfully.")
