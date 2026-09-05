@@ -5,7 +5,7 @@ from werkzeug.security import generate_password_hash
 
 os.environ.setdefault("READWISE_SKIP_AUTO_INIT", "1")
 
-from app import DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME, SEED_ADMINS, SEED_TEACHERS, SEED_STUDENTS
+from app import DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME, SEED_ADMINS, SEED_TEACHERS, SEED_STUDENTS, init_database
 
 
 def connect(database=None, autocommit=False):
@@ -155,7 +155,12 @@ def seed_users_and_students():
 if __name__ == "__main__":
     seed_demo_data = "--schema-only" not in sys.argv
     print("Ensuring database schema..." + ("" if not seed_demo_data else " seeding demo data..."))
-    ensure_schema()
+    if seed_demo_data:
+        ensure_schema()
+    else:
+        os.environ["READWISE_SCHEMA_ONLY"] = "1"
+        if not init_database():
+            raise SystemExit("Database schema initialization failed.")
     if seed_demo_data:
         seed_users_and_students()
     print("Database bootstrap completed successfully.")

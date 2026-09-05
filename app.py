@@ -1252,7 +1252,8 @@ def init_database():
         cur.close()
         conn.close()
 
-        run_migrations()
+        if os.environ.get("READWISE_SCHEMA_ONLY") != "1":
+            run_migrations()
 
         with db_cursor(True) as (_, cur):
             schema = [
@@ -1440,6 +1441,13 @@ def init_database():
         ]
             for sql in schema:
                 cur.execute(sql)
+
+            if os.environ.get("READWISE_SCHEMA_ONLY") == "1":
+                conn.commit()
+                cur.close()
+                conn.close()
+                DB_READY = True
+                return True
 
             # ===== Backfill next identity/hierarchy tables (compatibility-first) =====
             # reading_levels: EASY/MODERATE/HARD with temporary thresholds
