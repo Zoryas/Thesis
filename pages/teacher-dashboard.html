@@ -255,6 +255,18 @@
     }
   }
 
+  function renderClassNames(elementId, names) {
+    const element = document.getElementById(elementId);
+    const roster = Array.isArray(names) ? names.filter(Boolean) : [];
+    if (!roster.length) {
+      element.textContent = "No students yet";
+      element.removeAttribute("title");
+      return;
+    }
+    element.textContent = roster.slice(0, 3).join(", ") + (roster.length > 3 ? ", ..." : "");
+    element.title = roster.join(", ");
+  }
+
   async function bootstrapPage() {
     try {
       const auth = await ReadWiseAPI.me({ forceRefresh: true });
@@ -276,9 +288,9 @@
       document.getElementById("easy-count").textContent = levelCounts.EASY || 0;
       document.getElementById("moderate-count").textContent = levelCounts.MODERATE || 0;
       document.getElementById("hard-count").textContent = levelCounts.HARD || 0;
-      document.getElementById("easy-names").textContent = levelStudents.EASY && levelStudents.EASY.length ? levelStudents.EASY.join(", ") : "No students yet";
-      document.getElementById("moderate-names").textContent = levelStudents.MODERATE && levelStudents.MODERATE.length ? levelStudents.MODERATE.join(", ") : "No students yet";
-      document.getElementById("hard-names").textContent = levelStudents.HARD && levelStudents.HARD.length ? levelStudents.HARD.join(", ") : "No students yet";
+      renderClassNames("easy-names", levelStudents.EASY);
+      renderClassNames("moderate-names", levelStudents.MODERATE);
+      renderClassNames("hard-names", levelStudents.HARD);
 
       classChart.data.datasets[0].data = [levelCounts.EASY || 0, levelCounts.MODERATE || 0, levelCounts.HARD || 0];
       classChart.update("none");

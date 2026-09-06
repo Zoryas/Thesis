@@ -6,6 +6,10 @@
   <title>Reading - TalaSaAI</title>
   <link rel="stylesheet" href="../stylesheets/shared.css?v=20260316b">
   <script src="../runtime-config.js?v=20260316c"></script>
+  <style>
+    .reading-area { user-select: none; -webkit-user-select: none; }
+    @media print { body > * { display: none !important; } }
+  </style>
 </head>
 <body>
 <div class="demo-banner">TalaSaAI System</div>
@@ -405,6 +409,25 @@
     window.addEventListener("online", flushQueuedReadingTimes);
     await bootstrapPage();
     startAutosave();
+  })();
+
+  (function protectReadingContent() {
+    document.addEventListener("copy", function(event) { event.preventDefault(); });
+    document.addEventListener("cut", function(event) { event.preventDefault(); });
+    document.addEventListener("paste", function(event) { event.preventDefault(); });
+    document.addEventListener("contextmenu", function(event) { event.preventDefault(); });
+    document.addEventListener("dragstart", function(event) { event.preventDefault(); });
+    document.addEventListener("selectstart", function(event) {
+      if (event.target.closest && event.target.closest(".reading-area")) event.preventDefault();
+    });
+    document.addEventListener("keydown", function(event) {
+      var key = String(event.key || "").toLowerCase();
+      var modified = event.ctrlKey || event.metaKey;
+      if ((modified && ["c", "x", "v", "s", "p", "u"].includes(key)) || key === "printscreen") {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    }, true);
   })();
 </script>
 </body>

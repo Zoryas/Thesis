@@ -11,6 +11,10 @@
   <script src="../runtime-config.js?v=20260316c"></script>
   <script src="../client_assessment_helpers.js?v=20260804"></script>
   <style>
+    .assessment-shell { user-select: none; -webkit-user-select: none; }
+    .assessment-shell input, .assessment-shell textarea, .assessment-shell button { user-select: auto; -webkit-user-select: auto; }
+    @media print { body > * { display: none !important; } }
+
     #difficulty-slider {
       -webkit-appearance: none;
       appearance: none;
@@ -661,6 +665,22 @@
   bootstrapPage();
   updateDifficultySliderVisual();
   document.getElementById("difficulty-slider").addEventListener("input", updateDifficultySliderVisual);
+
+  (function protectQuestionContent() {
+    document.addEventListener("copy", function(event) { event.preventDefault(); });
+    document.addEventListener("cut", function(event) { event.preventDefault(); });
+    document.addEventListener("paste", function(event) { event.preventDefault(); });
+    document.addEventListener("contextmenu", function(event) { event.preventDefault(); });
+    document.addEventListener("dragstart", function(event) { event.preventDefault(); });
+    document.addEventListener("keydown", function(event) {
+      var key = String(event.key || "").toLowerCase();
+      var modified = event.ctrlKey || event.metaKey;
+      if ((modified && ["c", "x", "v", "s", "p", "u"].includes(key)) || key === "printscreen") {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    }, true);
+  })();
 </script>
 </body>
 </html>

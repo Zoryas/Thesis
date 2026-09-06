@@ -668,13 +668,16 @@ def mysql_config(include_db=True):
 
 @contextmanager
 def db_cursor(dictionary=False):
-    conn = mysql.connector.connect(**mysql_config(True), autocommit=False)
+    schema_only = os.environ.get("READWISE_SCHEMA_ONLY") == "1"
+    conn = mysql.connector.connect(**mysql_config(True), autocommit=schema_only)
     cur = conn.cursor(dictionary=dictionary)
     try:
         yield conn, cur
-        conn.commit()
+        if not schema_only:
+            conn.commit()
     except Exception:
-        conn.rollback()
+        if not schema_only:
+            conn.rollback()
         raise
     finally:
         cur.close()
