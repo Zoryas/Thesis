@@ -20,7 +20,7 @@ def _record_audit_log(user_id, student_id, action, details=None):
 
 auth_bp = Blueprint("auth_bp", __name__)
 
-RATE_LIMIT_WINDOW_SECONDS = int(os.environ.get("READWISE_RATE_LIMIT_WINDOW_SECONDS", "900"))
+RATE_LIMIT_WINDOW_SECONDS = int(os.environ.get("READWISE_RATE_LIMIT_WINDOW_SECONDS", "5"))
 RATE_LIMIT_MAX_ATTEMPTS = int(os.environ.get("READWISE_RATE_LIMIT_MAX_ATTEMPTS", "5"))
 LOGIN_ATTEMPT_BUCKETS = defaultdict(list)
 
