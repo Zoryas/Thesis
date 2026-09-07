@@ -402,8 +402,8 @@ def assignments_post():
             return api_ok({"week": week, "assignments": get_weekly_assignments(cur, week), "message": "Passage already assigned."})
 
         cur.execute("SELECT COUNT(*) AS total FROM weekly_assignments WHERE week_no=%s AND class_level=%s", (week, class_level))
-        if int(cur.fetchone()["total"]) >= 5:
-            return api_error("Class already has 5 passages this week.", 400)
+        if int(cur.fetchone()["total"]) >= 3:
+            return api_error("Class already has 3 passages this week.", 400)
 
         cur.execute("INSERT INTO weekly_assignments (week_no,class_level,passage_id) VALUES (%s,%s,%s)", (week, class_level, passage_id))
         return api_ok({"week": week, "assignments": get_weekly_assignments(cur, week), "message": "Passage assigned."})

@@ -19,7 +19,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from app_config import get_allowed_origins
 
 TOTAL_PROGRAM_WEEKS = 8
-MAX_WEEKLY_PASSAGES_PER_CLASS = 5
+MAX_WEEKLY_PASSAGES_PER_CLASS = 3
 
 DB_HOST = os.environ.get("READWISE_DB_HOST", "127.0.0.1")
 DB_PORT = int(os.environ.get("READWISE_DB_PORT", "3306"))

@@ -6,7 +6,7 @@
   var USER_CACHE_KEY = "readwise_user_v1";
   var USER_TOKEN_KEY = "readwise_auth_token_v1";
   var TOTAL_WEEKS = 8;
-  var MAX_WEEKLY_PASSAGES_PER_CLASS = 5;
+  var MAX_WEEKLY_PASSAGES_PER_CLASS = 3;
 
   function normalizeWeek(value) {
     var parsed = Number(value);
