@@ -1,0 +1,2030 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Expert Mode - TalaSaAI</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="../image/logo-final.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="../image/logo-final.png">
+  <link rel="manifest" href="../image/site.webmanifest">
+  <link rel="stylesheet" href="../stylesheets/shared.css?v=20260316b">
+  <script src="../runtime-config.js?v=20260316c"></script>
+  <style>
+    /* ============================================================
+       1. TOAST NOTIFICATION SYSTEM
+    ============================================================ */
+    #toast-container {
+      position: fixed;
+      top: calc(var(--banner-height, 48px) + 14px);
+      right: 18px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      pointer-events: none;
+      max-width: 360px;
+    }
+
+    .toast {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 13px 15px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.10);
+      color: #fff;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.22);
+      backdrop-filter: blur(16px);
+      pointer-events: auto;
+      animation: toastSlideIn 0.3s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+      position: relative;
+      overflow: hidden;
+      min-width: 240px;
+    }
+
+    .toast.toast-hiding { animation: toastSlideOut 0.22s ease forwards; }
+    .toast-success { background: rgba(22, 76, 48, 0.96); }
+    .toast-error   { background: rgba(122, 32, 28, 0.96); }
+    .toast-info    { background: rgba(20, 52, 96, 0.96); }
+
+    .toast-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+    .toast-body { flex: 1; }
+    .toast-title { font-weight: 700; font-size: 13px; margin-bottom: 2px; }
+    .toast-msg { font-size: 12.5px; opacity: 0.88; line-height: 1.45; }
+    .toast-close { background: none; border: none; color: rgba(255,255,255,0.6); cursor: pointer; font-size: 18px; padding: 0; flex-shrink: 0; line-height: 1; }
+    .toast-close:hover { color: #fff; }
+    .toast-timer { position: absolute; bottom: 0; left: 0; height: 3px; border-radius: 0 0 12px 12px; background: rgba(255,255,255,0.38); animation: toastTimerShrink 4s linear forwards; }
+
+    @keyframes toastSlideIn {
+      from { opacity: 0; transform: translateX(38px) scale(0.96); }
+      to   { opacity: 1; transform: translateX(0) scale(1); }
+    }
+    @keyframes toastSlideOut {
+      from { opacity: 1; transform: translateX(0); }
+      to   { opacity: 0; transform: translateX(38px); }
+    }
+    @keyframes toastTimerShrink {
+      from { width: 100%; }
+      to   { width: 0%; }
+    }
+
+    /* ============================================================
+       2. ALGORITHM EXPLANATION PANEL
+    ============================================================ */
+    .algo-explanation-card {
+      margin-bottom: 16px;
+      border-radius: 14px;
+      border: 1px solid rgba(78, 88, 104, 0.17);
+      background: rgba(255, 252, 248, 0.88);
+      box-shadow: 0 10px 22px rgba(29, 42, 61, 0.06);
+      overflow: hidden;
+    }
+
+    .algo-explanation-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 16px 20px;
+      cursor: pointer;
+      user-select: none;
+      border-bottom: 1px solid transparent;
+      transition: border-color 0.2s;
+    }
+
+    .algo-explanation-header.is-open {
+      border-color: rgba(78, 88, 104, 0.14);
+    }
+
+    .algo-explanation-header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .algo-explanation-icon-box {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: rgba(35, 76, 132, 0.10);
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    .algo-explanation-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #233042;
+    }
+
+    .algo-explanation-subtitle {
+      font-size: 12px;
+      color: #536173;
+      margin-top: 1px;
+    }
+
+    .algo-chevron {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+      stroke: #7c8695;
+      stroke-width: 2.2;
+      fill: none;
+      transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .algo-explanation-header.is-open .algo-chevron {
+      transform: rotate(180deg);
+    }
+
+    .algo-explanation-body {
+      overflow: hidden;
+      max-height: 0;
+      transition: max-height 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .algo-explanation-body.is-open {
+      max-height: 4000px;
+    }
+
+    .algo-explanation-content {
+      padding: 20px;
+    }
+
+    /* Explanation sections */
+    .explanation-section { display: none; }
+    .explanation-section.is-active {
+      display: block;
+      animation: expFadeIn 0.32s ease forwards;
+    }
+
+    @keyframes expFadeIn {
+      from { opacity: 0; transform: translateY(5px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .exp-heading {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #7c8695;
+      margin: 0 0 10px;
+    }
+
+    .exp-rows {
+      display: grid;
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+
+    .exp-row {
+      display: grid;
+      grid-template-columns: 30px 108px 1fr;
+      align-items: start;
+      gap: 10px;
+      padding: 12px 14px;
+      border-radius: 10px;
+      background: rgba(78, 88, 104, 0.04);
+      border: 1px solid rgba(78, 88, 104, 0.09);
+    }
+
+    .exp-row-icon { font-size: 18px; text-align: center; padding-top: 1px; }
+    .exp-row-label { font-size: 11px; font-weight: 700; color: #234c84; text-transform: uppercase; letter-spacing: 0.05em; padding-top: 2px; }
+    .exp-row-desc { font-size: 13px; color: #233042; line-height: 1.55; }
+
+    /* Pipeline diagram */
+    .exp-pipeline {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      flex-wrap: wrap;
+      margin: 12px 0 18px;
+    }
+
+    .exp-pip-step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+      padding: 10px 14px;
+      border-radius: 10px;
+      background: rgba(35, 76, 132, 0.07);
+      border: 1px solid rgba(35, 76, 132, 0.16);
+      font-size: 12px;
+      font-weight: 600;
+      color: #234c84;
+      text-align: center;
+      min-width: 80px;
+    }
+
+    .exp-pip-icon { font-size: 17px; }
+    .exp-pip-arrow { color: #aab3c0; font-size: 16px; padding: 0 4px; flex-shrink: 0; }
+
+    /* Threshold ruler */
+    .exp-threshold-ruler {
+      display: flex;
+      height: 38px;
+      border-radius: 8px;
+      overflow: hidden;
+      margin: 10px 0 18px;
+      border: 1px solid rgba(78, 88, 104, 0.10);
+    }
+
+    .exp-thr-seg {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: 0.04em;
+      flex: 1;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    }
+
+    .exp-thr-seg.easy     { background: #2f8b66; }
+    .exp-thr-seg.moderate { background: #b97b20; }
+    .exp-thr-seg.hard     { background: #b85648; }
+
+    /* Pseudo-code block */
+    .exp-code {
+      background: #16202e;
+      color: #9fd4a0;
+      border-radius: 10px;
+      padding: 14px 18px;
+      font-family: "Courier New", monospace;
+      font-size: 12.5px;
+      line-height: 1.78;
+      margin: 10px 0 18px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      overflow-x: auto;
+      white-space: pre;
+    }
+
+    .cc { color: #445e44; }   /* comment */
+    .ck { color: #77b7ff; }   /* keyword */
+    .cv { color: #f0c070; }   /* value */
+    .cr { color: #e09090; }   /* result string */
+
+    /* Info note */
+    .exp-note {
+      padding: 11px 14px;
+      border-radius: 9px;
+      background: rgba(35, 76, 132, 0.06);
+      border-left: 3px solid rgba(35, 76, 132, 0.38);
+      font-size: 13px;
+      color: #233042;
+      line-height: 1.55;
+      margin-bottom: 14px;
+    }
+
+    /* ============================================================
+       3. FLOW PIPELINE NODES (Connected with Arrows)
+    ============================================================ */
+    .expert-flow-pipeline {
+      display: flex;
+      align-items: flex-start;
+      gap: 0;
+      flex-wrap: wrap;
+      margin-top: 8px;
+      margin-bottom: 6px;
+      padding-bottom: 4px;
+    }
+
+    .expert-flow-node-wrap {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      margin-bottom: 8px;
+    }
+
+    .expert-flow-node {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 5px;
+      min-width: 138px;
+      max-width: 172px;
+      padding: 11px 13px;
+      border-radius: 12px;
+      border: 1.5px solid rgba(78, 88, 104, 0.18);
+      background: #fff;
+      color: #233042;
+      text-align: left;
+      cursor: pointer;
+      transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+      animation: expertNodeEnter 0.32s ease-out;
+    }
+
+    .expert-flow-node:hover {
+      transform: translateY(-2px);
+      border-color: rgba(35, 76, 132, 0.42);
+      box-shadow: 0 5px 18px rgba(35, 76, 132, 0.09);
+    }
+
+    .expert-flow-node.is-active {
+      border-color: rgba(35, 76, 132, 0.82);
+      box-shadow: 0 0 0 3px rgba(35, 76, 132, 0.11), 0 5px 18px rgba(35, 76, 132, 0.12);
+      background: rgba(35, 76, 132, 0.05);
+      animation: expertNodePulse 1.8s ease-in-out infinite alternate;
+    }
+
+    .expert-flow-node.is-complete {
+      border-color: rgba(47, 139, 102, 0.62);
+      background: rgba(47, 139, 102, 0.05);
+    }
+
+    .expert-flow-connector {
+      display: flex;
+      align-items: center;
+      padding: 0 3px;
+      color: rgba(78, 88, 104, 0.32);
+      flex-shrink: 0;
+      margin-top: 22px;
+      align-self: flex-start;
+    }
+
+    .expert-flow-connector svg {
+      width: 18px;
+      height: 18px;
+      stroke: currentColor;
+      stroke-width: 2;
+      fill: none;
+    }
+
+    .expert-flow-node-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: rgba(35, 76, 132, 0.08);
+      color: #234c84;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .expert-flow-node.is-complete .expert-flow-node-chip {
+      background: rgba(47, 139, 102, 0.11);
+      color: #1e6b4a;
+    }
+
+    .expert-flow-node-check { display: none; }
+    .expert-flow-node.is-complete .expert-flow-node-check { display: inline; }
+
+    .expert-flow-node-title {
+      font-size: 13px;
+      font-weight: 700;
+      line-height: 1.3;
+      color: #233042;
+    }
+
+    .expert-flow-node.is-active .expert-flow-node-title { color: #234c84; }
+    .expert-flow-node.is-complete .expert-flow-node-title { color: #1e6b4a; }
+
+    /* ============================================================
+       4. STEP PROGRESS BAR
+    ============================================================ */
+    .expert-progress-wrap {
+      margin: 16px 0 14px;
+    }
+
+    .expert-progress-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 7px;
+    }
+
+    .expert-progress-meta-label {
+      font-size: 12px;
+      color: #536173;
+    }
+
+    .expert-progress-meta-count {
+      font-size: 13px;
+      font-weight: 700;
+      color: #233042;
+    }
+
+    .expert-progress-track {
+      height: 6px;
+      border-radius: 999px;
+      background: rgba(78, 88, 104, 0.11);
+      overflow: hidden;
+    }
+
+    .expert-progress-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #234c84, #4da6ff);
+      transition: width 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+      width: 0%;
+    }
+
+    /* ============================================================
+       5. RICH STEP DETAIL PANEL
+    ============================================================ */
+    .expert-step-panel {
+      border-radius: 12px;
+      border: 1px solid rgba(78, 88, 104, 0.14);
+      background: rgba(255, 252, 248, 0.85);
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+
+    .expert-step-panel-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      border-bottom: 1px solid rgba(78, 88, 104, 0.09);
+      background: rgba(255, 255, 255, 0.55);
+    }
+
+    .expert-step-panel-icon {
+      font-size: 24px;
+      flex-shrink: 0;
+      min-width: 32px;
+      text-align: center;
+    }
+
+    .expert-step-panel-meta { flex: 1; }
+
+    .expert-step-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 9px;
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .badge-input          { background: rgba(35,76,132,0.10);  color: #234c84; }
+    .badge-processing     { background: rgba(185,123,32,0.11); color: #6e4200; }
+    .badge-check          { background: rgba(100,60,200,0.10); color: #5230a0; }
+    .badge-result         { background: rgba(47,139,102,0.11); color: #1e6b4a; }
+    .badge-recommendation { background: rgba(198,144,53,0.11); color: #7a4e00; }
+    .badge-output         { background: rgba(47,139,102,0.11); color: #1e6b4a; }
+
+    .expert-step-panel-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #233042;
+      line-height: 1.3;
+    }
+
+    .expert-step-panel-body {
+      padding: 14px 16px;
+      font-size: 14px;
+      line-height: 1.68;
+      color: #233042;
+    }
+
+    .expert-step-raw-toggle {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      border-top: 1px solid rgba(78, 88, 104, 0.09);
+      cursor: pointer;
+      user-select: none;
+      font-size: 12px;
+      font-weight: 600;
+      color: #536173;
+      background: rgba(78, 88, 104, 0.025);
+      transition: color 0.15s, background 0.15s;
+    }
+
+    .expert-step-raw-toggle:hover {
+      color: #234c84;
+      background: rgba(35, 76, 132, 0.04);
+    }
+
+    .raw-chevron {
+      width: 14px;
+      height: 14px;
+      stroke: #7c8695;
+      stroke-width: 2.2;
+      fill: none;
+      margin-left: auto;
+      transition: transform 0.22s ease;
+    }
+
+    .expert-step-raw-toggle.is-open .raw-chevron {
+      transform: rotate(180deg);
+    }
+
+    .expert-step-raw-body {
+      display: none;
+      padding: 12px 16px;
+      border-top: 1px solid rgba(78, 88, 104, 0.07);
+      background: rgba(22, 31, 43, 0.025);
+    }
+
+    .expert-step-raw-body.is-open { display: block; }
+
+    .expert-kv-grid {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 6px 16px;
+      font-size: 12.5px;
+    }
+
+    .expert-kv-key {
+      font-weight: 700;
+      color: #536173;
+      white-space: nowrap;
+    }
+
+    .expert-kv-value {
+      color: #233042;
+      word-break: break-word;
+    }
+
+    /* ============================================================
+       6. SCORE GAUGE (SVG Arc)
+    ============================================================ */
+    .expert-gauge-wrap {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      align-items: flex-start;
+      margin: 4px 0 10px;
+    }
+
+    .expert-gauge-unit {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .expert-gauge-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: #536173;
+      text-align: center;
+    }
+
+    .expert-gauge-svg-wrap {
+      position: relative;
+    }
+
+    .expert-gauge-center {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -46%);
+      text-align: center;
+      pointer-events: none;
+    }
+
+    .expert-gauge-value {
+      font-size: 21px;
+      font-weight: 800;
+      line-height: 1.1;
+      color: #233042;
+    }
+
+    .expert-gauge-sublabel {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      margin-top: 2px;
+    }
+
+    .gauge-easy     { color: #2f8b66; }
+    .gauge-moderate { color: #b97b20; }
+    .gauge-hard     { color: #b85648; }
+    .gauge-na       { color: #7c8695; }
+
+    /* ============================================================
+       7. SUMMARY GRID + SCORE COMPARISON TABLE
+    ============================================================ */
+    .expert-summary-section {
+      margin-top: 16px;
+      padding-top: 14px;
+      border-top: 1px solid rgba(78, 88, 104, 0.12);
+    }
+
+    .expert-summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .expert-summary-item {
+      padding: 10px 12px;
+      border-radius: 9px;
+      background: rgba(78, 88, 104, 0.05);
+      border: 1px solid rgba(78, 88, 104, 0.09);
+    }
+
+    .expert-summary-item-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #7c8695;
+      margin-bottom: 3px;
+    }
+
+    .expert-summary-item-value {
+      font-size: 14px;
+      font-weight: 700;
+      color: #233042;
+    }
+
+    .expert-threshold-section {
+      margin-top: 16px;
+      padding-top: 14px;
+      border-top: 1px solid rgba(78, 88, 104, 0.11);
+    }
+
+    .expert-threshold-section-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #7c8695;
+      margin-bottom: 8px;
+    }
+
+    .expert-threshold-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    .expert-threshold-table thead th {
+      padding: 6px 10px;
+      text-align: left;
+      font-size: 10.5px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #7c8695;
+      border-bottom: 1px solid rgba(78, 88, 104, 0.13);
+    }
+
+    .expert-threshold-table tbody td {
+      padding: 9px 10px;
+      vertical-align: middle;
+    }
+
+    .expert-threshold-table tbody tr.is-match {
+      background: rgba(35, 76, 132, 0.06);
+    }
+
+    .expert-threshold-table tbody tr.is-match td:first-child {
+      border-left: 3px solid #234c84;
+      padding-left: 7px;
+    }
+
+    .lv-easy     { color: #2f8b66; font-weight: 700; }
+    .lv-moderate { color: #b97b20; font-weight: 700; }
+    .lv-hard     { color: #b85648; font-weight: 700; }
+
+    .match-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 9px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .match-badge.is-match  { background: rgba(35, 76, 132, 0.10); color: #234c84; }
+    .match-badge.no-match  { color: #aab3c0; }
+
+    /* ============================================================
+       SHARED ANIMATIONS
+    ============================================================ */
+    @keyframes expertNodeEnter {
+      from { opacity: 0; transform: translateY(6px) scale(0.97); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    @keyframes expertNodePulse {
+      from { box-shadow: 0 0 0 0 rgba(35, 76, 132, 0.22); }
+      to   { box-shadow: 0 0 0 7px rgba(35, 76, 132, 0.05); }
+    }
+
+    @keyframes expertContentReveal {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    #expert-step-title,
+    #expert-step-body,
+    #expert-mode-summary {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+
+    #expert-step-title.expert-content-visible,
+    #expert-step-body.expert-content-visible,
+    #expert-mode-summary.expert-content-visible {
+      animation: expertContentReveal 0.35s ease forwards;
+    }
+  </style>
+</head>
+<body class="teacher-dashboard-page">
+
+<!-- Toast Container -->
+<div id="toast-container"></div>
+
+<div class="demo-banner">TalaSaAI System</div>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <h2>TalaSaAI</h2>
+      <p>Teacher Portal</p>
+    </div>
+    <nav>
+      <a href="teacher-dashboard.html"><span class="icon" data-icon="dashboard"></span><span class="nav-label">Dashboard</span></a>
+      <a href="teacher-passages.html"><span class="icon" data-icon="library"></span><span class="nav-label">Passage Library</span></a>
+      <a href="teacher-submit.html"><span class="icon" data-icon="submit"></span><span class="nav-label">Submit Passage</span></a>
+      <a href="teacher-students.html"><span class="icon" data-icon="students"></span><span class="nav-label">Students</span></a>
+      <a href="teacher-recommendations.html"><span class="icon" data-icon="recommendations"></span><span class="nav-label">Recommendations</span></a>
+      <a href="teacher-reports.html"><span class="icon" data-icon="reports"></span><span class="nav-label">Reports</span></a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-info shell-user-info">
+        <strong id="sidebar-user-name">Ms. Ana Villanueva</strong>
+        <span id="sidebar-user-meta" class="shell-user-meta">Grade 7 English | PNHS</span>
+      </div>
+      <button class="logout-btn" onclick="logout()"><span class="icon" data-icon="logout"></span><span class="nav-label">Logout</span></button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="breadcrumb"><a href="teacher-dashboard.html">Dashboard</a> &gt; Expert Mode</div>
+    <div class="page-header page-header-split">
+      <div class="page-header-copy">
+        <p class="eyebrow">Teacher workspace</p>
+        <h1>Expert Mode</h1>
+        <p id="expert-summary">Load a student to inspect the system's decision process.</p>
+      </div>
+      <div class="header-meta">
+        <span class="meta-pill"><strong id="expert-status-pill">Hidden</strong></span>
+      </div>
+    </div>
+
+    <!-- =====================================================
+         ALGORITHM SELECTOR CARD
+    ====================================================== -->
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-header">
+        <div class="card-header-copy">
+          <div class="section-title">Algorithm Selector</div>
+          <div class="micro-copy">Choose the expert view you want to inspect.</div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:16px;">
+        <button id="expert-view-rule-btn" class="btn btn-primary" type="button">Rule Base</button>
+        <button id="expert-view-svm-btn" class="btn btn-outline" type="button">SVM Algo</button>
+        <button id="expert-view-recommendation-btn" class="btn btn-outline" type="button">Recommendation Engine</button>
+      </div>
+
+      <!-- Rule Base Panel -->
+      <div id="expert-rule-panel">
+        <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:16px;">
+          <button id="expert-rule-student-btn" class="btn btn-primary" type="button">Student</button>
+          <button id="expert-rule-custom-btn" class="btn btn-outline" type="button">Custom</button>
+        </div>
+        <div id="expert-rule-student-section">
+          <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:stretch;">
+            <div class="form-group" style="margin:0;flex:1;min-width:260px;max-width:420px;">
+              <label class="form-label" for="expert-mode-student-select">Student</label>
+              <select id="expert-mode-student-select" class="form-control">
+                <option value="">Loading students...</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div id="expert-rule-custom-section" style="display:none;margin-top:20px;padding-top:16px;border-top:1px solid rgba(135,149,177,0.25);">
+          <div style="font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#7f8ca6;margin-bottom:8px;">Custom Rule Trace</div>
+          <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:end;">
+            <div class="form-group" style="margin:0;flex:1;min-width:220px;max-width:300px;">
+              <label class="form-label" for="expert-custom-score">Custom pre-assessment score</label>
+              <input id="expert-custom-score" class="form-control" type="number" min="0" max="100" placeholder="Enter 0–100">
+            </div>
+            <button id="expert-load-custom-btn" class="btn btn-outline" type="button">Load Custom Rule Trace</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- SVM Panel -->
+      <div id="expert-svm-panel" style="display:none;">
+        <div class="form-group" style="margin-top:0;">
+          <label class="form-label" for="expert-custom-passage">Custom passage text</label>
+          <textarea id="expert-custom-passage" class="form-control" rows="4" placeholder="Paste passage text to run the passage classifier"></textarea>
+        </div>
+        <div style="display:flex;justify-content:flex-end;margin-top:12px;">
+          <button id="expert-predict-custom-btn" class="btn btn-primary" type="button">Run SVM Prediction</button>
+        </div>
+      </div>
+
+      <!-- Recommendation Panel -->
+      <div id="expert-recommendation-panel" style="display:none;">
+        <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:stretch;">
+          <div class="form-group" style="margin:0;flex:1;min-width:260px;max-width:420px;">
+            <label class="form-label" for="expert-recommendation-student-select">Student</label>
+            <select id="expert-recommendation-student-select" class="form-control">
+              <option value="">Loading students...</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;margin-top:12px;">
+          <button id="expert-load-recommendation-btn" class="btn btn-primary" type="button">Load Recommendation Trace</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- =====================================================
+         ALGORITHM EXPLANATION PANEL (Enhancement #7)
+    ====================================================== -->
+    <div class="algo-explanation-card" id="algo-explanation-card">
+      <div class="algo-explanation-header is-open" id="algo-explanation-toggle">
+        <div class="algo-explanation-header-left">
+          <div class="algo-explanation-icon-box">ℹ️</div>
+          <div>
+            <div class="algo-explanation-title">How This Algorithm Works</div>
+            <div class="algo-explanation-subtitle" id="algo-explanation-subtitle">Rule-Based Classification</div>
+          </div>
+        </div>
+        <svg class="algo-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+
+      <div class="algo-explanation-body is-open" id="algo-explanation-body">
+        <div class="algo-explanation-content">
+
+          <!-- ── RULE BASE ─────────────────────────────── -->
+          <div class="explanation-section is-active" id="explanation-rule">
+            <p class="exp-heading">Overview</p>
+            <div class="exp-note">
+              The <strong>Rule-Based Classifier</strong> is the first algorithm TalaSaAI runs for every student. It reads the student's pre-assessment score and applies a simple set of rules to decide which reading difficulty level the student should start at.
+            </div>
+
+            <p class="exp-heading">Step-by-Step Process</p>
+            <div class="exp-rows">
+              <div class="exp-row">
+                <div class="exp-row-icon">📝</div>
+                <div class="exp-row-label">1 · Input</div>
+                <div class="exp-row-desc">The system reads the student's <strong>pre-assessment score</strong> (0–100). This is a quiz taken by the student before starting any reading sessions. It measures their baseline reading readiness so the system can place them at the right starting level.</div>
+              </div>
+              <div class="exp-row">
+                <div class="exp-row-icon">⚙️</div>
+                <div class="exp-row-label">2 · Normalize</div>
+                <div class="exp-row-desc">The raw score is <strong>clamped</strong> to the valid 0–100 range and rounded to the nearest integer. Any value below 0 is treated as 0, and any value above 100 is treated as 100. This prevents edge cases from breaking the rule logic.</div>
+              </div>
+              <div class="exp-row">
+                <div class="exp-row-icon">🔍</div>
+                <div class="exp-row-label">3 · Threshold Check</div>
+                <div class="exp-row-desc">The normalized score is compared against <strong>three fixed thresholds</strong>. The matching threshold determines the student's Class Level, which controls which difficulty of reading passages they will receive.</div>
+              </div>
+              <div class="exp-row">
+                <div class="exp-row-icon">✅</div>
+                <div class="exp-row-label">4 · Result</div>
+                <div class="exp-row-desc">The system assigns a class level: <strong>Easy</strong>, <strong>Moderate</strong>, or <strong>Hard</strong>. This level is stored in the student's profile and used to filter all reading passages shown to that student.</div>
+              </div>
+            </div>
+
+            <p class="exp-heading">Threshold Ruler</p>
+            <div class="exp-threshold-ruler">
+              <div class="exp-thr-seg easy">🟢 Easy &nbsp;(0 – 59)</div>
+              <div class="exp-thr-seg moderate">🟡 Moderate &nbsp;(60 – 79)</div>
+              <div class="exp-thr-seg hard">🔴 Hard &nbsp;(≥ 80)</div>
+            </div>
+
+            <p class="exp-heading">Rule Logic (Pseudo-Code)</p>
+            <div class="exp-code"><span class="cc"># TalaSaAI — Rule-Based Pre-Assessment Classifier</span>
+<span class="ck">function</span> classify(raw_score):
+  score = clamp(raw_score, <span class="cv">0</span>, <span class="cv">100</span>)     <span class="cc"># Step 2: normalize</span>
+
+  <span class="ck">if</span> score &gt;= <span class="cv">80</span>:                          <span class="cc"># Step 3: threshold check</span>
+    <span class="ck">return</span> <span class="cr">"HARD"</span>
+  <span class="ck">elif</span> score &gt;= <span class="cv">60</span>:
+    <span class="ck">return</span> <span class="cr">"MODERATE"</span>
+  <span class="ck">else</span>:
+    <span class="ck">return</span> <span class="cr">"EASY"</span></div>
+
+            <div class="exp-note">💡 <strong>Why rule-based?</strong> Rules are fully transparent and auditable. A teacher can always verify exactly why a student received a specific class level — just check the score against the thresholds above. There is no hidden computation.</div>
+          </div>
+
+          <!-- ── SVM CLASSIFIER ─────────────────────────── -->
+          <div class="explanation-section" id="explanation-svm">
+            <p class="exp-heading">Overview</p>
+            <div class="exp-note">
+              The <strong>SVM Passage Classifier</strong> is a machine learning model that reads a passage of text and automatically predicts how difficult it is (Easy, Moderate, or Hard). This removes the need for teachers to manually tag every passage.
+            </div>
+
+            <p class="exp-heading">Step-by-Step Process</p>
+            <div class="exp-rows">
+              <div class="exp-row">
+                <div class="exp-row-icon">📄</div>
+                <div class="exp-row-label">1 · Input</div>
+                <div class="exp-row-desc">A raw text passage is submitted to the classifier. This can be a passage from the library or any custom text pasted into the text area above.</div>
+              </div>
+              <div class="exp-row">
+                <div class="exp-row-icon">🔬</div>
+                <div class="exp-row-label">2 · Feature Extraction</div>
+                <div class="exp-row-desc">The text is analyzed to extract <strong>four linguistic features</strong> that describe complexity: average sentence length, average word length, type-token ratio (vocabulary richness), and total word count. These numbers become the input to the model.</div>
+              </div>
+              <div class="exp-row">
+                <div class="exp-row-icon">🤖</div>
+                <div class="exp-row-label">3 · SVM Model</div>
+                <div class="exp-row-desc">A <strong>Support Vector Machine (SVM)</strong> — trained on hundreds of pre-labeled passages — maps the extracted features to a predicted difficulty class. SVM finds the optimal mathematical boundary that separates Easy, Moderate, and Hard passages in feature space.</div>
+              </div>
+              <div class="exp-row">
+                <div class="exp-row-icon">📊</div>
+                <div class="exp-row-label">4 · Output &amp; Confidence</div>
+                <div class="exp-row-desc">The model outputs a <strong>predicted label</strong> (Easy / Moderate / Hard) and a <strong>confidence score</strong> (0–100%). High confidence means the passage clearly fits that level. Lower confidence means it sits near the boundary between two levels.</div>
+              </div>
+            </div>
+
+            <p class="exp-heading">Processing Pipeline</p>
+            <div class="exp-pipeline">
+              <div class="exp-pip-step"><span class="exp-pip-icon">📄</span>Raw Text</div>
+              <div class="exp-pip-arrow">→</div>
+              <div class="exp-pip-step"><span class="exp-pip-icon">🔬</span>Feature Extraction</div>
+              <div class="exp-pip-arrow">→</div>
+              <div class="exp-pip-step"><span class="exp-pip-icon">🤖</span>SVM Model</div>
+              <div class="exp-pip-arrow">→</div>
+              <div class="exp-pip-step"><span class="exp-pip-icon">🏷️</span>Label + Confidence</div>
+            </div>
+
+            <p class="exp-heading">Features Extracted from the Passage</p>
+            <div class="exp-rows">
+              <div class="exp-row">
+                <div class="exp-row-icon">📏</div>
+                <div class="exp-row-label">Sentence Length</div>
+                <div class="exp-row-desc">Average number of words per sentence. Longer, more complex sentences are typically associated with harder reading levels.</div>
+              </div>
+              <div class="exp-row">
+                <div class="exp-row-icon">🔤</div>
+                <div class="exp-row-label">Word Length</div>
+                <div class="exp-row-desc">Average number of characters per word. Passages with longer words tend to use more complex or academic vocabulary.</div>
+              </div>
+              <div class="exp-row">
+                <div class="exp-row-icon">📚</div>
+                <div class="exp-row-label">Type-Token Ratio</div>
+                <div class="exp-row-desc">The ratio of unique words to total words. A higher ratio indicates more varied vocabulary, which generally makes reading harder.</div>
+              </div>
+              <div class="exp-row">
+                <div class="exp-row-icon">🔢</div>
+                <div class="exp-row-label">Word Count</div>
+                <div class="exp-row-desc">Total number of words in the passage. Longer passages require more sustained reading effort and concentration.</div>
+              </div>
+            </div>
+
+            <div class="exp-note">💡 <strong>What is a Support Vector Machine?</strong> An SVM is a supervised machine learning algorithm. It was trained on a set of reading passages that experts already labeled as Easy, Moderate, or Hard. It learned the patterns in those labels and now applies them to new passages automatically — without any human tagging needed.</div>
+          </div>
+
+          <!-- ── RECOMMENDATION ENGINE ──────────────────── -->
+          <div class="explanation-section" id="explanation-recommendation">
+            <p class="exp-heading">Overview</p>
+            <div class="exp-note">
+              The <strong>Recommendation Engine</strong> runs at the end of each week. It looks at how well a student performed across all their reading sessions that week and recommends a new difficulty level for the following week — either keeping the current level or moving the student up or down.
+            </div>
+
+            <p class="exp-heading">Step-by-Step Process</p>
+            <div class="exp-rows">
+              <div class="exp-row">
+                <div class="exp-row-icon">📋</div>
+                <div class="exp-row-label">1 · Input</div>
+                <div class="exp-row-desc">The engine gathers all of the student's session scores for the current week and computes a <strong>weekly average score</strong> (0–100%). This single number summarizes overall performance for that week.</div>
+              </div>
+              <div class="exp-row">
+                <div class="exp-row-icon">📏</div>
+                <div class="exp-row-label">2 · Threshold Check</div>
+                <div class="exp-row-desc">The weekly average is checked against the student's <strong>current level</strong>, not just a single raw score. That means the outcome can change depending on the scenario: an Easy student at 60% or above moves up to Moderate, a Moderate student at 80% or above moves up to Hard, and a Hard student below 80% moves down to Moderate.</div>
+              </div>
+              <div class="exp-row">
+                <div class="exp-row-icon">🎯</div>
+                <div class="exp-row-label">3 · Output</div>
+                <div class="exp-row-desc">The engine sets <strong>nextClassLevel</strong> — the difficulty of passages the student will see next week. If the recommendation is <em>applied</em>, the student's class level is automatically updated in their profile.</div>
+              </div>
+            </div>
+
+            <p class="exp-heading">Why Average Over a Full Week?</p>
+            <div class="exp-note">A single session score can be skewed by a bad day, distraction, or an unusually hard passage. Averaging across the entire week gives a more reliable picture of the student's actual performance before the system adjusts their level.</div>
+
+            <p class="exp-heading">Recommendation Logic (Pseudo-Code)</p>
+            <div class="exp-code"><span class="cc"># TalaSaAI — Weekly Recommendation Engine</span>
+<span class="ck">function</span> recommend(weekly_session_scores, current_level):
+  avg = sum(weekly_session_scores) / len(weekly_session_scores)
+
+  <span class="ck">if</span> current_level == <span class="cr">"EASY"</span>:
+    <span class="ck">if</span> avg &gt;= <span class="cv">60</span>:
+      next_level = <span class="cr">"MODERATE"</span>
+    <span class="ck">else</span>:
+      next_level = <span class="cr">"EASY"</span>
+
+  <span class="ck">elif</span> current_level == <span class="cr">"MODERATE"</span>:
+    <span class="ck">if</span> avg &gt;= <span class="cv">80</span>:
+      next_level = <span class="cr">"HARD"</span>
+    <span class="ck">elif</span> avg &gt;= <span class="cv">60</span>:
+      next_level = <span class="cr">"MODERATE"</span>
+    <span class="ck">else</span>:
+      next_level = <span class="cr">"EASY"</span>
+
+  <span class="ck">else</span>:
+    <span class="ck">if</span> avg &gt;= <span class="cv">80</span>:
+      next_level = <span class="cr">"HARD"</span>
+    <span class="ck">else</span>:
+      next_level = <span class="cr">"MODERATE"</span>
+
+  apply_to_student(next_level)      <span class="cc"># update class level for next week</span>
+  <span class="ck">return</span> next_level</div>
+
+            <p class="exp-heading">Recommendation Status</p>
+            <div class="exp-rows">
+              <div class="exp-row">
+                <div class="exp-row-icon">✅</div>
+                <div class="exp-row-label">Applied</div>
+                <div class="exp-row-desc">The student's class level has been updated. Starting from their next session, they will receive passages at the new difficulty level.</div>
+              </div>
+              <div class="exp-row">
+                <div class="exp-row-icon">⏳</div>
+                <div class="exp-row-label">Not Applied</div>
+                <div class="exp-row-desc">The week is still in progress, or the teacher has reviewed the recommendation and decided to keep the current level manually. The student's level has not changed yet.</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- =====================================================
+         ALGORITHM WALKTHROUGH CARD
+    ====================================================== -->
+    <div id="expert-walkthrough-card" class="card" style="display:none;">
+      <div class="card-header">
+        <div class="card-header-copy">
+          <div class="section-title">Algorithm Walkthrough</div>
+          <div class="micro-copy">Step-by-step interactive trace for the selected algorithm and student.</div>
+        </div>
+      </div>
+
+      <!-- Flow Pipeline (Connected Nodes) -->
+      <div class="expert-flow-pipeline" id="expert-flow-steps" aria-live="polite"></div>
+
+      <!-- Progress Bar -->
+      <div class="expert-progress-wrap">
+        <div class="expert-progress-meta">
+          <span class="expert-progress-meta-label">Progress through steps</span>
+          <strong class="expert-progress-meta-count" id="expert-step-label">Step 0 of 0</strong>
+        </div>
+        <div class="expert-progress-track">
+          <div class="expert-progress-fill" id="expert-progress-fill"></div>
+        </div>
+      </div>
+
+      <!-- Step Navigation -->
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
+        <button id="expert-prev-btn" class="btn btn-outline btn-sm" type="button">&#8592; Prev</button>
+        <button id="expert-next-btn" class="btn btn-primary btn-sm" type="button">Next &#8594;</button>
+      </div>
+
+      <!-- Rich Step Detail Panel -->
+      <div class="expert-step-panel" id="expert-step-panel-wrap">
+        <div class="expert-step-panel-header">
+          <div class="expert-step-panel-icon" id="expert-step-icon">📥</div>
+          <div class="expert-step-panel-meta">
+            <div class="expert-step-badge badge-input" id="expert-step-badge">Input</div>
+            <div class="expert-step-panel-title" id="expert-step-title"></div>
+          </div>
+        </div>
+        <div class="expert-step-panel-body" id="expert-step-body"></div>
+        <!-- Raw Trace Toggle -->
+        <div class="expert-step-raw-toggle" id="expert-step-raw-toggle">
+          <svg viewBox="0 0 24 24" width="13" height="13" stroke="#536173" stroke-width="2" fill="none"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+          <span>Raw Trace Data</span>
+          <svg class="raw-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="expert-step-raw-body" id="expert-step-raw-body">
+          <div class="expert-kv-grid" id="expert-step-kv"></div>
+        </div>
+      </div>
+
+      <!-- Summary Section (Gauge + Grid + Threshold Table) -->
+      <div id="expert-mode-summary" class="expert-summary-section">
+        <!-- Score Gauges -->
+        <div class="expert-gauge-wrap" id="expert-gauge-wrap"></div>
+        <!-- Summary Grid -->
+        <div class="expert-summary-grid" id="expert-summary-grid"></div>
+        <!-- Score Comparison Table -->
+        <div class="expert-threshold-section" id="expert-threshold-section" style="display:none;">
+          <div class="expert-threshold-section-label">Threshold Comparison</div>
+          <table class="expert-threshold-table">
+            <thead>
+              <tr>
+                <th>Level</th>
+                <th>Score Range</th>
+                <th>Student Score</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="expert-threshold-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script src="../api.js?v=20260804"></script>
+<script>
+  /* ============================================================
+     STATE
+  ============================================================ */
+  var expertModeEnabled = ReadWiseAPI.getExpertModeState();
+  var expertStudents = [];
+  var expertTrace = null;
+  var currentExpertStepIndex = 0;
+  var selectedExpertView = "rule";
+  var selectedRuleMode = "student";
+
+  /* ============================================================
+     TOAST SYSTEM
+  ============================================================ */
+  function showToast(message, type, title) {
+    type = type || "info";
+    var container = document.getElementById("toast-container");
+    if (!container) return;
+    var icons  = { success: "✅", error: "❌", info: "ℹ️" };
+    var titles = { success: "Success", error: "Error", info: "Notice" };
+    var toast = document.createElement("div");
+    toast.className = "toast toast-" + type;
+    toast.innerHTML =
+      '<div class="toast-icon">' + (icons[type] || "ℹ️") + '</div>' +
+      '<div class="toast-body">' +
+        '<div class="toast-title">' + escapeHtml(title || titles[type] || "Notice") + '</div>' +
+        '<div class="toast-msg">' + escapeHtml(message) + '</div>' +
+      '</div>' +
+      '<button class="toast-close" aria-label="Dismiss">&times;</button>' +
+      '<div class="toast-timer"></div>';
+    container.appendChild(toast);
+    function dismiss() {
+      toast.classList.add("toast-hiding");
+      setTimeout(function() { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 260);
+    }
+    toast.querySelector(".toast-close").addEventListener("click", dismiss);
+    setTimeout(dismiss, 4300);
+  }
+
+  /* ============================================================
+     HELPERS
+  ============================================================ */
+  function escapeHtml(value) {
+    return String(value || "").replace(/[&<>"']/g, function(c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  function getStepMeta(title) {
+    var t = (title || "").toLowerCase();
+    if (t.indexOf("normali") !== -1)
+      return { badge: "Processing", badgeClass: "badge-processing", icon: "⚙️" };
+    if (t.indexOf("feature") !== -1)
+      return { badge: "Processing", badgeClass: "badge-processing", icon: "🔬" };
+    if (t.indexOf("threshold") !== -1 || t.indexOf("rule") !== -1 || t.indexOf("check") !== -1)
+      return { badge: "Threshold Check", badgeClass: "badge-check", icon: "🔍" };
+    if (t.indexOf("prediction") !== -1)
+      return { badge: "Prediction", badgeClass: "badge-check", icon: "🤖" };
+    if (t === "recommendation output" || t.indexOf("output") !== -1)
+      return { badge: "Output", badgeClass: "badge-output", icon: "📤" };
+    if (t.indexOf("recommendation") !== -1)
+      return { badge: "Recommendation", badgeClass: "badge-recommendation", icon: "🎯" };
+    if (t.indexOf("result") !== -1 || t.indexOf("final") !== -1)
+      return { badge: "Result", badgeClass: "badge-result", icon: "✅" };
+    return { badge: "Input", badgeClass: "badge-input", icon: "📥" };
+  }
+
+  function getStepRawData(stepIndex, trace) {
+    if (!trace) return {};
+    var pre  = trace.preAssessmentTrace || {};
+    var pred = trace.predictionTrace || null;
+    var week = trace.weeklyProgressTrace || null;
+    var stu  = trace.student || {};
+    var data = {};
+    var growth = week && week.growthMetrics ? week.growthMetrics : {};
+
+    if (pred) {
+      // SVM trace
+      if (stepIndex === 0)
+        data = { "Text Length (chars)": pred.input && pred.input.textLength, "Word Count": pred.input && pred.input.wordCount, "Preview": pred.input && pred.input.preview ? pred.input.preview.slice(0, 100) + "…" : "N/A" };
+      else if (stepIndex === 1)
+        data = { "Cleaned Length": pred.normalized && pred.normalized.cleanedTextLength, "Word Count": pred.normalized && pred.normalized.wordCount };
+      else if (stepIndex === 2)
+        data = { "Algorithm": pred.decision && pred.decision.algorithm, "Predicted Label": pred.decision && pred.decision.predictedLabel, "Confidence": pred.decision && pred.decision.confidencePercent !== undefined ? pred.decision.confidencePercent + "%" : "N/A" };
+      else if (stepIndex === 3)
+        data = { "Label": pred.result && pred.result.label, "Confidence": pred.result && pred.result.confidence !== undefined ? pred.result.confidence + "%" : "N/A" };
+    } else if (week && !pre.input) {
+      // Recommendation trace
+      if (stepIndex === 0)
+        data = { "Student": stu.name, "Week": week.week, "Average Score": week.averageScore !== undefined ? week.averageScore + "%" : "N/A", "Baseline Score": growth.baselineScore !== undefined ? growth.baselineScore + "%" : "N/A", "WPM": growth.wpm !== undefined ? Number(growth.wpm).toFixed(2) : "N/A" };
+      else if (stepIndex === 1)
+        data = { "Recommendation": week.recommendation, "Thresholds": "Easy < 60 | Moderate 60–79 | Hard ≥ 80", "Gain": growth.gain !== undefined ? growth.gain + "%" : "N/A", "Normalized Gain": growth.normalizedGain !== undefined ? growth.normalizedGain : "N/A" };
+      else if (stepIndex === 2)
+        data = { "Next Class Level": week.nextClassLevel, "Applied": week.applied ? "Yes" : "No", "Previous Level": week.previousClassLevel || stu.classLevel, "Latest Score": growth.latestScore !== undefined ? growth.latestScore + "%" : "N/A" };
+    } else {
+      // Rule base trace
+      if (stepIndex === 0)
+        data = { "Student": stu.name || "Custom Input", "Raw Score": stu.preScore !== undefined ? stu.preScore : "N/A" };
+      else if (stepIndex === 1)
+        data = { "Clamped Score": pre.normalized && pre.normalized.clampedScore !== undefined ? pre.normalized.clampedScore : stu.preScore, "Valid Range": "0 – 100" };
+      else if (stepIndex === 2)
+        data = { "Score": stu.preScore !== undefined ? stu.preScore + "%" : "N/A", "Rule Applied": (pre.decision && pre.decision.ruleApplied) || "N/A", "Hard Threshold": "≥ 80", "Moderate Threshold": "60 – 79", "Easy Threshold": "< 60" };
+      else if (stepIndex === 3)
+        data = { "Class Level": trace.currentClassLevel || stu.classLevel, "Score": stu.preScore !== undefined ? stu.preScore + "%" : "N/A" };
+      else if (stepIndex === 4)
+        data = { "Recommendation": (week && week.recommendation) || trace.currentClassLevel || "N/A" };
+    }
+    return data;
+  }
+
+  /* ============================================================
+     SCORE GAUGE (SVG Arc)
+  ============================================================ */
+  function buildGaugeSvg(value, colorClass) {
+    var r = 38, cx = 50, cy = 53;
+    var circ = 2 * Math.PI * r;          // ≈ 238.76
+    var arcLen  = circ * 0.75;           // 270° of the circle
+    var fillLen = arcLen * (Math.max(0, Math.min(100, Number(value) || 0)) / 100);
+    var bgDash   = arcLen.toFixed(2) + " " + (circ - arcLen).toFixed(2);
+    var fillDash = fillLen.toFixed(2) + " " + (circ - fillLen).toFixed(2);
+    var colors = { easy: "#2f8b66", moderate: "#b97b20", hard: "#b85648" };
+    var stroke = colors[colorClass] || "#234c84";
+    var rot = "rotate(135 " + cx + " " + cy + ")";
+    return '<svg viewBox="0 0 100 110" width="112" height="112">' +
+      '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="none" stroke="rgba(78,88,104,0.11)" stroke-width="8" stroke-dasharray="' + bgDash + '" transform="' + rot + '"/>' +
+      '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="none" stroke="' + stroke + '" stroke-width="8" stroke-linecap="round" stroke-dasharray="' + fillDash + '" transform="' + rot + '" style="transition:stroke-dasharray 0.75s cubic-bezier(0.22,1,0.36,1);"/>' +
+      '</svg>';
+  }
+
+  function renderScoreGauges(trace) {
+    var wrap = document.getElementById("expert-gauge-wrap");
+    if (!wrap) return;
+    if (!trace) { wrap.innerHTML = ""; return; }
+    var stu  = trace.student || {};
+    var pred = trace.predictionTrace || null;
+    var week = trace.weeklyProgressTrace || null;
+    var units = [];
+
+    if (pred && pred.result) {
+      var conf = Number(pred.result.confidence) || 0;
+      var lbl  = (pred.result.label || "N/A").toLowerCase();
+      var cc   = lbl === "hard" ? "hard" : (lbl === "moderate" ? "moderate" : "easy");
+      units.push({ value: conf, label: "SVM Confidence", sublabel: pred.result.label || "N/A", colorClass: cc });
+    }
+
+    if (stu.preScore !== undefined && stu.preScore !== null) {
+      var sc  = Number(stu.preScore) || 0;
+      var cl  = (trace.currentClassLevel || stu.classLevel || "").toLowerCase();
+      var scc = cl === "hard" ? "hard" : (cl === "moderate" ? "moderate" : "easy");
+      units.push({ value: sc, label: "Pre-Assessment", sublabel: trace.currentClassLevel || stu.classLevel || "N/A", colorClass: scc });
+    }
+
+    if (week && week.averageScore !== undefined && week.averageScore !== null) {
+      var wav  = Number(week.averageScore) || 0;
+      var wrec = (week.recommendation || "").toLowerCase();
+      var wcc  = wrec === "hard" ? "hard" : (wrec === "moderate" ? "moderate" : "easy");
+      units.push({ value: wav, label: "Weekly Average", sublabel: week.recommendation || "N/A", colorClass: wcc });
+    }
+
+    if (!units.length) { wrap.innerHTML = ""; return; }
+
+    wrap.innerHTML = units.map(function(u) {
+      return '<div class="expert-gauge-unit">' +
+        '<div class="expert-gauge-label">' + escapeHtml(u.label) + '</div>' +
+        '<div class="expert-gauge-svg-wrap">' +
+          buildGaugeSvg(u.value, u.colorClass) +
+          '<div class="expert-gauge-center">' +
+            '<div class="expert-gauge-value">' + Math.round(u.value) + '<span style="font-size:12px;font-weight:600">%</span></div>' +
+            '<div class="expert-gauge-sublabel gauge-' + (u.colorClass || "na") + '">' + escapeHtml(u.sublabel) + '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    }).join("");
+  }
+
+  /* ============================================================
+     SUMMARY GRID
+  ============================================================ */
+  function renderSummaryGrid(trace) {
+    var grid = document.getElementById("expert-summary-grid");
+    if (!grid || !trace) { if (grid) grid.innerHTML = ""; return; }
+    var stu  = trace.student || {};
+    var pred = trace.predictionTrace || null;
+    var week = trace.weeklyProgressTrace || null;
+    var pre  = trace.preAssessmentTrace || {};
+    var items = [];
+    var growth = week && week.growthMetrics ? week.growthMetrics : {};
+
+    items.push({ label: "Student",       value: stu.name || "Custom Input" });
+    items.push({ label: "Current Level", value: trace.currentClassLevel || stu.classLevel || "—" });
+    if (stu.preScore !== undefined && stu.preScore !== null)
+      items.push({ label: "Pre-Score", value: stu.preScore + "%" });
+    if (pre.decision && pre.decision.ruleApplied)
+      items.push({ label: "Rule Used", value: pre.decision.ruleApplied });
+    if (pred && pred.result) {
+      items.push({ label: "Passage Label", value: pred.result.label || "N/A" });
+      if (pred.result.confidence !== undefined && pred.result.confidence !== null)
+        items.push({ label: "Confidence", value: pred.result.confidence + "%" });
+    }
+    if (week) {
+      if (week.recommendation)
+        items.push({ label: "Recommendation", value: week.recommendation });
+      if (week.averageScore !== undefined && week.averageScore !== null)
+        items.push({ label: "Weekly Avg Score", value: week.averageScore + "%" });
+      if (growth.baselineScore !== undefined && growth.baselineScore !== null)
+        items.push({ label: "Baseline Score", value: growth.baselineScore + "%" });
+      if (growth.latestScore !== undefined && growth.latestScore !== null)
+        items.push({ label: "Latest Score", value: growth.latestScore + "%" });
+      if (growth.gain !== undefined && growth.gain !== null)
+        items.push({ label: "Gain", value: growth.gain + "%" });
+      if (growth.normalizedGain !== undefined && growth.normalizedGain !== null)
+        items.push({ label: "Normalized Gain", value: Number(growth.normalizedGain).toFixed(2) });
+      if (growth.wpm !== undefined && growth.wpm !== null)
+        items.push({ label: "WPM", value: Number(growth.wpm).toFixed(2) });
+    }
+
+    grid.innerHTML = items.map(function(item) {
+      return '<div class="expert-summary-item">' +
+        '<div class="expert-summary-item-label">' + escapeHtml(item.label) + '</div>' +
+        '<div class="expert-summary-item-value">' + escapeHtml(item.value) + '</div>' +
+      '</div>';
+    }).join("");
+  }
+
+  /* ============================================================
+     THRESHOLD TABLE
+  ============================================================ */
+  function getRecommendationAction(score, currentLevel) {
+    var normalizedScore = Number(score) || 0;
+    var current = normalizeClassLevel(currentLevel || "EASY");
+
+    if (current === "EASY") {
+      if (normalizedScore >= 60) {
+        return { action: "Step Up", target: "MODERATE" };
+      }
+      return { action: "Maintain", target: current };
+    }
+
+    if (current === "MODERATE") {
+      if (normalizedScore >= 80) {
+        return { action: "Step Up", target: "HARD" };
+      }
+      if (normalizedScore >= 60) {
+        return { action: "Maintain", target: current };
+      }
+      return { action: "Step Down", target: "EASY" };
+    }
+
+    if (normalizedScore >= 80) {
+      return { action: "Maintain", target: current };
+    }
+
+    return { action: "Step Down", target: "MODERATE" };
+  }
+
+  function renderThresholdTable(trace) {
+    var section = document.getElementById("expert-threshold-section");
+    var tbody   = document.getElementById("expert-threshold-tbody");
+    if (!section || !tbody || !trace) { if (section) section.style.display = "none"; return; }
+
+    var stu  = trace.student || {};
+    var pred = trace.predictionTrace || null;
+    var week = trace.weeklyProgressTrace || null;
+
+    // Only for rule-based / recommendation views
+    if (pred && !stu.preScore && !week) { section.style.display = "none"; return; }
+    if (selectedExpertView === "svm") { section.style.display = "none"; return; }
+
+    var score = null;
+    if (selectedExpertView === "recommendation" && week && week.averageScore !== undefined && week.averageScore !== null) {
+      score = Number(week.averageScore);
+    } else if (stu.preScore !== undefined && stu.preScore !== null) {
+      score = Number(stu.preScore);
+    } else if (week && week.averageScore !== undefined && week.averageScore !== null) {
+      score = Number(week.averageScore);
+    }
+    if (score === null) { section.style.display = "none"; return; }
+
+    section.style.display = "block";
+    var currentLevel = normalizeClassLevel(trace.currentClassLevel || stu.classLevel || "EASY");
+    var action = getRecommendationAction(score, currentLevel);
+    var levels = [
+      { label: "Easy",     cls: "lv-easy",     range: "0 – 59",  min: 0,  max: 59  },
+      { label: "Moderate", cls: "lv-moderate",  range: "60 – 79", min: 60, max: 79  },
+      { label: "Hard",     cls: "lv-hard",      range: "≥ 80",    min: 80, max: 100 },
+    ];
+    tbody.innerHTML = levels.map(function(lv) {
+      var normalizedLevel = normalizeClassLevel(lv.label);
+      var isCurrent = normalizedLevel === currentLevel;
+      var statusText = "—";
+      var badgeClass = "no-match";
+
+      if (isCurrent) {
+        if (action.action === "Maintain") {
+          statusText = "Maintain";
+        } else {
+          statusText = action.action + " to " + getClassDisplayName(action.target);
+        }
+        badgeClass = "is-match";
+      }
+
+      return '<tr class="' + (isCurrent ? "is-match" : "") + '">' +
+        '<td class="' + lv.cls + '">' + lv.label + '</td>' +
+        '<td>' + lv.range + '</td>' +
+        '<td>' + Math.round(score) + '%</td>' +
+        '<td><span class="match-badge ' + badgeClass + '">' + statusText + '</span></td>' +
+      '</tr>';
+    }).join("");
+  }
+
+  /* ============================================================
+     PROGRESS BAR
+  ============================================================ */
+  function updateProgressBar() {
+    var fill = document.getElementById("expert-progress-fill");
+    if (!fill) return;
+    var steps = expertTrace && Array.isArray(expertTrace.steps) ? expertTrace.steps : [];
+    var pct = steps.length ? Math.round(((currentExpertStepIndex + 1) / steps.length) * 100) : 0;
+    fill.style.width = pct + "%";
+  }
+
+  /* ============================================================
+     ALGORITHM EXPLANATION PANEL
+  ============================================================ */
+  function updateAlgoExplanation(view) {
+    var map = {
+      rule:           { id: "explanation-rule",           subtitle: "Rule-Based Classification" },
+      svm:            { id: "explanation-svm",            subtitle: "SVM Passage Classifier" },
+      recommendation: { id: "explanation-recommendation", subtitle: "Weekly Recommendation Engine" },
+    };
+    var target = map[view] || map.rule;
+    var subtitle = document.getElementById("algo-explanation-subtitle");
+    if (subtitle) subtitle.textContent = target.subtitle;
+    ["explanation-rule", "explanation-svm", "explanation-recommendation"].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.classList.remove("is-active");
+    });
+    var active = document.getElementById(target.id);
+    if (active) active.classList.add("is-active");
+  }
+
+  /* ============================================================
+     UI STATE SYNC
+  ============================================================ */
+  function syncExpertModeState() {
+    var pill    = document.getElementById("expert-status-pill");
+    var summary = document.getElementById("expert-summary");
+    if (pill)    pill.textContent = expertModeEnabled ? "Visible" : "Hidden";
+    if (summary) summary.textContent = expertModeEnabled
+      ? "Expert mode is active. Select an algorithm view and inspect the chosen trace."
+      : "Expert mode is hidden. Type expertmodeon to activate it.";
+  }
+
+  window.addEventListener("readwise-expert-mode-change", function(event) {
+    expertModeEnabled = !!(event && event.detail && event.detail.enabled);
+    syncExpertModeState();
+  });
+
+  function setWalkthroughVisible(visible) {
+    var card = document.getElementById("expert-walkthrough-card");
+    if (card) card.style.display = visible ? "block" : "none";
+  }
+
+  function updateRuleModeUI() {
+    var studentBtn     = document.getElementById("expert-rule-student-btn");
+    var customBtn      = document.getElementById("expert-rule-custom-btn");
+    var studentSection = document.getElementById("expert-rule-student-section");
+    var customSection  = document.getElementById("expert-rule-custom-section");
+    var showStudent    = selectedRuleMode === "student";
+    if (studentBtn)     studentBtn.className = showStudent ? "btn btn-primary" : "btn btn-outline";
+    if (customBtn)      customBtn.className  = !showStudent ? "btn btn-primary" : "btn btn-outline";
+    if (studentSection) studentSection.style.display = showStudent ? "block" : "none";
+    if (customSection)  customSection.style.display  = showStudent ? "none" : "block";
+  }
+
+  function updateExpertViewUI() {
+    var ruleBtn  = document.getElementById("expert-view-rule-btn");
+    var svmBtn   = document.getElementById("expert-view-svm-btn");
+    var recBtn   = document.getElementById("expert-view-recommendation-btn");
+    var rulePanel = document.getElementById("expert-rule-panel");
+    var svmPanel  = document.getElementById("expert-svm-panel");
+    var recPanel  = document.getElementById("expert-recommendation-panel");
+    var showRule = selectedExpertView === "rule";
+    var showSvm  = selectedExpertView === "svm";
+    var showRec  = selectedExpertView === "recommendation";
+    if (ruleBtn)  ruleBtn.className = showRule ? "btn btn-primary" : "btn btn-outline";
+    if (svmBtn)   svmBtn.className  = showSvm  ? "btn btn-primary" : "btn btn-outline";
+    if (recBtn)   recBtn.className  = showRec  ? "btn btn-primary" : "btn btn-outline";
+    if (rulePanel) rulePanel.style.display = showRule ? "block" : "none";
+    if (svmPanel)  svmPanel.style.display  = showSvm  ? "block" : "none";
+    if (recPanel)  recPanel.style.display  = showRec  ? "block" : "none";
+    updateRuleModeUI();
+    updateAlgoExplanation(selectedExpertView);
+  }
+
+  function animateExpertContent(elements) {
+    elements.forEach(function(el) {
+      if (!el) return;
+      el.classList.remove("expert-content-visible");
+      void el.offsetWidth;
+      el.classList.add("expert-content-visible");
+    });
+  }
+
+  /* ============================================================
+     FLOW NODES RENDER
+  ============================================================ */
+  function renderExpertFlowNodes() {
+    var container = document.getElementById("expert-flow-steps");
+    var steps = expertTrace && Array.isArray(expertTrace.steps) ? expertTrace.steps : [];
+    if (!container) return;
+    if (!steps.length) { container.innerHTML = ""; return; }
+
+    container.innerHTML = steps.map(function(step, index) {
+      var stateClass = index === currentExpertStepIndex
+        ? "is-active"
+        : (index < currentExpertStepIndex ? "is-complete" : "");
+      var isLast = index === steps.length - 1;
+      var arrow = isLast ? "" :
+        '<div class="expert-flow-connector"><svg viewBox="0 0 24 24"><polyline points="9 6 15 12 9 18"/></svg></div>';
+      return '<div class="expert-flow-node-wrap">' +
+        '<button type="button" class="expert-flow-node ' + stateClass + '" data-step-index="' + index + '">' +
+          '<span class="expert-flow-node-chip">Step ' + (index + 1) + ' <span class="expert-flow-node-check">&#10003;</span></span>' +
+          '<span class="expert-flow-node-title">' + escapeHtml(step.title || "Step") + '</span>' +
+        '</button>' + arrow +
+      '</div>';
+    }).join("");
+
+    container.querySelectorAll(".expert-flow-node").forEach(function(node) {
+      node.addEventListener("click", function() {
+        currentExpertStepIndex = Number(node.getAttribute("data-step-index") || 0);
+        renderExpertTraceStep();
+      });
+    });
+  }
+
+  /* ============================================================
+     TRACE BUILDERS
+  ============================================================ */
+  function clampScoreValue(value) {
+    var parsed = Number(value);
+    if (!Number.isFinite(parsed)) return 0;
+    return Math.round(Math.max(0, Math.min(100, parsed)));
+  }
+
+  function buildRecommendationSummary(score) {
+    var r = score >= 80 ? "HARD" : (score >= 60 ? "MODERATE" : "EASY");
+    return { recommendation: r, difficulty: r, classLevel: r };
+  }
+
+  function buildRecommendationTrace(response) {
+    var trace = response || {};
+    var weekTrace = trace.weeklyProgressTrace || {};
+    var student = trace.student || {};
+    var currentClassLevel = trace.currentClassLevel || student.classLevel || "EASY";
+    var averageScore = weekTrace.averageScore !== undefined && weekTrace.averageScore !== null ? weekTrace.averageScore : "N/A";
+    var recommendation = weekTrace.recommendation || "N/A";
+    var nextClassLevel = weekTrace.nextClassLevel || currentClassLevel;
+    var currentLabel = getClassDisplayName(currentClassLevel);
+    var nextLabel = getClassDisplayName(nextClassLevel);
+    var growth = weekTrace.growthMetrics || {};
+    var gain = growth.gain !== undefined && growth.gain !== null ? Number(growth.gain) : 0;
+    var normalizedGain = growth.normalizedGain !== undefined && growth.normalizedGain !== null ? Number(growth.normalizedGain) : 0;
+    var wpm = growth.wpm !== undefined && growth.wpm !== null ? Number(growth.wpm) : 0;
+
+    var specificScenario;
+    if (recommendation === "Maintain") {
+      specificScenario = "The weekly average of " + averageScore + "% matches the student's current reading band, so the engine recommends Maintain. In this scenario, the student stays at " + currentLabel + " for the next week.";
+    } else if (recommendation.indexOf("Step UP") === 0) {
+      specificScenario = "The student is currently at " + currentLabel + " and the weekly average is " + averageScore + "%. Because the score is high enough to move the student one level up, the engine recommends Step Up to " + nextLabel + ".";
+    } else if (recommendation.indexOf("Step DOWN") === 0) {
+      specificScenario = "The student is currently at " + currentLabel + " and the weekly average is " + averageScore + "%. Because the score is low enough to move the student one level down, the engine recommends Step Down to " + nextLabel + ".";
+    } else {
+      specificScenario = "The engine reviewed the weekly average of " + averageScore + "% and compared it against the current reading level of " + currentLabel + ". The recommendation is " + recommendation + ".";
+    }
+
+    if (gain !== 0 || normalizedGain !== 0 || wpm > 0) {
+      specificScenario += " The growth view adds more context: gain is " + gain + "% from baseline, normalized gain is " + normalizedGain.toFixed(2) + ", and reading speed is " + wpm.toFixed(2) + " WPM. This helps explain whether the score improvement is meaningful and whether the student is keeping pace while reading.";
+    }
+
+    return {
+      student: student,
+      currentClassLevel: currentClassLevel,
+      preAssessmentTrace: null,
+      predictionTrace: null,
+      weeklyProgressTrace: weekTrace,
+      steps: [
+        {
+          step: 1,
+          title: "Recommendation Input",
+          body: "The recommendation engine starts with the student's weekly snapshot for week " + (weekTrace.week || 0) + ". It checks the student's average score of " + averageScore + "% and uses the current class level of " + currentLabel + " as the starting point for comparison, so the next recommendation is based on recent performance rather than a single test result. The system also considers baseline score, gain, normalized gain, and WPM to understand whether the performance change is real and stable."
+        },
+        {
+          step: 2,
+          title: "Recommendation Rule",
+          body: specificScenario + " The rule is dynamic here: the same score can lead to different outcomes depending on whether the student is already in Easy, Moderate, or Hard."
+        },
+        {
+          step: 3,
+          title: "Recommendation Output",
+          body: "The engine converts that scenario into a next class level of " + nextLabel + ". It also records whether the recommendation was applied in the system, so the teacher can see whether the student's reading pathway was actually updated for the next week."
+        },
+      ],
+    };
+  }
+
+  function buildCustomRuleTrace(score) {
+    var s   = clampScoreValue(score);
+    var rule = s >= 80 ? "score >= 80 => HARD" : (s >= 60 ? "score >= 60 and score < 80 => MODERATE" : "score < 60 => EASY");
+    var cl   = s >= 80 ? "HARD" : (s >= 60 ? "MODERATE" : "EASY");
+    var rec  = buildRecommendationSummary(s);
+    return {
+      student: { id: "custom-input", name: "Custom Input", email: "custom@example.com", grade: "N/A", section: "N/A", classLevel: cl, preScore: s, preAssessmentCompleted: true },
+      currentClassLevel: cl,
+      preAssessmentTrace: {
+        input: { score: s },
+        normalized: { clampedScore: s },
+        decision: { thresholds: { hardMin: 80, moderateMin: 60 }, ruleApplied: rule },
+        result: { classLevel: cl },
+      },
+      weeklyProgressTrace: { week: 1, averageScore: s, previousClassLevel: cl, recommendation: rec.recommendation, nextClassLevel: cl, applied: false },
+      steps: [
+        { step: 1, title: "Input", body: "The teacher entered a custom pre-assessment score of " + s + ". This value acts as the student's baseline readiness score and is the first input the rule-based system uses to decide which reading level should be assigned." },
+        { step: 2, title: "Normalization", body: "Before the rule is applied, the score is checked against the valid 0 to 100 range and clamped if needed. This keeps the same rule logic stable and prevents invalid or extreme values from causing inconsistent class placement." },
+        { step: 3, title: "Threshold Check", body: "The normalized score is now compared with the system thresholds. Because " + s + " falls in the " + rule + " branch, the engine chooses the " + cl + " class level. In plain terms, the rule engine decides whether the student should be placed in Easy, Moderate, or Hard based on the score they entered." },
+        { step: 4, title: "Final Result", body: "The rule-based classifier finishes by assigning the student to the " + cl + " level. This output is what the app would use to determine the reading pathway and the difficulty of future passages for that student." },
+      ],
+    };
+  }
+
+  /* ============================================================
+     RENDER STEP
+  ============================================================ */
+  function renderExpertTraceStep() {
+    var stepLabel  = document.getElementById("expert-step-label");
+    var stepTitle  = document.getElementById("expert-step-title");
+    var stepBody   = document.getElementById("expert-step-body");
+    var summary    = document.getElementById("expert-mode-summary");
+    var prevBtn    = document.getElementById("expert-prev-btn");
+    var nextBtn    = document.getElementById("expert-next-btn");
+    var badge      = document.getElementById("expert-step-badge");
+    var icon       = document.getElementById("expert-step-icon");
+    var rawToggle  = document.getElementById("expert-step-raw-toggle");
+    var rawBody    = document.getElementById("expert-step-raw-body");
+    var kvGrid     = document.getElementById("expert-step-kv");
+    var steps      = expertTrace && Array.isArray(expertTrace.steps) ? expertTrace.steps : [];
+
+    renderExpertFlowNodes();
+
+    if (!steps.length) {
+      setWalkthroughVisible(false);
+      if (stepLabel) stepLabel.textContent = "Step 0 of 0";
+      if (stepTitle) stepTitle.textContent = "";
+      if (stepBody)  stepBody.textContent  = "";
+      if (summary)   summary.innerHTML     = "";
+      if (prevBtn)   prevBtn.disabled = true;
+      if (nextBtn)   nextBtn.disabled = true;
+      return;
+    }
+
+    setWalkthroughVisible(true);
+    currentExpertStepIndex = Math.max(0, Math.min(currentExpertStepIndex, steps.length - 1));
+    var step = steps[currentExpertStepIndex];
+
+    // Step counter + progress
+    if (stepLabel) stepLabel.textContent = "Step " + (currentExpertStepIndex + 1) + " of " + steps.length;
+    updateProgressBar();
+
+    // Badge + icon
+    var meta = getStepMeta(step.title || "");
+    if (badge) { badge.textContent = meta.badge; badge.className = "expert-step-badge " + meta.badgeClass; }
+    if (icon)  icon.textContent = meta.icon;
+
+    // Title + body
+    if (stepTitle) stepTitle.textContent = step.title || "Step";
+    if (stepBody)  stepBody.textContent  = step.body  || "";
+
+    // Raw trace data
+    var rawData = getStepRawData(currentExpertStepIndex, expertTrace);
+    if (kvGrid) {
+      var keys = Object.keys(rawData);
+      if (keys.length) {
+        kvGrid.innerHTML = keys.map(function(k) {
+          return '<span class="expert-kv-key">' + escapeHtml(k) + ':</span>' +
+                 '<span class="expert-kv-value">' + escapeHtml(String(rawData[k] !== undefined && rawData[k] !== null ? rawData[k] : "N/A")) + '</span>';
+        }).join("");
+      } else {
+        kvGrid.innerHTML = '<span class="expert-kv-key" style="grid-column:1/-1;color:#aab3c0;font-weight:400;font-size:12px;">No raw data available for this step.</span>';
+      }
+    }
+
+    // Collapse raw body on step change
+    if (rawBody)   rawBody.classList.remove("is-open");
+    if (rawToggle) rawToggle.classList.remove("is-open");
+
+    // Nav buttons
+    if (prevBtn) prevBtn.disabled = currentExpertStepIndex === 0;
+    if (nextBtn) {
+      nextBtn.textContent = currentExpertStepIndex === steps.length - 1 ? "End" : "Next \u2192";
+      nextBtn.disabled = false;
+    }
+
+    // Summary panel
+    renderScoreGauges(expertTrace);
+    renderSummaryGrid(expertTrace);
+    renderThresholdTable(expertTrace);
+
+    // Animations
+    animateExpertContent([stepTitle, stepBody, summary]);
+  }
+
+  /* ============================================================
+     DATA LOADING
+  ============================================================ */
+  async function loadExpertModeStudents() {
+    try {
+      var response    = await ReadWiseAPI.getTeacherStudents();
+      expertStudents  = Array.isArray(response && response.students) ? response.students : [];
+      var ruleSelect  = document.getElementById("expert-mode-student-select");
+      var recSelect   = document.getElementById("expert-recommendation-student-select");
+
+      function populateSelect(sel) {
+        if (!sel) return;
+        if (!expertStudents.length) { sel.innerHTML = '<option value="">No students available</option>'; return; }
+        sel.innerHTML = expertStudents.map(function(s) {
+          return '<option value="' + encodeURIComponent(s.id) + '">' + escapeHtml(s.name || ("Student #" + s.id)) + '</option>';
+        }).join("");
+        if (!sel.value && expertStudents[0]) sel.value = encodeURIComponent(expertStudents[0].id);
+      }
+
+      populateSelect(ruleSelect);
+      populateSelect(recSelect);
+    } catch (error) {
+      console.error("Unable to load expert mode students", error);
+    }
+  }
+
+  async function loadExpertTrace(studentId) {
+    if (!studentId) { expertTrace = null; setWalkthroughVisible(false); renderExpertTraceStep(); return; }
+    try {
+      var response = await ReadWiseAPI.getTeacherStudentExpertTrace(studentId);
+      expertTrace  = response || null;
+      currentExpertStepIndex = 0;
+      setWalkthroughVisible(Boolean(expertTrace && expertTrace.steps && expertTrace.steps.length));
+      renderExpertTraceStep();
+    } catch (error) {
+      expertTrace = null;
+      setWalkthroughVisible(false);
+      renderExpertTraceStep();
+      console.error("Unable to load expert trace", error);
+    }
+  }
+
+  async function loadRecommendationTrace(studentId) {
+    if (!studentId) {
+      showToast("Please select a student first.", "error");
+      expertTrace = null; currentExpertStepIndex = 0; renderExpertTraceStep();
+      return;
+    }
+    try {
+      var response   = await ReadWiseAPI.getTeacherStudentExpertTrace(studentId);
+      expertTrace    = buildRecommendationTrace(response);
+      selectedExpertView = "recommendation";
+      updateExpertViewUI();
+      currentExpertStepIndex = 0;
+      setWalkthroughVisible(Boolean(expertTrace && expertTrace.steps && expertTrace.steps.length));
+      renderExpertTraceStep();
+    } catch (error) {
+      expertTrace = null; setWalkthroughVisible(false); renderExpertTraceStep();
+      console.error("Unable to load recommendation trace", error);
+      showToast((error && error.message) || "Unable to load the recommendation trace.", "error");
+    }
+  }
+
+  async function runCustomPrediction() {
+    var textarea = document.getElementById("expert-custom-passage");
+    var text = textarea ? textarea.value : "";
+    if (!text || !text.trim()) {
+      showToast("Please enter passage text first.", "error");
+      return;
+    }
+    selectedExpertView = "svm";
+    updateExpertViewUI();
+    try {
+      var prediction = await ReadWiseAPI.predict(text);
+      expertTrace = {
+        student: { id: "custom-input", name: "Custom Input", email: "custom@example.com", grade: "N/A", section: "N/A", classLevel: prediction.label || "N/A", preScore: null, preAssessmentCompleted: false },
+        currentClassLevel: prediction.label || "N/A",
+        preAssessmentTrace: null,
+        predictionTrace: {
+          input:      { textLength: text.length, wordCount: (text.match(/[A-Za-z]+(?:'[A-Za-z]+)?/g) || []).length, preview: text.trim().slice(0, 160) },
+          normalized: { cleanedTextLength: text.trim().length, wordCount: (text.match(/[A-Za-z]+(?:'[A-Za-z]+)?/g) || []).length },
+          decision:   { algorithm: "SVM passage classifier", confidencePercent: prediction.confidence, predictedLabel: prediction.label },
+          result:     { label: prediction.label, confidence: prediction.confidence, features: prediction.features || {} },
+        },
+        weeklyProgressTrace: null,
+        steps: [
+          { step: 1, title: "Input", body: "The SVM pipeline begins when a teacher pastes custom passage text into the passage classifier. The system stores the original text first so it can be cleaned, processed, and explained step by step." },
+          { step: 2, title: "Feature Extraction", body: "The passage is normalized and converted into measurable features such as sentence length, average word length, type-token ratio, and total word count. These features are what the model uses to judge how difficult the passage is." },
+          { step: 3, title: "Prediction", body: "The trained SVM model evaluates the feature vector and predicts the likely difficulty label. The confidence score explains how strongly the model believes that prediction, with higher percentages indicating a clearer match to the predicted class." },
+          { step: 4, title: "Result", body: "The classifier returns the predicted passage level of " + (prediction.label || "N/A") + ". That output can then be used to route the passage into the correct reading band and explain the model's decision to the teacher." },
+        ],
+      };
+      currentExpertStepIndex = 0;
+      renderExpertTraceStep();
+      showToast("Prediction complete: " + (prediction.label || "N/A") + " (" + (prediction.confidence || 0) + "% confidence)", "success", "SVM Result");
+    } catch (error) {
+      console.error("Unable to run custom prediction", error);
+      showToast((error && error.message) || "Unable to run the passage prediction.", "error");
+    }
+  }
+
+  function loadCustomRuleTrace() {
+    var input    = document.getElementById("expert-custom-score");
+    var rawScore = input ? input.value : "";
+    if (rawScore === null || rawScore === undefined || String(rawScore).trim() === "") {
+      showToast("Please enter a custom pre-assessment score first.", "error");
+      return;
+    }
+    var score = Number(rawScore);
+    if (!Number.isFinite(score)) {
+      showToast("Please enter a valid score between 0 and 100.", "error");
+      return;
+    }
+    selectedExpertView = "rule";
+    updateExpertViewUI();
+    expertTrace = buildCustomRuleTrace(score);
+    currentExpertStepIndex = 0;
+    setWalkthroughVisible(Boolean(expertTrace && expertTrace.steps && expertTrace.steps.length));
+    renderExpertTraceStep();
+    showToast("Rule trace loaded for score " + clampScoreValue(score) + "%.", "success", "Trace Loaded");
+  }
+
+  /* ============================================================
+     KEYBOARD LISTENER
+  ============================================================ */
+  function attachExpertModeKeyboardListener() {
+    var buffer = { value: "" };
+    document.addEventListener("keydown", function(event) {
+      var key = event.key || "";
+      if (key && key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
+        buffer.value += key.toLowerCase();
+      }
+      if (buffer.value.length > 40) buffer.value = "";
+      if (buffer.value.indexOf("expertmodeon") !== -1) {
+        expertModeEnabled = true; syncExpertModeState(); buffer.value = "";
+        showToast("Expert mode is now active.", "success", "Expert Mode On");
+      } else if (buffer.value.indexOf("expertmodeoff") !== -1) {
+        expertModeEnabled = false; syncExpertModeState(); buffer.value = "";
+        showToast("Expert mode has been hidden.", "info", "Expert Mode Off");
+      }
+    });
+  }
+
+  /* ============================================================
+     BOOTSTRAP
+  ============================================================ */
+  async function bootstrapPage() {
+    try {
+      var auth = await ReadWiseAPI.me({ forceRefresh: true });
+      if (!auth || !auth.user || auth.user.role !== "teacher") throw new Error("Unauthorized");
+      ReadWiseAPI.renderTeacherSidebar(auth.user);
+      await loadExpertModeStudents();
+      syncExpertModeState();
+      updateExpertViewUI();
+      attachExpertModeKeyboardListener();
+
+      /* ── Accordion: Explanation panel ── */
+      var algoToggle = document.getElementById("algo-explanation-toggle");
+      var algoBody   = document.getElementById("algo-explanation-body");
+      if (algoToggle && algoBody) {
+        algoToggle.addEventListener("click", function() {
+          algoToggle.classList.toggle("is-open");
+          algoBody.classList.toggle("is-open");
+        });
+      }
+
+      /* ── Raw data toggle ── */
+      var rawToggle = document.getElementById("expert-step-raw-toggle");
+      var rawBody   = document.getElementById("expert-step-raw-body");
+      if (rawToggle && rawBody) {
+        rawToggle.addEventListener("click", function() {
+          rawToggle.classList.toggle("is-open");
+          rawBody.classList.toggle("is-open");
+        });
+      }
+
+      /* ── Student select (Rule Base) ── */
+      var studentSelect = document.getElementById("expert-mode-student-select");
+      if (studentSelect) {
+        studentSelect.addEventListener("change", function() {
+          if (!studentSelect.value) {
+            expertTrace = null; currentExpertStepIndex = 0; renderExpertTraceStep();
+            return;
+          }
+          loadExpertTrace(studentSelect.value);
+        });
+      }
+
+      /* ── Step navigation ── */
+      document.getElementById("expert-prev-btn").addEventListener("click", function() {
+        if (!expertTrace || !expertTrace.steps || !expertTrace.steps.length) return;
+        currentExpertStepIndex = Math.max(0, currentExpertStepIndex - 1);
+        renderExpertTraceStep();
+      });
+
+      document.getElementById("expert-next-btn").addEventListener("click", function() {
+        if (!expertTrace || !expertTrace.steps || !expertTrace.steps.length) return;
+        currentExpertStepIndex = Math.min(expertTrace.steps.length - 1, currentExpertStepIndex + 1);
+        renderExpertTraceStep();
+      });
+
+      /* ── View selector buttons ── */
+      document.getElementById("expert-view-rule-btn").addEventListener("click", function() {
+        selectedExpertView = "rule"; updateExpertViewUI();
+        var sel = document.getElementById("expert-mode-student-select");
+        if (selectedRuleMode === "student" && sel && sel.value) loadExpertTrace(sel.value);
+      });
+
+      document.getElementById("expert-view-svm-btn").addEventListener("click", function() {
+        selectedExpertView = "svm"; updateExpertViewUI();
+        var passage = document.getElementById("expert-custom-passage");
+        if (passage && passage.value.trim()) runCustomPrediction();
+      });
+
+      document.getElementById("expert-view-recommendation-btn").addEventListener("click", function() {
+        selectedExpertView = "recommendation"; updateExpertViewUI();
+      });
+
+      /* ── Action buttons ── */
+      document.getElementById("expert-load-custom-btn").addEventListener("click", loadCustomRuleTrace);
+      document.getElementById("expert-predict-custom-btn").addEventListener("click", runCustomPrediction);
+      document.getElementById("expert-load-recommendation-btn").addEventListener("click", function() {
+        var sel = document.getElementById("expert-recommendation-student-select");
+        if (sel) loadRecommendationTrace(sel.value);
+      });
+
+      /* ── Rule mode (Student / Custom) ── */
+      document.getElementById("expert-rule-student-btn").addEventListener("click", function() {
+        selectedRuleMode = "student"; updateRuleModeUI();
+        var sel = document.getElementById("expert-mode-student-select");
+        if (sel && sel.value) loadExpertTrace(sel.value);
+      });
+
+      document.getElementById("expert-rule-custom-btn").addEventListener("click", function() {
+        selectedRuleMode = "custom";
+        expertTrace = null; currentExpertStepIndex = 0; renderExpertTraceStep();
+        updateRuleModeUI();
+      });
+
+    } catch (error) {
+      console.error("Expert mode bootstrap error", error);
+      if (error && (error.isAuthError || error.message === "Unauthorized")) {
+        window.location.href = "../login.html";
+        return;
+      }
+      var summaryEl = document.getElementById("expert-summary");
+      if (summaryEl) summaryEl.textContent = (error && error.message) || "Unable to load expert mode.";
+    }
+  }
+
+  async function logout() {
+    try { await ReadWiseAPI.logout(); } catch (e) { /* ignore */ }
+    sessionStorage.clear();
+    window.location.href = "../login.html";
+  }
+
+  bootstrapPage();
+</script>
+</body>
+</html>

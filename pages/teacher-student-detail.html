@@ -10,6 +10,60 @@
   <link rel="stylesheet" href="../stylesheets/shared.css?v=20260316b">
   <script src="../runtime-config.js?v=20260316c"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    .student-growth-grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+    }
+
+    .student-growth-card {
+      padding: 18px 18px 16px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: linear-gradient(180deg, var(--surface-elevated), var(--surface));
+      box-shadow: var(--shadow-xs);
+      min-height: 128px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .student-growth-label {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-soft);
+    }
+
+    .student-growth-value {
+      font-size: clamp(22px, 2.4vw, 30px);
+      font-weight: 800;
+      color: var(--text);
+      line-height: 1.1;
+      margin-top: 8px;
+    }
+
+    .student-growth-note {
+      font-size: 12px;
+      color: var(--text-soft);
+      margin-top: 12px;
+    }
+
+    @media (max-width: 980px) {
+      .student-growth-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 560px) {
+      .student-growth-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
 </head>
 <body>
 <div class="demo-banner">TalaSaAI System</div>
@@ -66,6 +120,42 @@
         <div class="stat-label">Latest Score</div>
         <div class="stat-val" id="latest-score">-%</div>
         <div class="stat-label" id="latest-rec" style="margin-top:6px"></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-header">
+        <div class="card-header-copy">
+          <div class="section-title">Growth Snapshot</div>
+          <div class="micro-copy">Baseline readiness, recent score movement, and reading speed for this student.</div>
+        </div>
+      </div>
+      <div class="student-growth-grid">
+        <div class="student-growth-card">
+          <div class="student-growth-label">Baseline</div>
+          <div id="student-growth-baseline" class="student-growth-value">N/A</div>
+          <div class="student-growth-note">Pre-assessment score</div>
+        </div>
+        <div class="student-growth-card">
+          <div class="student-growth-label">Latest</div>
+          <div id="student-growth-latest" class="student-growth-value">N/A</div>
+          <div class="student-growth-note">Most recent weekly score</div>
+        </div>
+        <div class="student-growth-card">
+          <div class="student-growth-label">Gain</div>
+          <div id="student-growth-gain" class="student-growth-value">N/A</div>
+          <div class="student-growth-note">Change from baseline</div>
+        </div>
+        <div class="student-growth-card">
+          <div class="student-growth-label">Normalized Gain</div>
+          <div id="student-growth-normalized" class="student-growth-value">N/A</div>
+          <div class="student-growth-note">Relative improvement</div>
+        </div>
+        <div class="student-growth-card">
+          <div class="student-growth-label">WPM</div>
+          <div id="student-growth-wpm" class="student-growth-value">N/A</div>
+          <div class="student-growth-note">Estimated reading speed</div>
+        </div>
       </div>
     </div>
 
@@ -239,6 +329,43 @@
     link.removeAttribute("aria-disabled");
   }
 
+  function formatGrowthMetric(value, suffix) {
+    if (value === undefined || value === null || value === "") return "N/A";
+    var numeric = Number(value);
+    if (!Number.isFinite(numeric)) return String(value);
+    if (suffix === "%") return numeric.toFixed(0) + "%";
+    if (suffix === "ratio") return numeric.toFixed(2);
+    if (suffix === "wpm") return numeric.toFixed(2);
+    return String(value);
+  }
+
+  function renderStudentGrowthSnapshot(trace) {
+    var growth = trace && trace.weeklyProgressTrace && trace.weeklyProgressTrace.growthMetrics ? trace.weeklyProgressTrace.growthMetrics : {};
+    var week = trace && trace.weeklyProgressTrace ? trace.weeklyProgressTrace : {};
+    var baseline = growth.baselineScore ?? null;
+    var latest = growth.latestScore ?? week.averageScore ?? null;
+
+    document.getElementById("student-growth-baseline").textContent = formatGrowthMetric(baseline, "%");
+    document.getElementById("student-growth-latest").textContent = formatGrowthMetric(latest, "%");
+    document.getElementById("student-growth-gain").textContent = formatGrowthMetric(growth.gain ?? null, "%");
+    document.getElementById("student-growth-normalized").textContent = formatGrowthMetric(growth.normalizedGain ?? null, "ratio");
+    document.getElementById("student-growth-wpm").textContent = formatGrowthMetric(growth.wpm ?? null, "wpm");
+  }
+
+  async function loadStudentGrowthSnapshot(studentId) {
+    try {
+      var trace = await ReadWiseAPI.getTeacherStudentExpertTrace(studentId);
+      renderStudentGrowthSnapshot(trace);
+    } catch (error) {
+      console.error("Unable to load student growth snapshot", error);
+      document.getElementById("student-growth-baseline").textContent = "N/A";
+      document.getElementById("student-growth-latest").textContent = "N/A";
+      document.getElementById("student-growth-gain").textContent = "N/A";
+      document.getElementById("student-growth-normalized").textContent = "N/A";
+      document.getElementById("student-growth-wpm").textContent = "N/A";
+    }
+  }
+
   function renderSessionTable(progress) {
     var tbody = document.getElementById("session-table");
     if (!progress.length) {
@@ -337,6 +464,7 @@
       renderSessionTable(progress);
       renderTimeline(progress);
       renderPendingShortAnswer(student.id, pending, latestScoredAttempt, pendingCount);
+      await loadStudentGrowthSnapshot(student.id);
     } catch (error) {
       // Teacher-only page: any failure here should route back to login to prevent viewing protected UI.
       window.location.href = "../login.html";

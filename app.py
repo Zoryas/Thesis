@@ -901,13 +901,33 @@ def pre_assessment_completed(student):
     return bool(int(student.get("pre_assessment_completed") or 0))
 
 
-def recommendation_for_score(score):
+def recommendation_for_score(score, current_level=None):
     normalized_score = int(score or 0)
+    if current_level is None:
+        if normalized_score >= 80:
+            return "HARD", "HARD"
+        if normalized_score >= 60:
+            return "MODERATE", "MODERATE"
+        return "EASY", "EASY"
+
+    current = normalize_class_level(current_level)
+
+    if current == "EASY":
+        if normalized_score >= 60:
+            return "Step UP to MODERATE", "MODERATE"
+        return "Maintain", current
+
+    if current == "MODERATE":
+        if normalized_score >= 80:
+            return "Step UP to HARD", "HARD"
+        if normalized_score >= 60:
+            return "Maintain", current
+        return "Step DOWN to EASY", "EASY"
+
     if normalized_score >= 80:
-        return "HARD", "HARD"
-    if normalized_score >= 60:
-        return "MODERATE", "MODERATE"
-    return "EASY", "EASY"
+        return "Maintain", current
+
+    return "Step DOWN to MODERATE", "MODERATE"
 
 
 def fetch_student_progress(cur, student_id):

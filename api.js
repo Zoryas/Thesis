@@ -158,6 +158,68 @@
     }
   }
 
+  function getExpertModeState() {
+    try {
+      return global.localStorage.getItem("readwise_expert_mode") === "true";
+    } catch (error) {
+      return false;
+    }
+  }
+
+  function setExpertModeState(enabled) {
+    try {
+      global.localStorage.setItem("readwise_expert_mode", enabled ? "true" : "false");
+    } catch (error) {
+      // ignore storage errors
+    }
+
+    try {
+      var event = new global.CustomEvent("readwise-expert-mode-change", {
+        detail: { enabled: !!enabled }
+      });
+      global.dispatchEvent(event);
+    } catch (error) {
+      // ignore custom event errors
+    }
+  }
+
+  function attachExpertModeKeyboardListener() {
+    if (typeof global === "undefined" || !global.addEventListener) return;
+    var buffer = "";
+    global.addEventListener("keydown", function(event) {
+      var key = event.key || "";
+      if (key && key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
+        buffer += key.toLowerCase();
+      }
+      if (buffer.length > 40) {
+        buffer = "";
+      }
+      if (buffer.indexOf("expertmodeon") !== -1) {
+        setExpertModeState(true);
+        buffer = "";
+        if (global.location && global.location.pathname && global.location.pathname.indexOf("expert-mode.html") === -1) {
+          var currentPath = global.location.pathname || "";
+          var target = currentPath.indexOf("/pages/") !== -1
+            ? currentPath.substring(0, currentPath.lastIndexOf("/") + 1) + "expert-mode.html"
+            : "pages/expert-mode.html";
+          global.location.href = target;
+        }
+      } else if (buffer.indexOf("expertmodeoff") !== -1) {
+        setExpertModeState(false);
+        buffer = "";
+        if (global.location && global.location.pathname && global.location.pathname.indexOf("expert-mode.html") !== -1) {
+          var currentPath = global.location.pathname || "";
+          var target = currentPath.indexOf("/pages/") !== -1
+            ? currentPath.substring(0, currentPath.lastIndexOf("/") + 1) + "teacher-dashboard.html"
+            : "pages/teacher-dashboard.html";
+          global.location.href = target;
+        }
+      }
+    });
+  }
+
+  attachExpertModeKeyboardListener();
+
   async function predict(text) {
     var response = await fetch(buildUrl("/predict"), {
       method: "POST",
@@ -180,6 +242,8 @@
     request: request,
     predict: predict,
     renderTeacherSidebar: renderTeacherSidebar,
+    getExpertModeState: getExpertModeState,
+    setExpertModeState: setExpertModeState,
     login: function(email, password, role) {
       clearCachedUser();
       return request("/api/auth/login", {
@@ -321,6 +385,9 @@
     },
     getTeacherStudentDetail: function(studentId) {
       return request("/api/teacher/students/" + encodeURIComponent(studentId));
+    },
+    getTeacherStudentExpertTrace: function(studentId) {
+      return request("/api/teacher/students/" + encodeURIComponent(studentId) + "/expert-trace");
     },
     getTeacherStudentPendingShortAnswers: function(studentId) {
       return request("/api/teacher/students/" + encodeURIComponent(studentId) + "/pending-short-answers");

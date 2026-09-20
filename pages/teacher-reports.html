@@ -9,6 +9,60 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
+  <style>
+    .report-growth-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .report-growth-card {
+      padding: 18px 18px 16px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: linear-gradient(180deg, var(--surface-elevated), var(--surface));
+      box-shadow: var(--shadow-xs);
+      min-height: 124px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .report-growth-label {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-soft);
+    }
+
+    .report-growth-value {
+      font-size: clamp(22px, 2.2vw, 28px);
+      font-weight: 800;
+      color: var(--text);
+      line-height: 1.1;
+      margin-top: 8px;
+    }
+
+    .report-growth-note {
+      font-size: 12px;
+      color: var(--text-soft);
+      margin-top: 12px;
+    }
+
+    @media (max-width: 980px) {
+      .report-growth-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 560px) {
+      .report-growth-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
 </head>
 <body>
 <div class="demo-banner">TalaSaAI System</div>
@@ -72,6 +126,37 @@
         <div class="stat-label">Program Completion</div>
         <div class="stat-val" style="color:var(--accent)" id="report-completion">0%</div>
         <div class="micro-copy" id="report-completion-copy">Based on the latest recorded week across all students.</div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-header">
+        <div class="card-header-copy">
+          <div class="section-title">Class Growth Summary</div>
+          <div class="micro-copy">Group-level baseline, latest average, gain, and normalized gain across all tracked students.</div>
+        </div>
+      </div>
+      <div class="report-growth-grid">
+        <div class="report-growth-card">
+          <div class="report-growth-label">Baseline Avg.</div>
+          <div id="report-growth-baseline" class="report-growth-value">--</div>
+          <div class="report-growth-note">Average pre-assessment</div>
+        </div>
+        <div class="report-growth-card">
+          <div class="report-growth-label">Latest Avg.</div>
+          <div id="report-growth-latest" class="report-growth-value">--</div>
+          <div class="report-growth-note">Average latest score</div>
+        </div>
+        <div class="report-growth-card">
+          <div class="report-growth-label">Average Gain</div>
+          <div id="report-growth-gain" class="report-growth-value">--</div>
+          <div class="report-growth-note">Absolute change from baseline</div>
+        </div>
+        <div class="report-growth-card">
+          <div class="report-growth-label">Avg. Normalized Gain</div>
+          <div id="report-growth-normalized" class="report-growth-value">--</div>
+          <div class="report-growth-note">Relative growth rate</div>
+        </div>
       </div>
     </div>
 
@@ -280,6 +365,9 @@
       var recommendationLabel = student.latestRecommendation
         ? formatRecommendationDisplay(student.latestRecommendation)
         : "Pending";
+      var growthMetrics = student.growthMetrics || {};
+      var gainValue = growthMetrics.gain === null || growthMetrics.gain === undefined ? "-" : (Number(growthMetrics.gain) > 0 ? "+" : "") + Number(growthMetrics.gain).toFixed(0) + "%";
+      var normGainValue = growthMetrics.normalizedGain === null || growthMetrics.normalizedGain === undefined ? "-" : Number(growthMetrics.normalizedGain).toFixed(2);
 
       return (
         "<tr>" +
@@ -295,7 +383,7 @@
               ? '<span class="muted-copy">No weekly score yet</span>'
               : ("<strong>" + escapeHtml(student.latestScore) + "%</strong><div class=\"micro-copy\">Week " + escapeHtml(student.latestWeek) + "</div>")) +
           "</td>" +
-          "<td style=\"color:" + improvementTone + ";font-weight:700\">" + escapeHtml(formatImprovement(improvement)) + "</td>" +
+          "<td style=\"color:" + improvementTone + ";font-weight:700\"><div>" + escapeHtml(formatImprovement(improvement)) + "</div><div class=\"micro-copy\">Gain: " + escapeHtml(gainValue) + " | N-Gain: " + escapeHtml(normGainValue) + "</div></td>" +
           "<td><strong>" + escapeHtml(recommendationLabel) + "</strong></td>" +
           "<td><span class=\"badge " + badgeClassForTone(student.statusTone) + "\">" + escapeHtml(student.statusLabel) + "</span>" +
             (student.isStagnant ? "<div class=\"micro-copy\" style=\"margin-top:6px\">" + escapeHtml(student.stagnantReason) + "</div>" : "") +
@@ -303,6 +391,14 @@
         "</tr>"
       );
     }).join("");
+  }
+
+  function renderGrowthSummary(snapshot) {
+    var growthSummary = (snapshot && snapshot.growthSummary) || {};
+    document.getElementById("report-growth-baseline").textContent = (growthSummary.baselineAverage === null || growthSummary.baselineAverage === undefined) ? "--" : (growthSummary.baselineAverage + "%");
+    document.getElementById("report-growth-latest").textContent = (growthSummary.latestAverage === null || growthSummary.latestAverage === undefined) ? "--" : (growthSummary.latestAverage + "%");
+    document.getElementById("report-growth-gain").textContent = (growthSummary.averageGain === null || growthSummary.averageGain === undefined) ? "--" : ((Number(growthSummary.averageGain) > 0 ? "+" : "") + Number(growthSummary.averageGain).toFixed(0) + "%");
+    document.getElementById("report-growth-normalized").textContent = (growthSummary.averageNormalizedGain === null || growthSummary.averageNormalizedGain === undefined) ? "--" : Number(growthSummary.averageNormalizedGain).toFixed(2);
   }
 
   function renderReport(snapshot) {
@@ -326,6 +422,7 @@
     document.getElementById("export-csv-btn").disabled = !students.length;
     document.getElementById("export-pdf-btn").disabled = !students.length;
 
+    renderGrowthSummary(snapshot);
     renderChart(students);
     renderStagnantAlerts(stagnantStudents);
     renderTable(students);
@@ -334,6 +431,7 @@
   function buildExportRows() {
     if (!reportSnapshot || !reportSnapshot.students) return [];
     return reportSnapshot.students.map(function(student) {
+      var metrics = student.growthMetrics || {};
       return [
         student.name || "",
         student.grade || "",
@@ -343,6 +441,8 @@
         formatPercent(student.latestScore),
         student.latestWeek ? ("Week " + student.latestWeek) : "",
         formatImprovement(student.improvement),
+        metrics.gain === null || metrics.gain === undefined ? "-" : Number(metrics.gain).toFixed(0) + "%",
+        metrics.normalizedGain === null || metrics.normalizedGain === undefined ? "-" : Number(metrics.normalizedGain).toFixed(2),
         student.latestRecommendation ? formatRecommendationDisplay(student.latestRecommendation) : "Pending",
         student.statusLabel || "",
         student.isStagnant ? (student.stagnantReason || "Yes") : "No"
@@ -365,6 +465,8 @@
       "Latest Weekly Score",
       "Latest Week",
       "Improvement",
+      "Gain",
+      "Normalized Gain",
       "Recommendation",
       "Status",
       "Stagnant Alert"
@@ -474,6 +576,8 @@
         "Latest Weekly Score",
         "Latest Week",
         "Improvement",
+        "Gain",
+        "Normalized Gain",
         "Recommendation",
         "Status",
         "Stagnant Alert"
@@ -499,9 +603,11 @@
         5: { cellWidth: 48 },
         6: { cellWidth: 34 },
         7: { cellWidth: 38 },
-        8: { cellWidth: 52 },
-        9: { cellWidth: 52 },
-        10: { cellWidth: 65 }
+        8: { cellWidth: 38 },
+        9: { cellWidth: 44 },
+        10: { cellWidth: 52 },
+        11: { cellWidth: 52 },
+        12: { cellWidth: 65 }
       },
       margin: { left: left, right: left, bottom: 40 }
     });

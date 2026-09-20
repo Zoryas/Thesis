@@ -23,6 +23,9 @@ ARTIFACTS = {
     "char_vectorizer": joblib.load(MODEL_DIR / "char_vectorizer.pkl"),
     "label_encoder": joblib.load(MODEL_DIR / "label_encoder.pkl"),
 }
+SURFACE_SCALER_PATH = MODEL_DIR / "surface_scaler.pkl"
+if SURFACE_SCALER_PATH.exists():
+    ARTIFACTS["surface_scaler"] = joblib.load(SURFACE_SCALER_PATH)
 
 QUESTION_TYPES_BY_DIFFICULTY = {
     "EASY": {"multiple_choice", "true_false"},
@@ -256,6 +259,59 @@ def classify_pre_assessment_level(score):
     if normalized_score >= 60:
         return "MODERATE"
     return "EASY"
+
+
+def build_pre_assessment_trace(score):
+    try:
+        normalized_score = int(score)
+    except (TypeError, ValueError):
+        normalized_score = 0
+    normalized_score = max(0, min(100, normalized_score))
+    if normalized_score >= 80:
+        class_level = "HARD"
+        rule = "score >= 80 => HARD"
+    elif normalized_score >= 60:
+        class_level = "MODERATE"
+        rule = "score >= 60 and score < 80 => MODERATE"
+    else:
+        class_level = "EASY"
+        rule = "score < 60 => EASY"
+    return {
+        "input": {"score": normalized_score},
+        "normalized": {"clampedScore": normalized_score},
+        "decision": {
+            "thresholds": {"hardMin": 80, "moderateMin": 60},
+            "ruleApplied": rule,
+        },
+        "result": {"classLevel": class_level},
+    }
+
+
+def build_passage_prediction_trace(text):
+    prediction = build_prediction_response(text)
+    raw_text = str(text or "")
+    trimmed_text = re.sub(r"\s+", " ", raw_text.replace("\n", " ").replace("\t", " ")).strip()
+    return {
+        "input": {
+            "textLength": len(raw_text),
+            "wordCount": count_words(raw_text),
+            "preview": trimmed_text[:160],
+        },
+        "normalized": {
+            "cleanedTextLength": len(trimmed_text),
+            "wordCount": count_words(trimmed_text),
+        },
+        "decision": {
+            "algorithm": "SVM passage classifier",
+            "confidencePercent": prediction.get("confidence"),
+            "predictedLabel": prediction.get("label"),
+        },
+        "result": {
+            "label": prediction.get("label"),
+            "confidence": prediction.get("confidence"),
+            "features": prediction.get("features", {}),
+        },
+    }
 
 
 def normalize_question_difficulty(value):
@@ -647,6 +703,99 @@ def average_numbers(values):
     return int(round(sum(cleaned) / len(cleaned)))
 
 
+def calculate_wpm(total_words, reading_time_seconds=None, reading_time_minutes=None):
+    try:
+        words = float(total_words or 0)
+    except (TypeError, ValueError):
+        words = 0.0
+
+    if words <= 0:
+        return None
+
+    if reading_time_minutes is not None:
+        minutes = float(reading_time_minutes or 0)
+    elif reading_time_seconds is not None:
+        try:
+            minutes = float(reading_time_seconds or 0) / 60.0
+        except (TypeError, ValueError):
+            minutes = 0.0
+    else:
+        minutes = 0.0
+
+    if minutes <= 0:
+        return None
+
+    return round(words / minutes, 2)
+
+
+def calculate_gain(latest_score, baseline_score):
+    try:
+        latest = float(latest_score or 0)
+    except (TypeError, ValueError):
+        latest = 0.0
+
+    try:
+        baseline = float(baseline_score or 0)
+    except (TypeError, ValueError):
+        baseline = 0.0
+
+    return round(latest - baseline, 2)
+
+
+def calculate_normalized_gain(latest_score, pre_assessment_score):
+    try:
+        latest = float(latest_score or 0)
+    except (TypeError, ValueError):
+        latest = 0.0
+
+    try:
+        pre_score = float(pre_assessment_score or 0)
+    except (TypeError, ValueError):
+        pre_score = 0.0
+
+    if pre_score >= 100:
+        return 0.0
+
+    denominator = 100.0 - pre_score
+    if denominator <= 0:
+        return 0.0
+
+    return round((latest - pre_score) / denominator, 3)
+
+
+def calculate_weekly_average_score(scores):
+    cleaned = []
+    for value in scores:
+        if value is None:
+            continue
+        try:
+            cleaned.append(float(value))
+        except (TypeError, ValueError):
+            continue
+    if not cleaned:
+        return 0.0
+    return round(sum(cleaned) / len(cleaned), 2)
+
+
+def decode_prediction_label(prediction_code):
+    encoder = ARTIFACTS.get("label_encoder")
+    if encoder is None:
+        raise ValueError("No label encoder found.")
+
+    if hasattr(encoder, "inverse_transform"):
+        return encoder.inverse_transform([prediction_code])[0]
+
+    if isinstance(encoder, dict):
+        if prediction_code in encoder:
+            return str(prediction_code)
+
+        for label, code in encoder.items():
+            if int(code) == int(prediction_code):
+                return str(label)
+
+    raise ValueError("Unsupported label encoder format.")
+
+
 def build_prediction_response(text):
     raw_text = str(text or "").strip()
     if not raw_text:
@@ -664,15 +813,19 @@ def build_prediction_response(text):
     avg_word_length = sum(len(word) for word in words) / max(word_count, 1)
     type_token_ratio = len({word.lower() for word in words}) / max(word_count, 1)
 
-    surface = csr_matrix(
-        np.asarray([[avg_sentence_length, avg_word_length, type_token_ratio, float(word_count)]], dtype=float)
+    surface_values = np.asarray(
+        [[avg_sentence_length, avg_word_length, type_token_ratio, float(word_count)]], dtype=float
     )
+    if ARTIFACTS.get("surface_scaler") is not None:
+        surface_values = ARTIFACTS["surface_scaler"].transform(surface_values)
+
+    surface = csr_matrix(surface_values)
     word_features = ARTIFACTS["word_vectorizer"].transform([cleaned])
     char_features = ARTIFACTS["char_vectorizer"].transform([cleaned])
     feature_matrix = hstack([word_features, char_features, surface], format="csr")
 
     prediction_code = ARTIFACTS["svm_model"].predict(feature_matrix)[0]
-    predicted = ARTIFACTS["label_encoder"].inverse_transform([prediction_code])[0]
+    predicted = decode_prediction_label(prediction_code)
     predicted = normalize_class_level(predicted)
 
     scores = ARTIFACTS["svm_model"].decision_function(feature_matrix)
@@ -696,13 +849,33 @@ def build_prediction_response(text):
     }
 
 
-def recommendation_for_score(score):
+def recommendation_for_score(score, current_level=None):
     normalized_score = int(score or 0)
+    if current_level is None:
+        if normalized_score >= 80:
+            return "HARD", "HARD"
+        if normalized_score >= 60:
+            return "MODERATE", "MODERATE"
+        return "EASY", "EASY"
+
+    current = normalize_class_level(current_level)
+
+    if current == "EASY":
+        if normalized_score >= 60:
+            return "Step UP to MODERATE", "MODERATE"
+        return "Maintain", current
+
+    if current == "MODERATE":
+        if normalized_score >= 80:
+            return "Step UP to HARD", "HARD"
+        if normalized_score >= 60:
+            return "Maintain", current
+        return "Step DOWN to EASY", "EASY"
+
     if normalized_score >= 80:
-        return "HARD", "HARD"
-    if normalized_score >= 60:
-        return "MODERATE", "MODERATE"
-    return "EASY", "EASY"
+        return "Maintain", current
+
+    return "Step DOWN to MODERATE", "MODERATE"
 
 
 def next_class_level(current_level, target_level):
@@ -1052,6 +1225,8 @@ def build_teacher_report_summary(cur, active_week):
     students = fetch_teacher_student_summaries(cur)
     report_rows = []
     completion_ratios = []
+    gain_values = []
+    normalized_gain_values = []
     for student in students:
         cur.execute(
             """
@@ -1084,7 +1259,23 @@ def build_teacher_report_summary(cur, active_week):
         improvement = None
         if pre_score is not None and latest_score is not None:
             improvement = int(latest_score) - int(pre_score)
+
+        gain = None
+        normalized_gain = None
+        if pre_score is not None and latest_score is not None:
+            gain = calculate_gain(latest_score, pre_score)
+            normalized_gain = calculate_normalized_gain(latest_score, pre_score)
+            gain_values.append(gain)
+            normalized_gain_values.append(normalized_gain)
+
         status_label, status_tone = build_report_status(student, is_stagnant)
+        growth_metrics = {
+            "baselineScore": pre_score,
+            "latestScore": latest_score,
+            "gain": gain,
+            "normalizedGain": normalized_gain,
+            "wpm": None,
+        }
         report_rows.append(
             {
                 "id": student["id"],
@@ -1100,6 +1291,9 @@ def build_teacher_report_summary(cur, active_week):
                 "latestRecommendation": student["latestRecommendation"],
                 "latestDifficulty": student["latestDifficulty"],
                 "improvement": improvement,
+                "gain": gain,
+                "normalizedGain": normalized_gain,
+                "growthMetrics": growth_metrics,
                 "statusLabel": status_label,
                 "statusTone": status_tone,
                 "isStagnant": is_stagnant,
@@ -1110,6 +1304,8 @@ def build_teacher_report_summary(cur, active_week):
 
     completion_percent = int(round((sum(completion_ratios) / len(completion_ratios)) * 100)) if completion_ratios else 0
     stagnant_students = [student for student in report_rows if student["isStagnant"]]
+    class_gain_average = average_numbers(gain_values) if gain_values else None
+    class_normalized_gain_average = average_numbers(normalized_gain_values) if normalized_gain_values else None
 
     return {
         "generatedAt": datetime.now(timezone.utc).isoformat(),
@@ -1122,6 +1318,14 @@ def build_teacher_report_summary(cur, active_week):
         "completionPercent": completion_percent,
         "stagnantCount": len(stagnant_students),
         "stagnantStudents": stagnant_students,
+        "growthSummary": {
+            "averageGain": class_gain_average,
+            "averageNormalizedGain": class_normalized_gain_average,
+            "baselineAverage": average_numbers(
+                student["preScore"] for student in report_rows if student["preAssessmentCompleted"]
+            ),
+            "latestAverage": average_numbers(student["latestScore"] for student in report_rows),
+        },
         "students": report_rows,
     }
 

@@ -8,7 +8,12 @@ from routes.helpers import (
     api_ok,
     apply_weekly_level_progression,
     average_numbers,
+    build_passage_prediction_trace,
+    build_pre_assessment_trace,
     build_teacher_report_summary,
+    calculate_gain,
+    calculate_normalized_gain,
+    calculate_wpm,
     fetch_pending_short_answer,
     fetch_pending_short_answers,
     fetch_student_progress,
@@ -18,6 +23,7 @@ from routes.helpers import (
     normalize_text_value,
     normalize_week,
     parse_program_start_date,
+    recommendation_for_score,
     require_auth,
     require_role,
     TOTAL_PROGRAM_WEEKS,
@@ -338,6 +344,159 @@ def teacher_student_detail(student_id):
         "latest": latest,
         "pendingShortAnswer": pending_short_answer,
         "latestScoredAttempt": latest_scored_attempt,
+    }
+    return api_ok(payload)
+
+
+@teacher_bp.get("/api/teacher/students/<student_id>/expert-trace")
+def teacher_student_expert_trace(student_id):
+    user, err = require_role("teacher")
+    if err:
+        return err
+    del user
+
+    with db_cursor(True) as (_, cur):
+        cur.execute(
+            """
+            SELECT s.id,s.full_name,s.grade,s.section,s.class_level,s.pre_score,s.pre_assessment_completed,u.email
+            FROM students s
+            JOIN users u ON u.id=s.user_id
+            WHERE s.id=%s
+            """,
+            (student_id,),
+        )
+        student = cur.fetchone()
+        if not student:
+            return api_error("Student not found.", 404)
+
+        progress = fetch_student_progress(cur, student_id)
+        latest = progress[-1] if progress else None
+        pre_assessment_trace = build_pre_assessment_trace(student.get("pre_score") or 0)
+        current_class_level = normalize_class_level(
+            pre_assessment_trace.get("result", {}).get("classLevel")
+            or student["class_level"]
+        )
+
+        prediction_trace = None
+        cur.execute(
+            """
+            SELECT p.title, p.text
+            FROM quiz_attempts qa
+            JOIN passages p ON p.id = qa.passage_id
+            WHERE qa.student_id=%s
+            ORDER BY qa.submitted_at DESC, qa.id DESC
+            LIMIT 1
+            """,
+            (student_id,),
+        )
+        latest_attempt = cur.fetchone()
+        if latest_attempt and (latest_attempt.get("text") or "").strip():
+            prediction_trace = build_passage_prediction_trace(latest_attempt.get("text") or "")
+            prediction_trace["passage"] = {
+                "title": latest_attempt.get("title") or "Latest passage",
+            }
+
+        weekly_progress_trace = None
+        if latest:
+            recommendation, target_level = recommendation_for_score(
+                latest.get("score") or 0,
+                current_class_level,
+            )
+            baseline_score = int(student.get("pre_score") or 0) if bool(int(student.get("pre_assessment_completed") or 0)) else None
+            latest_score = int(latest.get("score") or 0)
+            estimated_wpm = None
+            estimated_reading_minutes = None
+
+            cur.execute(
+                """
+                SELECT p.words, p.est_minutes
+                FROM quiz_attempts qa
+                JOIN passages p ON p.id = qa.passage_id
+                WHERE qa.student_id=%s
+                ORDER BY qa.submitted_at DESC, qa.id DESC
+                LIMIT 1
+                """,
+                (student_id,),
+            )
+            latest_passage = cur.fetchone()
+            if latest_passage:
+                estimated_reading_minutes = latest_passage.get("est_minutes")
+                estimated_wpm = calculate_wpm(
+                    latest_passage.get("words") or 0,
+                    reading_time_minutes=estimated_reading_minutes,
+                )
+
+            gain = calculate_gain(latest_score, baseline_score) if baseline_score is not None else None
+            normalized_gain = calculate_normalized_gain(latest_score, baseline_score) if baseline_score is not None else None
+
+            weekly_progress_trace = {
+                "week": int(latest.get("week") or 0),
+                "averageScore": int(latest.get("score") or 0),
+                "previousClassLevel": current_class_level,
+                "recommendation": recommendation,
+                "nextClassLevel": target_level,
+                "applied": bool(int(latest.get("applied") or 0)),
+                "growthMetrics": {
+                    "baselineScore": baseline_score,
+                    "latestScore": latest_score,
+                    "weeklyAverageScore": latest_score,
+                    "gain": gain,
+                    "normalizedGain": normalized_gain,
+                    "wpm": estimated_wpm,
+                    "estimatedReadingMinutes": estimated_reading_minutes,
+                },
+            }
+
+        steps = [
+            {
+                "step": 1,
+                "title": "Input",
+                "body": f"The teacher begins with Student {student['full_name']}'s pre-assessment score of {int(student['pre_score'] or 0)}. This value is the student's baseline readiness score and is the first piece of information the rule-based system uses to decide where that learner should start in the reading pathway.",
+            },
+            {
+                "step": 2,
+                "title": "Normalization",
+                "body": "The system checks whether the submitted score is within the valid range of 0 to 100. If it is outside that range, the score is clamped before any class-level decision is made, which keeps the rule engine consistent and prevents invalid scores from producing unreliable results.",
+            },
+            {
+                "step": 3,
+                "title": "Threshold Check",
+                "body": f"The normalized score is compared against the rule thresholds used by the app. The exact decision applied here is: {pre_assessment_trace['decision']['ruleApplied']}. In practical terms, the system chooses the student’s reading band by deciding whether the score falls into the Easy, Moderate, or Hard range.",
+            },
+            {
+                "step": 4,
+                "title": "Final Result",
+                "body": f"Once the threshold check is complete, the system assigns the student to the {current_class_level} level. That level becomes the student’s current class placement and is used to guide future passage selection, difficulty balancing, and the next instructional recommendation.",
+            },
+        ]
+
+        if prediction_trace:
+            steps.append(
+                {
+                    "step": 5,
+                    "title": "Passage Prediction Model",
+                    "body": (
+                        f"The passage classifier reviewed the latest passage text ({prediction_trace['passage']['title']}) and turned it into measurable text features before running the SVM model. It looked at things such as the text length, word count, and cleaned passage content, then used those features to estimate how difficult the passage should be. The model predicted the {prediction_trace['result']['label']} difficulty level with {prediction_trace['result']['confidence']}% confidence, which means it was highly certain about that classification."
+                    ),
+                }
+            )
+
+    payload = {
+        "student": {
+            "id": student["id"],
+            "name": student["full_name"],
+            "email": student["email"],
+            "grade": student["grade"],
+            "section": student["section"],
+            "classLevel": current_class_level,
+            "preScore": int(student["pre_score"] or 0),
+            "preAssessmentCompleted": bool(int(student["pre_assessment_completed"] or 0)),
+        },
+        "currentClassLevel": current_class_level,
+        "preAssessmentTrace": pre_assessment_trace,
+        "predictionTrace": prediction_trace,
+        "weeklyProgressTrace": weekly_progress_trace,
+        "steps": steps,
     }
     return api_ok(payload)
 

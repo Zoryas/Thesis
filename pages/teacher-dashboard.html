@@ -10,6 +10,166 @@
   <link rel="stylesheet" href="../stylesheets/shared.css?v=20260316b">
   <script src="../runtime-config.js?v=20260316c"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    .dashboard-growth-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+    }
+
+    .growth-metric-card {
+      padding: 18px 18px 16px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: linear-gradient(180deg, var(--surface-elevated), var(--surface));
+      min-height: 120px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      box-shadow: var(--shadow-xs);
+    }
+
+    .growth-metric-label {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-soft);
+    }
+
+    .growth-metric-value {
+      font-size: clamp(22px, 2.5vw, 30px);
+      font-weight: 800;
+      color: var(--text);
+      line-height: 1.1;
+      margin-top: 8px;
+    }
+
+    .growth-metric-note {
+      font-size: 12px;
+      color: var(--text-soft);
+      margin-top: 12px;
+    }
+
+    @media (max-width: 880px) {
+      .dashboard-growth-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 560px) {
+      .dashboard-growth-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .expert-flow-steps {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 8px;
+    }
+
+    .expert-flow-node {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 6px;
+      min-width: 164px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid rgba(135, 149, 177, 0.35);
+      background: rgba(17, 24, 39, 0.55);
+      color: var(--text-primary);
+      text-align: left;
+      cursor: pointer;
+      transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+      animation: expertNodeEnter 0.32s ease-out;
+    }
+
+    .expert-flow-node:hover {
+      transform: translateY(-1px);
+      border-color: rgba(119, 183, 255, 0.8);
+    }
+
+    .expert-flow-node.is-active {
+      border-color: rgba(119, 183, 255, 0.9);
+      box-shadow: 0 0 0 2px rgba(119, 183, 255, 0.18);
+      background: linear-gradient(135deg, rgba(33, 92, 146, 0.6), rgba(14, 25, 42, 0.9));
+      animation: expertNodePulse 0.8s ease-in-out infinite alternate;
+    }
+
+    .expert-flow-node.is-complete {
+      border-color: rgba(46, 204, 113, 0.8);
+      background: rgba(24, 55, 42, 0.5);
+    }
+
+    .expert-flow-node-chip {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.08);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .expert-flow-node-title {
+      font-size: 14px;
+      font-weight: 700;
+      line-height: 1.3;
+    }
+
+    #expert-step-title,
+    #expert-step-body,
+    #expert-mode-summary {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+
+    #expert-step-title.expert-content-visible,
+    #expert-step-body.expert-content-visible,
+    #expert-mode-summary.expert-content-visible {
+      animation: expertContentReveal 0.35s ease forwards;
+    }
+
+    @keyframes expertNodeEnter {
+      from {
+        opacity: 0;
+        transform: translateY(6px) scale(0.98);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    @keyframes expertNodePulse {
+      from {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(119, 183, 255, 0.3);
+      }
+      to {
+        transform: scale(1.02);
+        box-shadow: 0 0 0 6px rgba(119, 183, 255, 0.08);
+      }
+    }
+
+    @keyframes expertContentReveal {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+  </style>
 </head>
 <body class="teacher-dashboard-page">
 <div class="demo-banner">TalaSaAI System</div>
@@ -130,6 +290,61 @@
         <button id="clear-week-override-btn" class="btn btn-outline" type="button">Clear Override</button>
       </div>
       <div id="week-settings-status" class="week-settings-status" aria-live="polite"></div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-header">
+        <div class="card-header-copy">
+          <div class="section-title">Student Growth Snapshot</div>
+          <div class="micro-copy">Compare pre-assessment readiness, weekly gains, and reading speed for a selected student.</div>
+        </div>
+      </div>
+      <div class="week-settings-grid" style="margin-top:14px">
+        <div class="form-group" style="max-width:360px">
+          <label class="form-label" for="dashboard-growth-student-select">Student</label>
+          <select id="dashboard-growth-student-select" class="form-control">
+            <option value="">Loading students...</option>
+          </select>
+        </div>
+      </div>
+      <div id="growth-summary-status" class="micro-copy" style="margin-top:12px;color:var(--text-soft)">Select a student to review their growth metrics.</div>
+      <div class="dashboard-growth-grid">
+        <div class="growth-metric-card">
+          <div class="growth-metric-label">Baseline Score</div>
+          <div id="growth-baseline-score" class="growth-metric-value">N/A</div>
+          <div class="growth-metric-note">Pre-assessment readiness</div>
+        </div>
+        <div class="growth-metric-card">
+          <div class="growth-metric-label">Latest Score</div>
+          <div id="growth-latest-score" class="growth-metric-value">N/A</div>
+          <div class="growth-metric-note">Most recent weekly result</div>
+        </div>
+        <div class="growth-metric-card">
+          <div class="growth-metric-label">Weekly Average</div>
+          <div id="growth-weekly-average" class="growth-metric-value">N/A</div>
+          <div class="growth-metric-note">Weekly score trend</div>
+        </div>
+        <div class="growth-metric-card">
+          <div class="growth-metric-label">Gain</div>
+          <div id="growth-gain" class="growth-metric-value">N/A</div>
+          <div class="growth-metric-note">Absolute change from baseline</div>
+        </div>
+        <div class="growth-metric-card">
+          <div class="growth-metric-label">Normalized Gain</div>
+          <div id="growth-normalized-gain" class="growth-metric-value">N/A</div>
+          <div class="growth-metric-note">Relative learning gain</div>
+        </div>
+        <div class="growth-metric-card">
+          <div class="growth-metric-label">WPM</div>
+          <div id="growth-wpm" class="growth-metric-value">N/A</div>
+          <div class="growth-metric-note">Estimated reading speed</div>
+        </div>
+        <div class="growth-metric-card" style="grid-column:1 / -1;">
+          <div class="growth-metric-label">Recommendation Status</div>
+          <div id="growth-recommendation-status" class="growth-metric-value" style="font-size:clamp(18px,2vw,24px)">N/A</div>
+          <div id="growth-recommendation-note" class="growth-metric-note">Current recommendation and pathway</div>
+        </div>
+      </div>
     </div>
 
     <div class="card">
@@ -267,6 +482,264 @@
     element.title = roster.join(", ");
   }
 
+  function formatMetricValue(value, suffix) {
+    if (value === undefined || value === null || value === "") return "N/A";
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return String(value);
+    if (suffix === "%") return numeric.toFixed(0) + "%";
+    if (suffix === "ratio") return numeric.toFixed(2);
+    if (suffix === "wpm") return numeric.toFixed(2);
+    return String(value);
+  }
+
+  function renderGrowthSummary(trace) {
+    const growth = (trace && trace.weeklyProgressTrace && trace.weeklyProgressTrace.growthMetrics) ? trace.weeklyProgressTrace.growthMetrics : {};
+    const week = trace && trace.weeklyProgressTrace ? trace.weeklyProgressTrace : {};
+    const baseline = growth.baselineScore ?? null;
+    const latest = growth.latestScore ?? week.averageScore ?? null;
+    const weeklyAverage = growth.weeklyAverageScore ?? week.averageScore ?? latest ?? null;
+    const gain = growth.gain ?? null;
+    const normalizedGain = growth.normalizedGain ?? null;
+    const wpm = growth.wpm ?? null;
+    const recommendation = week.recommendation || "N/A";
+
+    document.getElementById("growth-baseline-score").textContent = formatMetricValue(baseline, "%");
+    document.getElementById("growth-latest-score").textContent = formatMetricValue(latest, "%");
+    document.getElementById("growth-weekly-average").textContent = formatMetricValue(weeklyAverage, "%");
+    document.getElementById("growth-gain").textContent = formatMetricValue(gain, "%");
+    document.getElementById("growth-normalized-gain").textContent = formatMetricValue(normalizedGain, "ratio");
+    document.getElementById("growth-wpm").textContent = formatMetricValue(wpm, "wpm");
+    document.getElementById("growth-recommendation-status").textContent = recommendation;
+    document.getElementById("growth-recommendation-note").textContent = (week.nextClassLevel ? "Next class level: " + week.nextClassLevel : "Recommendation based on the latest weekly score");
+    document.getElementById("growth-summary-status").textContent = trace && trace.student ? "Growth data for " + (trace.student.name || "student") + "." : "Select a student to review their growth metrics.";
+  }
+
+  async function loadGrowthSnapshot(studentId) {
+    const select = document.getElementById("dashboard-growth-student-select");
+    const status = document.getElementById("growth-summary-status");
+    if (!studentId) {
+      if (status) status.textContent = "Select a student to review their growth metrics.";
+      return;
+    }
+
+    try {
+      const trace = await ReadWiseAPI.getTeacherStudentExpertTrace(studentId);
+      renderGrowthSummary(trace);
+    } catch (error) {
+      const fallback = document.getElementById("growth-summary-status");
+      if (fallback) fallback.textContent = "Unable to load growth metrics for the selected student.";
+      console.error("Unable to load dashboard growth snapshot", error);
+    }
+  }
+
+  function syncGrowthStudentSelector() {
+    const select = document.getElementById("dashboard-growth-student-select");
+    if (!select) return;
+
+    if (!expertStudents.length) {
+      select.innerHTML = '<option value="">No students available</option>';
+      return;
+    }
+
+    select.innerHTML = expertStudents.map(function(student) {
+      return '<option value="' + encodeURIComponent(student.id) + '">' + escapeHtml(student.name || ("Student #" + student.id)) + '</option>';
+    }).join("");
+
+    if (!select.value) {
+      select.value = encodeURIComponent(expertStudents[0].id);
+    }
+
+    const selectedId = decodeURIComponent(select.value || "");
+    loadGrowthSnapshot(selectedId);
+  }
+
+  var expertModeEnabled = ReadWiseAPI.getExpertModeState();
+  var expertStudents = [];
+  var expertTrace = null;
+  var currentExpertStepIndex = 0;
+
+  function syncExpertModeControls() {
+    const toggleBtn = document.getElementById("expert-mode-toggle-btn");
+    const panel = document.getElementById("expert-mode-panel");
+    const studentSelect = document.getElementById("expert-mode-student-select");
+    const statusEl = document.getElementById("expert-mode-status");
+
+    if (!toggleBtn || !panel || !studentSelect || !statusEl) return;
+
+    toggleBtn.textContent = expertModeEnabled ? "Expert Mode On" : "Enable Expert Mode";
+    toggleBtn.className = expertModeEnabled ? "btn btn-primary" : "btn btn-outline";
+    panel.style.display = expertModeEnabled ? "block" : "none";
+    studentSelect.disabled = !expertModeEnabled || !expertStudents.length;
+
+    if (!expertModeEnabled) {
+      statusEl.textContent = "Expert mode is off. Use the button above or type expertmodeon on the keyboard.";
+    } else if (!expertStudents.length) {
+      statusEl.textContent = "Expert mode is on, but there are no students available to inspect yet.";
+    } else {
+      statusEl.textContent = "Expert mode is active. Choose a student to inspect how the algorithm reached the current result.";
+    }
+  }
+
+  function renderExpertFlowNodes() {
+    const container = document.getElementById("expert-flow-steps");
+    const steps = expertTrace && Array.isArray(expertTrace.steps) ? expertTrace.steps : [];
+
+    if (!container) return;
+
+    if (!steps.length) {
+      container.innerHTML = "";
+      return;
+    }
+
+    container.innerHTML = steps.map(function(step, index) {
+      const stateClass = index === currentExpertStepIndex
+        ? "is-active"
+        : (index < currentExpertStepIndex ? "is-complete" : "");
+      return '<button type="button" class="expert-flow-node ' + stateClass + '" data-step-index="' + index + '">' +
+        '<span class="expert-flow-node-chip">Step ' + (index + 1) + '</span>' +
+        '<span class="expert-flow-node-title">' + escapeHtml(step.title || "Step") + '</span>' +
+      '</button>';
+    }).join("");
+
+    container.querySelectorAll(".expert-flow-node").forEach(function(node) {
+      node.addEventListener("click", function() {
+        currentExpertStepIndex = Number(node.getAttribute("data-step-index") || 0);
+        renderExpertTraceStep();
+      });
+    });
+  }
+
+  function animateExpertContent(elements) {
+    elements.forEach(function(element) {
+      if (!element) return;
+      element.classList.remove("expert-content-visible");
+      void element.offsetWidth;
+      element.classList.add("expert-content-visible");
+    });
+  }
+
+  function renderExpertTraceStep() {
+    const stepLabel = document.getElementById("expert-step-label");
+    const stepTitle = document.getElementById("expert-step-title");
+    const stepBody = document.getElementById("expert-step-body");
+    const summary = document.getElementById("expert-mode-summary");
+    const prevBtn = document.getElementById("expert-prev-btn");
+    const nextBtn = document.getElementById("expert-next-btn");
+    const steps = expertTrace && Array.isArray(expertTrace.steps) ? expertTrace.steps : [];
+
+    renderExpertFlowNodes();
+
+    if (!steps.length) {
+      stepLabel.textContent = "Step 0 of 0";
+      stepTitle.textContent = "No trace available";
+      stepBody.textContent = "There is no algorithm trace to display for the selected student yet.";
+      summary.innerHTML = "";
+      prevBtn.disabled = true;
+      nextBtn.disabled = true;
+      animateExpertContent([stepTitle, stepBody, summary]);
+      return;
+    }
+
+    currentExpertStepIndex = Math.max(0, Math.min(currentExpertStepIndex, steps.length - 1));
+    const step = steps[currentExpertStepIndex];
+    stepLabel.textContent = "Step " + (currentExpertStepIndex + 1) + " of " + steps.length;
+    stepTitle.textContent = step.title || "Step";
+    stepBody.textContent = step.body || "";
+
+    prevBtn.disabled = currentExpertStepIndex === 0;
+    nextBtn.textContent = currentExpertStepIndex === steps.length - 1 ? "End" : "Next";
+    nextBtn.disabled = false;
+
+    const student = expertTrace.student || {};
+    const preTrace = expertTrace.preAssessmentTrace || {};
+    const weekTrace = expertTrace.weeklyProgressTrace || null;
+    summary.innerHTML = "<strong>Student:</strong> " + escapeHtml(student.name || "Unknown") +
+      "<br><strong>Current class level:</strong> " + escapeHtml(expertTrace.currentClassLevel || student.classLevel || "-") +
+      "<br><strong>Pre-score:</strong> " + escapeHtml((student.preScore !== undefined && student.preScore !== null) ? (student.preScore + '%') : 'N/A') +
+      "<br><strong>Rule used:</strong> " + escapeHtml((preTrace && preTrace.decision && preTrace.decision.ruleApplied) || "N/A");
+
+    if (weekTrace) {
+      summary.innerHTML +=
+        "<br><strong>Latest recommendation:</strong> " + escapeHtml(weekTrace.recommendation || "N/A") +
+        "<br><strong>Latest week score:</strong> " + escapeHtml((weekTrace.averageScore !== undefined && weekTrace.averageScore !== null) ? (weekTrace.averageScore + '%') : 'N/A');
+    }
+
+    animateExpertContent([stepTitle, stepBody, summary]);
+  }
+
+  async function loadExpertModeStudents() {
+    try {
+      const response = await ReadWiseAPI.getTeacherStudents();
+      expertStudents = Array.isArray(response && response.students) ? response.students : [];
+      const studentSelect = document.getElementById("expert-mode-student-select");
+
+      if (!studentSelect) return;
+
+      if (!expertStudents.length) {
+        studentSelect.innerHTML = '<option value="">No students available</option>';
+        studentSelect.disabled = true;
+        return;
+      }
+
+      studentSelect.innerHTML = expertStudents.map(function(student) {
+        return '<option value="' + encodeURIComponent(student.id) + '">' + escapeHtml(student.name || ("Student #" + student.id)) + '</option>';
+      }).join("");
+
+      if (!studentSelect.value) {
+        studentSelect.value = encodeURIComponent(expertStudents[0].id);
+      }
+      studentSelect.disabled = !expertModeEnabled;
+    } catch (error) {
+      console.error("Unable to load expert mode students", error);
+    }
+  }
+
+  async function loadExpertTrace(studentId) {
+    if (!expertModeEnabled || !studentId) {
+      expertTrace = null;
+      renderExpertTraceStep();
+      return;
+    }
+
+    try {
+      const response = await ReadWiseAPI.getTeacherStudentExpertTrace(studentId);
+      expertTrace = response || null;
+      currentExpertStepIndex = 0;
+      renderExpertTraceStep();
+    } catch (error) {
+      expertTrace = null;
+      renderExpertTraceStep();
+      console.error("Unable to load expert trace", error);
+    }
+  }
+
+  window.addEventListener("readwise-expert-mode-change", function(event) {
+    expertModeEnabled = !!(event && event.detail && event.detail.enabled);
+    syncExpertModeControls();
+
+    if (!expertModeEnabled) {
+      expertTrace = null;
+      renderExpertTraceStep();
+    }
+  });
+
+  async function toggleExpertMode() {
+    expertModeEnabled = !expertModeEnabled;
+    ReadWiseAPI.setExpertModeState(expertModeEnabled);
+    syncExpertModeControls();
+
+    if (expertModeEnabled) {
+      const studentSelect = document.getElementById("expert-mode-student-select");
+      const selectedStudentId = studentSelect ? studentSelect.value : "";
+      if (selectedStudentId) {
+        await loadExpertTrace(selectedStudentId);
+      }
+    } else {
+      expertTrace = null;
+      renderExpertTraceStep();
+    }
+  }
+
   async function bootstrapPage() {
     try {
       const auth = await ReadWiseAPI.me({ forceRefresh: true });
@@ -342,8 +815,49 @@
       );
       document.getElementById("pending-actions-list").innerHTML = actions.join("");
       await loadWeekSettingsPanel();
+      await loadExpertModeStudents();
+      syncGrowthStudentSelector();
+      syncExpertModeControls();
+      const studentSelect = document.getElementById("expert-mode-student-select");
+      if (studentSelect && expertModeEnabled) {
+        studentSelect.value = studentSelect.value || encodeURIComponent(expertStudents[0].id);
+        await loadExpertTrace(studentSelect.value);
+      }
+
+      const growthSelect = document.getElementById("dashboard-growth-student-select");
+      if (growthSelect) {
+        growthSelect.addEventListener("change", function() {
+          const selectedId = decodeURIComponent(growthSelect.value || "");
+          loadGrowthSnapshot(selectedId);
+        });
+      }
+
       document.getElementById("save-week-settings-btn").addEventListener("click", saveWeekSettings);
       document.getElementById("clear-week-override-btn").addEventListener("click", clearWeekOverride);
+
+      const prevBtn = document.getElementById("expert-prev-btn");
+      const nextBtn = document.getElementById("expert-next-btn");
+      if (prevBtn) {
+        prevBtn.addEventListener("click", function() {
+          if (!expertTrace || !expertTrace.steps || !expertTrace.steps.length) return;
+          currentExpertStepIndex = Math.max(0, currentExpertStepIndex - 1);
+          renderExpertTraceStep();
+        });
+      }
+      if (nextBtn) {
+        nextBtn.addEventListener("click", function() {
+          if (!expertTrace || !expertTrace.steps || !expertTrace.steps.length) return;
+          currentExpertStepIndex = Math.min(expertTrace.steps.length - 1, currentExpertStepIndex + 1);
+          renderExpertTraceStep();
+        });
+      }
+      if (studentSelect) {
+        studentSelect.addEventListener("change", function() {
+          if (expertModeEnabled) {
+            loadExpertTrace(studentSelect.value);
+          }
+        });
+      }
     } catch (error) {
       console.error("Teacher dashboard bootstrap error", error);
       if (error && (error.isAuthError || error.message === "Unauthorized")) {
