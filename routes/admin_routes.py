@@ -437,6 +437,10 @@ def admin_update_student(student_id):
     if not payload or not isinstance(payload, dict):
         return api_error("Request body must be valid JSON.", 400)
 
+    sanitized_payload = dict(payload)
+    if "password" in sanitized_payload:
+        sanitized_payload["password"] = "[REDACTED]"
+
     full_name = payload.get("fullName")
     grade = payload.get("grade")
     section = payload.get("section")
@@ -525,7 +529,7 @@ def admin_update_student(student_id):
         row = cur.fetchone()
         if not row:
             return api_error("Student not found after update.", 404)
-        _record_audit_log(user["id"], student_id, "admin:update_student", {"payload": payload})
+        _record_audit_log(user["id"], student_id, "admin:update_student", {"payload": sanitized_payload})
 
     return api_ok({
         "id": row["student_id"],
