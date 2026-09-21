@@ -529,7 +529,10 @@ def admin_update_student(student_id):
         row = cur.fetchone()
         if not row:
             return api_error("Student not found after update.", 404)
-        _record_audit_log(user["id"], student_id, "admin:update_student", {"payload": sanitized_payload})
+
+    # Keep the main transaction focused on the actual student update. Audit writes are
+    # best-effort and must not block the main request on a DB lock or worker timeout.
+    _record_audit_log(user["id"], student_id, "admin:update_student", {"payload": sanitized_payload})
 
     return api_ok({
         "id": row["student_id"],

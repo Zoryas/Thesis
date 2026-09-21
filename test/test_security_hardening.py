@@ -117,19 +117,30 @@ class CsrfProtectionTests(unittest.TestCase):
                 return None
 
         class FakeDB:
+            def __init__(self):
+                self.exited = False
+
             def __enter__(self):
                 return (None, FakeCursor())
+
             def __exit__(self, exc_type, exc_val, exc_tb):
+                self.exited = True
                 return False
 
         app = Flask(__name__)
         app.register_blueprint(admin_routes.admin_bp)
         app.config["TESTING"] = True
 
+        fake_db = FakeDB()
+        audit_after_commit = {"value": False}
+
+        def fake_audit(*args, **kwargs):
+            audit_after_commit["value"] = fake_db.exited
+
         with app.test_client() as client:
             with patch.object(admin_routes, "require_role", return_value=({"id": 1, "role": "admin"}, None)), \
-                 patch.object(admin_routes, "db_cursor", return_value=FakeDB()), \
-                 patch.object(admin_routes, "_record_audit_log") as mock_audit:
+                 patch.object(admin_routes, "db_cursor", return_value=fake_db), \
+                 patch.object(admin_routes, "_record_audit_log", side_effect=fake_audit) as mock_audit:
                 response = client.put(
                     "/api/admin/students/s20",
                     json={
@@ -145,6 +156,7 @@ class CsrfProtectionTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         mock_audit.assert_called_once()
+        self.assertTrue(audit_after_commit["value"])
         payload = mock_audit.call_args[0][3]
         self.assertEqual(payload["payload"]["password"], "[REDACTED]")
 
