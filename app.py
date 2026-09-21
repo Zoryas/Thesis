@@ -1140,8 +1140,17 @@ def build_report_status(student, is_stagnant):
         return "Awaiting Weekly Submission", "primary"
     if int(student["latestWeek"] or 0) >= TOTAL_PROGRAM_WEEKS:
         return f"Week {TOTAL_PROGRAM_WEEKS} Recorded", "success"
+
+    pre_score = int(student["preScore"] or 0) if student.get("preAssessmentCompleted") else 0
+    latest_score = int(student["latestScore"] or 0)
+    current_gain = latest_score - pre_score
+
     if is_stagnant:
+        if current_gain < 0:
+            return "Declining", "hard"
         return "Stagnant", "hard"
+    if current_gain < 0:
+        return "Declining", "hard"
     return "Improving", "easy"
 
 

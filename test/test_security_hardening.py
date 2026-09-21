@@ -4,7 +4,7 @@ from unittest.mock import patch
 from flask import Flask, request
 
 from routes import admin_routes
-from routes.helpers import enforce_csrf_for_state_change, normalize_text_value
+from routes.helpers import build_report_status, enforce_csrf_for_state_change, normalize_text_value
 
 
 class CsrfProtectionTests(unittest.TestCase):
@@ -159,6 +159,19 @@ class CsrfProtectionTests(unittest.TestCase):
         self.assertTrue(audit_after_commit["value"])
         payload = mock_audit.call_args[0][3]
         self.assertEqual(payload["payload"]["password"], "[REDACTED]")
+
+    def test_negative_gain_is_not_reported_as_improving(self):
+        student = {
+            "preAssessmentCompleted": True,
+            "preScore": 81,
+            "latestScore": 0,
+            "latestWeek": 2,
+        }
+
+        status_label, status_tone = build_report_status(student, is_stagnant=False)
+
+        self.assertEqual(status_label, "Declining")
+        self.assertEqual(status_tone, "hard")
 
 
 if __name__ == "__main__":
