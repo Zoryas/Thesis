@@ -457,7 +457,15 @@ def admin_update_student(student_id):
             class_level = "EASY"
 
     has_pre_score = "preScore" in payload
-    if pre_score is not None:
+    if has_pre_score:
+        if payload.get("preScore") is None or str(payload.get("preScore", "")).strip() == "":
+            return api_error("preScore must be a number between 0 and 100.", 400)
+        try:
+            pre_score = int(payload.get("preScore"))
+        except (TypeError, ValueError):
+            return api_error("preScore must be a number.", 400)
+        pre_score = max(0, min(100, pre_score))
+    elif pre_score is not None:
         try:
             pre_score = int(pre_score)
         except (TypeError, ValueError):
@@ -515,6 +523,8 @@ def admin_update_student(student_id):
             (student_id,),
         )
         row = cur.fetchone()
+        if not row:
+            return api_error("Student not found after update.", 404)
         _record_audit_log(user["id"], student_id, "admin:update_student", {"payload": payload})
 
     return api_ok({
