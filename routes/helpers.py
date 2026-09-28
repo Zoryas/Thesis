@@ -3,6 +3,7 @@ import json
 import os
 import re
 import secrets
+from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -36,6 +37,9 @@ QUESTION_TYPES_BY_DIFFICULTY = {
 
 TOTAL_PROGRAM_WEEKS = 8
 MIN_WORDS = 30
+LOW_UNIQUE_WORD_RATIO = 0.15
+MAX_GIBBERISH_WORD_VOCAB_COVERAGE = 0.2
+MAX_GIBBERISH_CHAR_NGRAM_COVERAGE = 0.4
 PRESET_AVATAR_PATTERN = re.compile(r"^/(?:[A-Za-z0-9._-]+/)?avatar/[A-Za-z0-9 _().-]+\.svg$")
 
 
@@ -796,6 +800,46 @@ def decode_prediction_label(prediction_code):
     raise ValueError("Unsupported label encoder format.")
 
 
+def is_repetitive_or_low_diversity(text, words):
+    normalized_words = [word.lower() for word in words]
+    if len(set(normalized_words)) / len(normalized_words) <= LOW_UNIQUE_WORD_RATIO:
+        return True
+
+    segments = re.split(r"(?:[.!?]+|\r?\n)+", text)
+    normalized_segments = [
+        " ".join(re.findall(r"[A-Za-z]+(?:'[A-Za-z]+)?", segment.lower()))
+        for segment in segments
+    ]
+    normalized_segments = [segment for segment in normalized_segments if segment]
+    segment_counts = Counter(normalized_segments)
+    repeated_count = sum(count for count in segment_counts.values() if count > 1)
+    return (
+        len(normalized_segments) >= 3
+        and max(segment_counts.values(), default=0) >= 3
+        and repeated_count / len(normalized_segments) >= 0.5
+    )
+
+
+def is_gibberish_text(text, words):
+    vocabulary_words = [word.lower() for word in words if len(word) >= 2]
+    if not vocabulary_words:
+        return False
+
+    word_vocabulary = ARTIFACTS["word_vectorizer"].vocabulary_
+    known_word_ratio = sum(word in word_vocabulary for word in vocabulary_words) / len(vocabulary_words)
+    if known_word_ratio > MAX_GIBBERISH_WORD_VOCAB_COVERAGE:
+        return False
+
+    char_analyzer = ARTIFACTS["char_vectorizer"].build_analyzer()
+    char_ngrams = char_analyzer(text.lower())
+    if not char_ngrams:
+        return False
+
+    char_vocabulary = ARTIFACTS["char_vectorizer"].vocabulary_
+    known_char_ratio = sum(ngram in char_vocabulary for ngram in char_ngrams) / len(char_ngrams)
+    return known_char_ratio <= MAX_GIBBERISH_CHAR_NGRAM_COVERAGE
+
+
 def build_prediction_response(text):
     raw_text = str(text or "").strip()
     if not raw_text:
@@ -827,6 +871,8 @@ def build_prediction_response(text):
     prediction_code = ARTIFACTS["svm_model"].predict(feature_matrix)[0]
     predicted = decode_prediction_label(prediction_code)
     predicted = normalize_class_level(predicted)
+    if is_repetitive_or_low_diversity(raw_text, words) or is_gibberish_text(raw_text, words):
+        predicted = "EASY"
 
     scores = ARTIFACTS["svm_model"].decision_function(feature_matrix)
     values = np.asarray(scores[0] if np.ndim(scores) > 1 else scores, dtype=float)
